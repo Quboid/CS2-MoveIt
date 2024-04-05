@@ -1,0 +1,185 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net481</TargetFramework>
+		<LangVersion>10</LangVersion>
+		<Configurations>Debug;Release</Configurations>
+		
+		<!--The folder where Game.dll is located. Set it only if the game is not installed in the default location, otherwise keep it empty-->
+		<CustomManagedPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed</CustomManagedPath>
+		
+		<!--Path to the text file where PDX account data is stored which is required to publish the mod-->
+		<!--Keep it outside of project in order to not commit it or share accidentally-->
+		<!--The file should contain 2 lines:-->
+		<!--Your.PDX@Account.login-->
+		<!--Your-PDX-Account-Pa$$word-->
+		<PDXAccountDataPath>C:\Users\Rob\Documents\Paradox Interactive\pdx_account.txt</PDXAccountDataPath>
+		
+		<!--The file where mod information which is required for publishing mod on PDX mods are stored-->
+		<PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
+		<Version>0.2.11</Version>
+		<AssemblyVersion>$(Version)</AssemblyVersion>
+		<FileVersion>$(Version)</FileVersion>
+	</PropertyGroup>
+	
+	<!--Imports must be after PropertyGroup block-->
+	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.props" />
+	<Import Project="..\..\..\..\QCommon\Repo\Code\QCommon\QCommon\Shared\QCommonShared.projitems" Label="Shared" />
+	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" />
+	
+	
+	<Target Name="CopyFiles" AfterTargets="DeployWIP">
+		<ItemGroup>
+			<UIFiles Include="bin\UI\**\*.*" />
+		</ItemGroup>
+		
+		<Exec Command="npm run build --prefix UI" />
+		
+		<Copy SourceFiles="@(UIFiles)" DestinationFiles="@(UIFiles->'$(DeployDir)\%(RecursiveDir)%(Filename)%(Extension)')" />
+	</Target>
+
+	<Target Name="SetupAttributes" BeforeTargets="BeforeBuild">
+        <XmlPoke XmlInputPath="$(PublishConfigurationPath)" Value="$([System.IO.File]::ReadAllText($(ProjectDir)/LongDescription.md))" Query="//LongDescription" />
+        <XmlPoke XmlInputPath="$(PublishConfigurationPath)" Value="$([System.IO.File]::ReadAllText($(ProjectDir)/ChangeLog.md))" Query="//ChangeLog" />
+		<XmlPoke XmlInputPath="$(PublishConfigurationPath)" Value="$(Version)" Query="//ModVersion/@Value" />
+    </Target>
+
+	<ItemGroup>
+	  <Compile Remove="UI\**" />
+	  <EmbeddedResource Remove="UI\**" />
+	  <None Remove="UI\**" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+		<Reference Include="Colossal.Collections">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Collections.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Colossal.Core">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Core.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Colossal.IO.AssetDatabase">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.IO.AssetDatabase.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Colossal.Localization">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Localization.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Colossal.Logging">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Logging.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Colossal.Mathematics">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.Mathematics.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Colossal.UI">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.UI.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Colossal.UI.Binding">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Colossal.UI.Binding.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Game">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Game.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Unity.Burst">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Unity.Burst.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Unity.Collections">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Unity.Collections.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Unity.Entities">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Unity.Entities.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Unity.InputSystem">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Unity.InputSystem.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="Unity.Mathematics">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\Unity.Mathematics.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="UnityEngine">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\UnityEngine.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+		<Reference Include="UnityEngine.IMGUIModule">
+		  <HintPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+		  <Private>False</Private>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Update="System">
+			<Private>False</Private>
+		</Reference>
+		<Reference Update="System.Core">
+			<Private>False</Private>
+		</Reference>
+		<Reference Update="System.Data">
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="$(ModPropsFile)" Link="Properties\Mod.props" />
+		<None Include="$(ModTargetsFile)" Link="Properties\Mod.targets" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Update="mscorlib">
+	    <Private>False</Private>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Update="System.Drawing">
+	    <Private>False</Private>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Update="System.IO.Compression.FileSystem">
+	    <Private>False</Private>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Update="System.Numerics">
+	    <Private>False</Private>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Update="System.Runtime.Serialization">
+	    <Private>False</Private>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Update="System.Xml">
+	    <Private>False</Private>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Update="System.Xml.Linq">
+	    <Private>False</Private>
+	  </Reference>
+	</ItemGroup>
+
+</Project>

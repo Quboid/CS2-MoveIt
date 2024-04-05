@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34607.119
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MoveIt", "MoveIt\MoveIt.csproj", "{5F36DE51-B349-4F45-AE76-CE229CB091AA}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "QCommonShared", "..\..\..\QCommon\Repo\Code\QCommon\QCommon\Shared\QCommonShared.shproj", "{CF555B78-7B30-44F4-9A5F-6C280293EC1F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5F36DE51-B349-4F45-AE76-CE229CB091AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F36DE51-B349-4F45-AE76-CE229CB091AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F36DE51-B349-4F45-AE76-CE229CB091AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F36DE51-B349-4F45-AE76-CE229CB091AA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1835ECD8-D291-4689-9360-9A4BD916781B}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\..\..\QCommon\Repo\Code\QCommon\QCommon\Shared\QCommonShared.projitems*{5f36de51-b349-4f45-ae76-ce229cb091aa}*SharedItemsImports = 5
+		..\..\..\QCommon\Repo\Code\QCommon\QCommon\Shared\QCommonShared.projitems*{cf555b78-7b30-44f4-9a5f-6c280293ec1f}*SharedItemsImports = 13
+	EndGlobalSection
+EndGlobal
