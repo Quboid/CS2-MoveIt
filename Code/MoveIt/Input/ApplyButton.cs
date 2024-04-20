@@ -77,8 +77,10 @@ namespace MoveIt.Input
                 }
             }
 
-            SelectActionBase action = (SelectActionBase)Queue.Current;
-            action.AddHovered(QKeyboard.Shift);
+            if (Queue.Current is SelectActionBase selectAction)
+            {
+                selectAction.AddHovered(QKeyboard.Shift);
+            }
             _Tool.ToolAction = ToolActions.Do;
         }
 

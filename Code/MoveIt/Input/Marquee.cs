@@ -30,6 +30,7 @@ namespace MoveIt.Input
         internal bool CheckIfMoved(float3 position)
         {
             if (m_HasMoved) return true;
+            if (position.Equals(default)) return false;
             if (position.Equals(m_StartPosition)) return false;
 
             Queue.Push(new SelectAction(QKeyboard.Shift));

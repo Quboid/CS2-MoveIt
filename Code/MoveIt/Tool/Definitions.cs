@@ -2,6 +2,8 @@
 using MoveIt.Managers;
 using MoveIt.Systems;
 using QCommonLib;
+using System.Collections.Generic;
+using System.Linq;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -110,6 +112,18 @@ namespace MoveIt.Tool
         /// Where sensitivity was last toggled, absolute
         /// </summary>
         // internal float3 m_sensitivityTogglePosAbs;
+
+        /// <summary>
+        /// Get the currently hovered entity, readonly. For other mods to access.
+        /// Entity.Null if nothing hovered.
+        /// </summary>
+        public Entity HoveredEntity => Hover.Entity;
+
+        /// <summary>
+        /// Get a hashset of the currently selected entities, readonly. For other mods to access.
+        /// Empty hashset if nothing selected.
+        /// </summary>
+        public HashSet<Entity> SelectedEntities => Selection.Entities.ToHashSet();
 
         /// <summary>
         /// Screen position where rotation started

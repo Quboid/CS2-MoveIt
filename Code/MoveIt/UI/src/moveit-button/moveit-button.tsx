@@ -20,11 +20,11 @@ const ToolBarTheme: Theme | any = getModule(
     "classes"
 );
 
-import iconOff from "./MoveIt_Off.png";
-import iconActive from "./MoveIt_Active.png";
+import iconOff from "../img/MoveIt_Off.svg";
+import iconActive from "../img/MoveIt_Active.svg";
 import styles from "../moveit.module.scss";
 
-export function toggle_ToolEnabled()
+function toggle_ToolEnabled()
 {
     console.log("MoveIt icon clicked");
     trigger(mod.id, 'MIT_EnableToggle');
@@ -36,7 +36,10 @@ export const MoveItButton : ModuleRegistryExtend = (Component) =>
         const { children, ...otherProps } = props || {};
         const MIT_ToolEnabled = useValue(MIT_ToolEnabled$);
 
-        const moveItIconSrc = MIT_ToolEnabled ? iconActive : iconOff;
+        let a = iconOff;
+        a = iconActive;
+
+        const moveItIconSrc = MIT_ToolEnabled ? "coui://ui-mods/images/MoveIt_Active.svg" : "coui://ui-mods/images/MoveIt_Off.svg";
         
         return (
             <>
