@@ -2,7 +2,6 @@
 using MoveIt.Actions;
 using MoveIt.Tool;
 using QCommonLib;
-using Unity.Entities;
 
 namespace MoveIt.Input
 {
@@ -13,26 +12,17 @@ namespace MoveIt.Input
 
         internal override void OnPress()
         {
+            m_Status = ButtonStatus.Down;
             if (_Tool.ToolState == ToolStates.Default)
             {
-                _Tool.Hover.OnPress = _Tool.Hover.Entity;
+                _Tool.Hover.OnPress = _Tool.Hover.Definition;
                 _Tool.m_ClickPositionAbs = _Tool.m_PointerPos;
 
-                if (_Tool.UseMarquee)
-                {
-                    if (!_Tool.Hover.IsSelected)
-                    {
-                        _Tool.ToolState = ToolStates.DrawingSelection;
-                        _Tool.m_Marquee = new(_Tool.m_PointerPos);
-                    }
-                }
-                else if (!_Tool.Hover.IsNull)
+                if (!_Tool.Hover.IsNull && !_Tool.UseMarquee)
                 {
                     ObjectClicked();
                 }
             }
-
-            //MIT.Log.Debug($"ApplyButton.OnPress ts:{_Tool.ToolState}");
         }
 
         internal override void OnClick()
@@ -41,76 +31,84 @@ namespace MoveIt.Input
             {
                 ObjectClicked();
             }
-            //MIT.Log.Debug($"ApplyButton.OnClick {Selection.Debug()}");
         }
 
         private void ObjectClicked()
         {
-            if (_Tool.ToolState != ToolStates.Default && _Tool.ToolState != ToolStates.DrawingSelection) return;
+            if (_Tool.ToolState != ToolStates.Default) return;
             if (_Tool.Hover.IsNull) return;
 
             _Tool.ToolState = ToolStates.Default;
-            _Tool.Hover.Moveable?.OnClick();
+            _Tool.Hover.MV?.OnClick();
 
-            //QLog.Debug($"ObjClick {_Tool.Hover} man:{_Tool.m_IsManipulateMode}");
-
-            if (_Tool.Manipulating && !_Tool.Hover.IsManipulatable)
+            if (_Tool.m_IsManipulateMode && !_Tool.Hover.IsManipulatable)
             {
                 MIT_ToolTipSystem.instance.Set($"Right-Click to exit Manipulation Mode", 1.5f);
                 return;
             }
 
-            if (_Tool.Hover.IsManipulatable && (_Tool.Manipulating || QKeyboard.Alt))
+            if (_Tool.IsManipulating && _Tool.Hover.IsManipulatable)
             {
-                if (!_Tool.Hover.IsSelected || Queue.Current is not SelectManipulateAction)
-                {
-                    Queue.Push(new SelectManipulateAction(QKeyboard.Shift, (_Tool.Hover.Moveable.m_Manipulatable & QTypes.Manipulate.Child) > 0));
-                }
-
                 _Tool.SetManipulationMode(true);
+                if (!_Tool.Hover.IsSelected)
+                {
+                    _Tool.Queue.Push(new SelectAction(true, QKeyboard.Shift, _Tool.Hover.MV.IsChild));
+                    _Tool.Queue.Do();
+                }
             }
             else
             {
-                if (!_Tool.Hover.IsSelected || Queue.Current is not SelectAction)
+                if (!_Tool.Hover.IsSelected || QKeyboard.Shift)
                 {
-                    Queue.Push(new SelectAction(QKeyboard.Shift));
+                    _Tool.Queue.Push(new SelectAction(false, QKeyboard.Shift));
+                    _Tool.Queue.Do();
                 }
             }
 
-            if (Queue.Current is SelectActionBase selectAction)
+            if (_Tool.Queue.Current is SelectAction selectAction)
             {
                 selectAction.AddHovered(QKeyboard.Shift);
             }
-            _Tool.ToolAction = ToolActions.Do;
+        }
+
+        internal override void OnDragStart()
+        {
+            if (_Tool.UseMarquee)
+            {
+                if (!_Tool.Hover.IsSelected)
+                {
+                    _Tool.ToolState = ToolStates.DrawingSelection;
+                    _Tool.m_Marquee = new(_Tool.m_PointerPos);
+                }
+            }
         }
 
         internal override void OnHold()
         {
-            if (_Tool.ToolState == ToolStates.Default && !_Tool.Hover.OnPress.Equals(Entity.Null))
+            if (m_Status == ButtonStatus.Down && _Tool.ToolState == ToolStates.Default && !_Tool.Hover.OnPress.IsNull)
             {
                 _Tool.StartMove();
             }
-            //MIT.Log.Debug($"ApplyButton.OnHold ts:{_Tool.ToolState}, prev:{_Tool.Hovered},");
         }
 
         internal override void OnHoldEnd()
         {
-            if (_Tool.ToolState == ToolStates.ApplyButtonHeld)
+            if (m_Status == ButtonStatus.Down && _Tool.ToolState == ToolStates.ApplyButtonHeld)
             {
                 _Tool.EndMove();
             }
-            //MIT.Log.Debug($"ApplyButton.OnHoldEnd ts:{_Tool.ToolState}");
         }
 
         internal override void OnRelease()
         {
-            _Tool.Hover.OnPress = Entity.Null;
+            m_Status = ButtonStatus.None;
+            _Tool.Hover.OnPress = new();
             if (_Tool.ToolState == ToolStates.DrawingSelection)
             {
                 _Tool.ToolState = ToolStates.Default;
-                _Tool.m_Marquee = null;
             }
-            //MIT.Log.Debug($"ApplyButton.OnRelease");
+            _Tool.m_Marquee?.Dispose();
+            _Tool.m_Marquee = null;
         }
     }
 }

@@ -18,21 +18,14 @@ namespace MoveIt
         internal void EnableIfPopulated()
         {
             UpdateForTTL();
-            if (_Text != string.Empty)
-            {
-                Enabled = true;
-            }
-            else
-            {
-                Enabled = false;
-            }
+
+            Enabled = _Text != string.Empty;
         }
 
         public void Set(string msg, float expires = 0)
         {
             _Text = msg;
-            _TTL = 0f;
-            if (expires > 0) _TTL = UnityEngine.Time.time + expires;
+            _TTL = (expires > 0) ? UnityEngine.Time.time + expires : 0f;
             Enabled = !msg.Equals(string.Empty);
         }
 

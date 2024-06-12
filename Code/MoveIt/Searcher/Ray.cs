@@ -1,6 +1,7 @@
 ﻿using Colossal.Collections;
 using Colossal.Entities;
 using Colossal.Mathematics;
+using MoveIt.Moveables;
 using MoveIt.Tool;
 using QCommonLib;
 using System;
@@ -17,7 +18,7 @@ namespace MoveIt.Searcher
     {
         internal NativeArray<Game.Common.RaycastResult> m_VanillaResults;
 
-        internal Ray(Filters flags, NativeArray<Game.Common.RaycastResult> vanillaResults, QTypes.Manipulate manipulate = QTypes.Manipulate.Normal) : base(flags, manipulate)
+        internal Ray(Filters flags, NativeArray<Game.Common.RaycastResult> vanillaResults, bool isManipulating = false) : base(flags, isManipulating)
         {
             m_VanillaResults = vanillaResults;
         }
@@ -41,6 +42,7 @@ namespace MoveIt.Searcher
 
             NativeList<Entity> results = new(Allocator.Temp);
 
+            // Non-network objects
             if ((m_Flags & Filters.AllObjects) != Filters.None)
             {
                 if (m_VanillaResults.Length != 0)
@@ -53,6 +55,7 @@ namespace MoveIt.Searcher
                 }
             }
 
+            // Segments
             if ((m_Flags & Filters.Segments) != Filters.None)
             {
                 if (m_VanillaResults.Length != 0)
@@ -65,31 +68,39 @@ namespace MoveIt.Searcher
                 }
             }
 
-            if ((m_Manipulation & QTypes.Manipulate.Child) == 0f && (m_Flags & Filters.Nodes) != Filters.None)
+            // Nodes
+            if (!m_IsManipulating && (m_Flags & Filters.Nodes) != Filters.None)
             {
                 SearcherNodeIterator iterator = default;
                 iterator.m_EntityList = new(Allocator.Temp);
                 iterator.m_SearchLine = line;
                 networkTree.Iterate(ref iterator);
 
+                //string msg = $"Results:{results.Length} Entities: {iterator.m_EntityList.Length} ";
                 for (int i = 0; i < iterator.m_EntityList.Length; i++)
                 {
+                    //msg += $" {iterator.m_EntityList[i].DX()}:{results.Contains(iterator.m_EntityList[i])}:{_Tool.EntityManager.HasComponent<Game.Net.Node>(iterator.m_EntityList[i])}";
                     if (!results.Contains(iterator.m_EntityList[i]) && _Tool.EntityManager.HasComponent<Game.Net.Node>(iterator.m_EntityList[i]))
                     {
+                        //msg += "!";
                         results.Add(iterator.m_EntityList[i]);
                     }
                 }
+                //if (results.Length > 0) QLog.Debug(msg);
                 iterator.Dispose();
             }
 
-            if ((m_Flags & Filters.ControlPoints) != Filters.None && (m_Manipulation & QTypes.Manipulate.Child) != 0f && _Tool.ControlPointManager.Any)
+            // Control Points
+            if ((m_Flags & Filters.ControlPoints) != Filters.None && m_IsManipulating && _Tool.ControlPointManager.Any)
             {
-                foreach (Components.MIT_ControlPoint data in _Tool.ControlPointManager)
+                foreach (Components.MIT_ControlPoint data in _Tool.ControlPointManager.GetAllData())
                 {
-                    if (!_Tool.Manipulation.Has(data.m_Segment)) continue;
+                    if (data.m_IsManipulatable != m_IsManipulating) continue;
+                    if (!_Tool.Selection.Has(new MVDefinition(Identity.Segment, data.m_Parent, data.m_IsManipulatable))) continue;
+
                     Circle2 circle = new(data.m_Diameter / 2, data.Position2D);
-                    float terrainHeight = _Tool.GetTerrainHeight(data.m_Position);
-                    Bounds1 bounds = new(terrainHeight - 0.1f, terrainHeight + 0.2f);
+                    Bounds1 bounds = new(data.m_Position.y - 0.1f, data.m_Position.y + 0.4f);
+                    //Overlays.Cylinder.Set("NodeBounds" + c++, circle, bounds);
 
                     if (QIntersect.DoesLineIntersectCylinder(line, circle, bounds, out _))
                     {
@@ -99,6 +110,7 @@ namespace MoveIt.Searcher
             }
 
             m_Results = results;
+            //if (m_Results.Length > 0) DebugDumpResults(true, $"vanilla:{m_VanillaResults.Length}, ");
         }
 
         private struct SearcherNodeIterator : INativeQuadTreeIterator<Entity, Game.Common.QuadTreeBoundsXZ>, IUnsafeQuadTreeIterator<Entity, Game.Common.QuadTreeBoundsXZ>, IDisposable
@@ -115,9 +127,8 @@ namespace MoveIt.Searcher
             {
                 if (!_Tool.IsValid(e)) return;
                 if (!_Tool.EntityManager.TryGetComponent(e, out Game.Net.Node node)) return;
-                if (!_Tool.EntityManager.TryGetComponent(e, out Game.Net.NodeGeometry geoData)) return;
 
-                Circle2 cylinderCircle = Moveables.Node.GetCircle(geoData);
+                Circle2 cylinderCircle = GetCircle(e, node);
                 Bounds1 cylinderHeight = new(node.m_Position.y - 0.1f, node.m_Position.y + 0.2f);
 
                 if (QIntersect.DoesLineIntersectCylinder(m_SearchLine, cylinderCircle, cylinderHeight, out List<float3> debug))
@@ -132,6 +143,15 @@ namespace MoveIt.Searcher
                     m_EntityList.Add(e);
                     return;
                 }
+            }
+
+            private readonly Circle2 GetCircle(Entity e, Game.Net.Node node)
+            {
+                if (_Tool.EntityManager.TryGetComponent(e, out Game.Net.NodeGeometry geoData))
+                {
+                    return MVNode.GetCircle(geoData);
+                }
+                return MVNode.GetCircle(node);
             }
 
             public void Dispose()
@@ -151,5 +171,36 @@ namespace MoveIt.Searcher
             handle = m_VanillaResults.Dispose(handle);
             return base.Dispose(handle);
         }
+
+
+        #region Debug
+
+        protected string DebugResults(bool full = false)
+        {
+            string msg = $"Results: {m_Results.Length}";
+            if (full)
+            {
+                for (int i = 0; i < m_Results.Length; i++)
+                {
+                    msg += $"\n    {m_Results[i].DX(true)}";
+                }
+            }
+            else
+            {
+                msg += "  ";
+                for (int i = 0; i < m_Results.Length; i++)
+                {
+                    msg += $"{m_Results[i].DX()}, ";
+                }
+            }
+            return msg;
+        }
+
+        protected void DebugDumpResults(bool full = false, string prefix = "")
+        {
+            QLog.Debug(prefix + DebugResults(full));
+        }
+
+        #endregion
     }
 }

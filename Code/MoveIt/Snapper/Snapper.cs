@@ -1,11 +1,8 @@
 ﻿using Colossal.Mathematics;
 using MoveIt.Actions;
 using MoveIt.Moveables;
-using MoveIt.Overlays;
 using MoveIt.Tool;
 using QCommonLib;
-using System.Collections.Generic;
-using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -60,21 +57,21 @@ namespace MoveIt.Snapper
             return msg;
         }
 
-        internal readonly Utils.IOverlay GetOverlay(OverlayFlags flags = OverlayFlags.None)
-        {
-            UnityEngine.Color c = new(0.9f, 0f, 0.3f, 0.8f);
-            switch (m_Type)
-            {
-                case SnapTypes.Point:
-                    return new Utils.Point(m_Point, c);
+        //internal readonly Utils.IOverlay GetOverlay(OverlayFlags flags = OverlayFlags.None)
+        //{
+        //    UnityEngine.Color c = new(0.9f, 0f, 0.3f, 0.8f);
+        //    switch (m_Type)
+        //    {
+        //        case SnapTypes.Point:
+        //            return new Utils.Point(m_Point, c);
 
-                case SnapTypes.Line:
-                    return new Utils.Line(m_Line, c);
+        //        case SnapTypes.Line:
+        //            return new Utils.Line(m_Line, c);
 
-                default:
-                    return new Utils.None();
-            }
-        }
+        //        default:
+        //            return new Utils.None();
+        //    }
+        //}
     }
 
     internal struct SnapResult
@@ -101,8 +98,7 @@ namespace MoveIt.Snapper
 
         protected readonly MIT _Tool = MIT.m_Instance;
         protected readonly TransformAction _Action;
-        protected Selection.Base Selection => _Tool.ActiveSelection;
-        protected List<Moveable> Moveables => Selection.GetObjectsToTransform();
+        protected Selection.SelectionBase Selection => _Tool.Selection;
         protected NativeList<SnapCandidate> _Candidates;
         protected SnapLookups _Lookups;
 
@@ -122,7 +118,7 @@ namespace MoveIt.Snapper
                 m_States = states,
                 m_Candidates = _Candidates.AsParallelWriter(),
                 m_Lookups = _Lookups,
-                m_IsManipulating = _Tool.Manipulating,
+                m_IsManipulating = _Tool.IsManipulating,
             };
 
             JobHandle findCandidatesHandle = findCandidatesJob.Schedule(states.Length, new());
@@ -146,7 +142,7 @@ namespace MoveIt.Snapper
                 m_Candidates = _Candidates,
                 m_Lookups = _Lookups,
                 m_Results = results.AsParallelWriter(),
-                m_IsManipulating = _Tool.Manipulating,
+                m_IsManipulating = _Tool.IsManipulating,
                 m_PointerPosition = _Tool.m_PointerPos,
                 m_OriginalPointerPosition = _Tool.m_ClickPositionAbs,
                 m_OriginalCenter = _Action.m_Center,
@@ -177,17 +173,17 @@ namespace MoveIt.Snapper
             return bestFound;
         }
 
-        internal HashSet<Utils.IOverlay> GetOverlays()
-        {
-            HashSet<Utils.IOverlay> result = new();
+        //internal HashSet<Overlays.OverlayManager> GetOverlays(Overlays.ToolFlags toolFlags)
+        //{
+        //    HashSet<Overlays.OverlayManager> result = new();
 
-            if (m_SnapType != SnapTypes.None)
-            {
-                result.Add(new Utils.Diamond(m_SnapPosition, 2f, OverlayFlags.Tool));
-            }
+        //    //if (m_SnapType != SnapTypes.None)
+        //    //{
+        //    //    result.Add(new Overlays.Diamond(m_SnapPosition, 2f, OverlayFlags.Tool));
+        //    //}
 
-            return result;
-        }
+        //    return result;
+        //}
 
         internal void DebugDump()
         {

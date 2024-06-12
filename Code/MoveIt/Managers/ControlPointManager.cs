@@ -4,60 +4,21 @@ using MoveIt.Moveables;
 using MoveIt.Tool;
 using QCommonLib;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Unity.Entities;
 using Unity.Mathematics;
 
 namespace MoveIt.Managers
 {
-    public enum CPStatus
-    {
-        None = 0,
-        Visible = 1,
-        Selected = 2,
-        Hovering = 4,
-    }
-
-    public struct CPDefinition
-    {
-        public Entity m_Segment;
-        public short m_CurveKey;
-
-        public CPDefinition(Entity node, Entity segment, short curveKey)
-        {
-            m_Segment = segment;
-            m_CurveKey = curveKey;
-        }
-
-        public CPDefinition(ControlPoint cp)
-        {
-            m_Segment = cp.m_Segment;
-            m_CurveKey = cp.m_CurveKey;
-        }
-
-        public CPDefinition(StateControlPoint scp)
-        {
-            m_Segment = scp.m_Segment;
-            m_CurveKey = scp.m_Curvekey;
-        }
-
-        public readonly override string ToString()
-        {
-            return $"s:{m_Segment.D()}:{m_CurveKey}";
-        }
-    }
-
-    public class ControlPointManager : IEnumerable<MIT_ControlPoint>
+    public class ControlPointManager
     {
         protected static readonly MIT _Tool = MIT.m_Instance;
 
         private EntityArchetype _ControlPointArchetype;
-        internal List<ControlPoint> m_ControlPoints;
 
-        internal bool Any => m_ControlPoints.Count > 0;
+        internal int Count => _Tool.Moveables.CountOf<MVControlPoint>();
+        internal bool Any => Count > 0;
 
         public ControlPointManager()
         {
@@ -66,195 +27,115 @@ namespace MoveIt.Managers
                 ComponentType.ReadWrite<Game.Rendering.CullingInfo>(),
                 ComponentType.ReadWrite<MIT_ControlPoint>()
             });
-
-            m_ControlPoints = new();
         }
 
-        public ControlPoint Factory(CPDefinition cpd)
+        private Entity CreateEntity(MVDefinition mvd)
         {
-            return Factory(cpd.m_Segment, cpd.m_CurveKey);
-        }
-
-        public ControlPoint Factory(Entity segment, short curveKey)
-        {
-            if (m_ControlPoints.Any(cp => cp.m_CurveKey == curveKey && cp.m_Segment == segment))
+            if (_Tool.Moveables.Any<MVControlPoint>(cp => mvd.Equals(cp) && DoesMVControlPointHaveEntity(cp)))
             {
-                ControlPoint result = m_ControlPoints.First(cp => cp.m_CurveKey == curveKey && cp.m_Segment == segment);
-                return result;
+                throw new Exception($"Trying to create ControlPoint entity but it already exists ({mvd})");
             }
 
             Entity e = _Tool.EntityManager.CreateEntity(_ControlPointArchetype);
 
-            float segmentWidth = Segment.GetDefaultWidth(segment);
-            Bezier4x3 curve = _Tool.EntityManager.GetComponentData<Game.Net.Curve>(segment).m_Bezier;
-            float3 position = curve.Get(curveKey);
+            Bezier4x3 curve = _Tool.EntityManager.GetComponentData<Game.Net.Curve>(mvd.m_Parent).m_Bezier;
+            float3 position = curve.Get(mvd.m_ParentKey);
 
-            Game.Net.Edge edge = _Tool.EntityManager.GetComponentData<Game.Net.Edge>(segment);
-            MIT_ControlPoint cpData = new(e, segment, (curveKey.IsNodeA() ? edge.m_Start : edge.m_End), position, math.max(segmentWidth / 4, 2f), curveKey);
-            _Tool.EntityManager.SetComponentData(e, cpData);
+            Game.Net.Edge edge = _Tool.EntityManager.GetComponentData<Game.Net.Edge>(mvd.m_Parent);
+            MIT_ControlPoint cpData = new(e, mvd.m_Parent, mvd.m_ParentKey, (mvd.m_ParentKey.IsNodeA() ? edge.m_Start : edge.m_End), position, Overlays.Overlay.CP_RADIUS * 2 /*math.max(segmentWidth / 4,  2f)*/, mvd.m_IsManipulatable);
             Game.Prefabs.PrefabRef prefabRef = new(Entity.Null);
-            _Tool.EntityManager.SetComponentData(e, prefabRef);
             Game.Rendering.CullingInfo culling = new()
             {
                 m_Bounds = new(cpData.m_Position - cpData.m_Diameter / 2, cpData.m_Position + cpData.m_Diameter / 2),
                 m_Radius = cpData.m_Diameter / 2
             };
 
-            ControlPoint cp = (ControlPoint)Moveable.Factory(e);
-            Add(cp);
-            return cp;
+            _Tool.EntityManager.SetComponentData(e, cpData);
+            _Tool.EntityManager.SetComponentData(e, prefabRef);
+            _Tool.EntityManager.SetComponentData(e, culling);
+
+            return e;
         }
 
-        public void Add(ControlPoint cp)
+        private static bool DoesMVControlPointHaveEntity(MVControlPoint cp)
         {
-            if (Has(cp.m_Entity)) throw new Exception($"ControlPoint for {cp.m_Entity.D()} already exists!");
-            m_ControlPoints.Add(cp);
-        }
-
-        public void RemoveFromList(ControlPoint cp)
-        {
-            m_ControlPoints.Remove(cp);
-        }
-
-        public void Clear()
-        {
-            while (m_ControlPoints.Count > 0)
-            {
-                m_ControlPoints[0].Dispose();
-            }
-
-            if (m_ControlPoints.Count > 0)
-            {
-                MIT.Log.Warning($"{m_ControlPoints.Count} control points still exist after cleanup!");
-            }
+            if (cp.m_Entity.Equals(Entity.Null)) MIT.Log.Debug($"CP {cp} has null entity");
+            if (!_Tool.EntityManager.Exists(cp.m_Entity)) MIT.Log.Debug($"CP {cp} has nonexistent entity");
+            if (cp.m_Entity.Equals(Entity.Null)) return false;
+            if (!_Tool.EntityManager.Exists(cp.m_Entity)) return false;
+            return true;
         }
 
         /// <summary>
-        /// Refresh CPs when the tool is activated, remove any that are not valid
+        /// Refresh CP map when the tool is activated, to ensure the Moveables exist and are up to date
         /// </summary>
         public void Refresh()
-        {
-            HashSet<ControlPoint> remove = new();
-            foreach (ControlPoint cp in m_ControlPoints)
-            {
-                if (!cp.Refresh())
-                {
-                    remove.Add(cp);
-                }
-            }
-
-            foreach (ControlPoint cp in remove)
-            {
-                cp.Dispose();
-            }
-        }
+        { }
 
         /// <summary>
         /// Update a control point's component data, if it exists
         /// </summary>
-        public void Update(CPDefinition cpd)
+        public void UpdateIfExists(MVDefinition mvd)
         {
-            if (!Has(cpd)) return;
+            if (!HasMoveable(mvd)) return;
 
-            ControlPoint cp = Get(cpd);
+            MVControlPoint cp = Get(mvd);
             cp.RefreshComponent();
         }
 
-        public bool Has(ControlPoint cp)
+        public bool HasMoveable(MVDefinition mvd)
         {
-            return m_ControlPoints.Contains(cp);
-        }
-
-        public bool Has(Entity e)
-        {
-            return m_ControlPoints.Any(cp => cp.m_Entity == e);
-        }
-
-        public bool Has(Entity seg, short curveKey)
-        {
-            return m_ControlPoints.Any(cp => cp.m_Segment == seg && cp.m_CurveKey == curveKey);
-        }
-
-        public bool Has(CPDefinition cpd)
-        {
-            return m_ControlPoints.Any(cp => cp.m_Segment == cpd.m_Segment && cp.m_CurveKey == cpd.m_CurveKey);
+            return _Tool.Moveables.Any<MVControlPoint>(cp => mvd.Equals(cp));
         }
 
         /// <summary>
-        /// Get the Moveable object from an existing control point entity
+        /// Get the MVControlPoint object from a MVDefinition struct
         /// </summary>
-        /// <param name="e">The existing control point entity</param>
+        /// <param name="mvd">The MVDefinition struct</param>
         /// <returns>The Control Point</returns>
-        public ControlPoint GetOrCreate(Entity e)
+        public MVControlPoint GetOrCreate(MVDefinition mvd)
         {
-            if (Has(e))
-            {
-                return Get(e);
-            }
-            return new(e);
+            if (HasMoveable(mvd)) return Get(mvd);
+
+            Entity e = CreateEntity(mvd);
+            mvd = new(Identity.ControlPoint, e, mvd.m_IsManipulatable, true, mvd.m_Parent, mvd.m_ParentKey);
+            MVControlPoint cp = _Tool.Moveables.Factory(mvd) as MVControlPoint;
+            return cp;
         }
 
         /// <summary>
-        /// Get the Moveable object from a ControlPointDefinition struct
+        /// Get the Moveable object from a MVDefinition struct only if it exists
         /// </summary>
-        /// <param name="cpd">The ControlPointDefinition struct</param>
+        /// <param name="mvd">The MVDefinition struct</param>
         /// <returns>The Control Point</returns>
-        public ControlPoint GetOrCreate(CPDefinition cpd)
+        public bool GetIfExists(MVDefinition mvd, out MVControlPoint cp)
         {
-            if (Has(cpd))
+            cp = null;
+            if (HasMoveable(mvd))
             {
-                return Get(cpd);
+                cp = Get(mvd);
+                return true;
             }
-            return Factory(cpd);
+            return false;
         }
 
-        /// <summary>
-        /// Get the Moveable object from a ControlPointDefinition struct if it already exists
-        /// </summary>
-        /// <param name="cpd">The ControlPointDefinition to look for</param>
-        /// <param name="cp">The Moveable if it exists</param>
-        /// <returns>Does this Control Point exist?</returns>
-        public bool TryGet(CPDefinition cpd, out ControlPoint cp)
+        internal Entity RecreateEntity(MVDefinition mvd)
         {
-            if (!Has(cpd.m_Segment, cpd.m_CurveKey))
-            {
-                cp = null;
-                return false;
-            }
-
-            cp = m_ControlPoints.First(cp => cp.m_Segment == cpd.m_Segment && cp.m_CurveKey == cpd.m_CurveKey);
-            return true;
+            return CreateEntity(mvd);
         }
 
-        public ControlPoint Get(Entity e)
+        public MVControlPoint Get(MVDefinition mvd)
         {
-            if (!Has(e)) throw new Exception($"Attempted to get ControlPoint {e.D()}, but doesn't exist");
+            if (!HasMoveable(mvd)) throw new Exception($"Attempted to get ControlPoint {mvd}, but doesn't exist");
 
-            return m_ControlPoints.First(cp => cp.m_Entity == e);
+            return _Tool.Moveables.First<MVControlPoint>(cp => mvd.Equals(cp));
         }
 
-        public ControlPoint Get(CPDefinition cpd)
-        {
-            if (!Has(cpd)) throw new Exception($"Attempted to get ControlPoint {cpd}, but doesn't exist");
-
-            return m_ControlPoints.First(cp => cp.m_Segment == cpd.m_Segment && cp.m_CurveKey == cpd.m_CurveKey);
-        }
-
-        public MIT_ControlPoint GetData(int index)
-        {
-            return GetData(m_ControlPoints[index]);
-        }
-
-        public MIT_ControlPoint GetData(Entity e)
-        {
-            return GetData(Get(e));
-        }
-
-        public MIT_ControlPoint GetData(ControlPoint mv)
+        public MIT_ControlPoint GetData(MVControlPoint mv)
         {
             try
             {
-                return new(mv.m_Entity, mv.m_Segment, mv.m_Node, mv.Transform.m_Position, mv.m_Diameter, mv.m_CurveKey);
+                return new(mv.m_Entity, mv.m_Parent, mv.m_ParentKey, mv.m_Node, mv.Transform.m_Position, mv.m_Diameter, mv.IsManipulatable);
             }
             catch (Exception e)
             {
@@ -263,53 +144,59 @@ namespace MoveIt.Managers
             return new();
         }
 
-        #region Enumeration
-        public IEnumerator<MIT_ControlPoint> GetEnumerator() => new Enumeration(this);
-        IEnumerator IEnumerable.GetEnumerator() => new Enumeration(this);
-        private class Enumeration : IEnumerator<MIT_ControlPoint>
+        public HashSet<MIT_ControlPoint> GetAllData()
         {
-            private int _Position = -1;
-            private readonly ControlPointManager _ControlPointManager;
-
-            public Enumeration(ControlPointManager cpm)
+            HashSet<MIT_ControlPoint> result = new();
+            foreach (var cp in _Tool.Moveables.GetAllOf<MVControlPoint>())
             {
-                _ControlPointManager = cpm;
+                result.Add(GetData(cp));
             }
-
-            public MIT_ControlPoint Current => _ControlPointManager.GetData(_Position);
-
-            object IEnumerator.Current => Current;
-
-            public void Dispose()
-            { }
-
-            public bool MoveNext()
-            {
-                _Position++;
-                return _Position < _ControlPointManager.m_ControlPoints.Count;
-            }
-
-            public void Reset()
-            {
-                _Position = -1;
-            }
+            return result;
         }
-        #endregion
+
+        public bool IsInUse(MVControlPoint cp)
+        {
+            MVDefinition mvd = cp.Definition;
+            if (_Tool.Hover.Is(mvd))        return true;
+            if (_Tool.Selection.Has(mvd))   return true;
+            if (_Tool.Selection.Has(cp.NodeDefinition))     return true;
+            if (_Tool.Selection.Has(cp.SegmentDefinition))  return true;
+            return false;
+        }
+
+        public void RemoveIfUnused(List<MVDefinition> mvds)
+        {
+            //string msg = $"CPM.RemoveIfUnused {cpds.Count}";
+            foreach (var mvd in mvds)
+            {
+                //msg += $"  {cpd}";
+                if (GetIfExists(mvd, out var cp))
+                {
+                    //msg += $"-E";
+                    if (cp.IsValid && IsInUse(cp)) continue;
+                    //msg += $"X";
+
+                    _Tool.Moveables.RemoveDo(cp);
+                }
+            }
+            //QLog.Debug(msg);
+        }
+
 
         internal string DebugControlPoints()
         {
             StringBuilder sb = new();
-            sb.AppendFormat("CPs:{0}", m_ControlPoints.Count);
-            foreach (ControlPoint cp in m_ControlPoints)
+            sb.AppendFormat("CPs:{0}", Count);
+            foreach (MVControlPoint cp in _Tool.Moveables.GetAllOf<MVControlPoint>())
             {
                 sb.AppendFormat(" {0}", cp.m_Entity.D());
             }
             return sb.ToString();
         }
 
-        internal void DebugDumpControlPoints()
+        internal void DebugDumpControlPoints(string prefix = "")
         {
-            QLog.Bundle("CPM", DebugControlPoints());
+            QLog.Bundle("CPM", prefix + DebugControlPoints());
         }
     }
 }

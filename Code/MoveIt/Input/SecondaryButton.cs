@@ -1,7 +1,6 @@
 ﻿using Game.Input;
 using MoveIt.Actions;
 using MoveIt.Tool;
-using Unity.Entities;
 using UnityEngine.InputSystem;
 
 namespace MoveIt.Input
@@ -13,6 +12,7 @@ namespace MoveIt.Input
 
         internal override void OnPress()
         {
+            m_Status = ButtonStatus.Down;
             if (_Tool.ToolState == ToolStates.Default)
             {
                 _Tool.m_MouseStartX = Mouse.current.position.x.ReadValue();
@@ -23,26 +23,15 @@ namespace MoveIt.Input
         {
             if (_Tool.ToolState != ToolStates.Default) return;
 
-            if (_Tool.Manipulating)
+            if (_Tool.IsManipulating && _Tool.Selection.Count == 0)
             {
-                EndManipulationAction action = new();
-                Queue.Push(action);
-                action.Do();
+                _Tool.SetManipulationMode(false);
 
                 return;
             }
 
-            if (Queue.Current is not SelectAction)
-            {
-                SelectAction action = new();
-                Queue.Push(action);
-            }
-            else
-            {
-                _Tool.Selection.Clear();
-                _Tool.ControlPointManager.Clear();
-                Queue.Invalidate();
-            }
+            _Tool.Queue.Push(new SelectAction());
+            _Tool.Queue.Do();
 
             _Tool.CreationPhase = CreationPhases.Cleanup;
 
@@ -52,9 +41,9 @@ namespace MoveIt.Input
         internal override void OnHold()
         {
             //MIT.Log.Debug($"SecondaryButton.OnDrag");
-            if (_Tool.ToolState == ToolStates.Default)
+            if (m_Status == ButtonStatus.Down && _Tool.ToolState == ToolStates.Default)
             {
-                if (_Tool.Hover.LastValid == Entity.Null) return;
+                if (_Tool.Hover.LastValid.IsNull) return;
 
                 _Tool.StartRotation();
             }
@@ -63,7 +52,7 @@ namespace MoveIt.Input
         internal override void OnHoldEnd()
         {
             //MIT.Log.Debug($"SecondaryButton.OnHoldEnd ts:{ToolState}");
-            if (Queue.Current is TransformAction ta && _Tool.ToolState == ToolStates.SecondaryButtonHeld)
+            if (m_Status == ButtonStatus.Down && _Tool.Queue.Current is TransformAction ta && _Tool.ToolState == ToolStates.SecondaryButtonHeld)
             {
                 _Tool.EndRotation();
             }
@@ -71,6 +60,7 @@ namespace MoveIt.Input
 
         internal override void OnRelease()
         {
+            m_Status = ButtonStatus.None;
             //MIT.Log.Debug($"SecondaryButton.OnRelease");
         }
     }

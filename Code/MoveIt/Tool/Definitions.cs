@@ -1,5 +1,6 @@
 ﻿using Game.Tools;
 using MoveIt.Managers;
+using MoveIt.Selection;
 using MoveIt.Systems;
 using QCommonLib;
 using System.Collections.Generic;
@@ -36,12 +37,18 @@ namespace MoveIt.Tool
         Redo
     }
 
-    internal enum SelectionGridModes
+    public enum InteractionFlags
     {
-        Unprocessed,
-        Ignore,
-        Add,
-        Remove
+        None                = 0,
+        Hovering            = 1,
+        Selected            = 2,
+        Moving              = 4,
+        Deselect            = 8,
+        Tool                = 16,
+        Static              = 32,
+        ParentHovering      = 64,
+        ParentSelected      = 128,
+        ParentManipulating  = 256,
     }
 
     public partial class MIT : ObjectToolBaseSystem
@@ -51,19 +58,30 @@ namespace MoveIt.Tool
         internal ControlPointManager ControlPointManager;
         internal HotkeyManager HotkeyManager;
         internal HoverManager Hover;
+        internal MoveablesManager Moveables;
+        internal QueueManager Queue;
 
-        internal MIT_OverlaySystem m_OverlaySystem;
         internal MIT_VanillaOverlaySystem m_VanillaOverlaySystem;
         internal MIT_RemoveOverriddenSystem m_RemoveOverriddenSystem;
         internal MIT_RenderSystem m_RenderSystem;
         internal MIT_UISystem m_UISystem;
+        internal MIT_PostToolSystem m_PostToolSystem;
+        //internal MIT_HoverSystem m_HoverSystem;
+        internal Overlays.MIT_OverlaySystem m_OverlaySystem;
+
+        internal Game.Common.RaycastSystem m_RaycastSystem;
 
         public static QLoggerCO Log { get => _Log; }
-        private readonly static QLoggerCO _Log = new(true, "", true);
+        private readonly static QLoggerCO _Log = new(false, "", true);
 
-        private Game.Simulation.TerrainSystem _TerrainSystem;
-        private Game.Common.RaycastSystem _RaycastSystem;
-        internal Game.Rendering.PhotoModeRenderSystem m_PhotoModeRenderSystem;
+        private ToolBaseSystem _PreviousTool = null;
+
+        /// <summary>
+        /// Check if the UI, including Move It panel, has focus (raycast hits it)
+        /// If hit, is set to 3 but immediately decremented each frame so first frames after leaving UI doesn't register
+        /// </summary>
+        internal bool UIHasFocus => _UIHasFocusStep != 0;
+        private short _UIHasFocusStep;
 
         internal JobHandle m_InputDeps;
 
@@ -73,13 +91,23 @@ namespace MoveIt.Tool
         internal EntityQuery m_TempQuery;
         internal EntityQuery m_ControlPointQuery;
 
-        internal int RotationDirection => Mod.Settings.InvertRotation ? 1 : -1;
-        internal Input.Marquee m_Marquee;
+        // Options
+        internal bool ShowDebugPanel    => Mod.Settings.ShowDebugPanel;
+        internal bool HideMoveItIcon    => Mod.Settings.HideMoveItIcon;
+        internal bool ExtraDebugLogging => Mod.Settings.ExtraDebugLogging;
+        internal int RotationDirection  => Mod.Settings.InvertRotation ? 1 : -1;
 
-        internal bool m_MarqueeSelect;
-        public bool Manipulating => _IsManipulateMode;
-        private bool _IsManipulateMode;
-        internal bool UseMarquee => m_MarqueeSelect && !_IsManipulateMode;
+        /// <summary>
+        /// Get the currently hovered entity, readonly. For other mods to access.
+        /// Entity.Null if nothing hovered.
+        /// </summary>
+        public Entity HoveredEntity => Hover.Definition.m_Entity;
+
+        /// <summary>
+        /// Get a hashset of the currently selected entities, readonly. For other mods to access.
+        /// Empty hashset if nothing selected.
+        /// </summary>
+        public HashSet<Entity> SelectedEntities => Selection.Definitions.Select(mvd => mvd.m_Entity).ToHashSet();
 
         /// <summary>
         /// Raycaster which only hits terrain
@@ -92,13 +120,10 @@ namespace MoveIt.Tool
             internal Entity m_Entity;
         }
 
-        public ToolStates ToolState { get; set; }
-
-        public ToolActions ToolAction { get; set; }
-
+        public ToolStates ToolState         { get; set; }
+        public ToolActions ToolAction       { get; set; }
         public CreationPhases CreationPhase { get; set; }
-
-        public ApplyMode BaseApplyMode { get => applyMode; set => applyMode = value; }
+        public ApplyMode BaseApplyMode      { get => applyMode; set => applyMode = value; }
 
         /// <summary>
         /// Where the current drag started, relative to selection center
@@ -114,18 +139,6 @@ namespace MoveIt.Tool
         // internal float3 m_sensitivityTogglePosAbs;
 
         /// <summary>
-        /// Get the currently hovered entity, readonly. For other mods to access.
-        /// Entity.Null if nothing hovered.
-        /// </summary>
-        public Entity HoveredEntity => Hover.Entity;
-
-        /// <summary>
-        /// Get a hashset of the currently selected entities, readonly. For other mods to access.
-        /// Empty hashset if nothing selected.
-        /// </summary>
-        public HashSet<Entity> SelectedEntities => Selection.Entities.ToHashSet();
-
-        /// <summary>
         /// Screen position where rotation started
         /// </summary>
         internal float m_MouseStartX;
@@ -134,8 +147,25 @@ namespace MoveIt.Tool
         /// </summary>
         internal float3 m_PointerPos;
 
-        public Selection.Main Selection = new();
-        public Selection.Manipulating Manipulation = new();
-        public Selection.Base ActiveSelection => _IsManipulateMode ? Manipulation : Selection;
+        // Selection modes
+        internal Input.Marquee m_Marquee;
+        internal bool m_MarqueeSelect;
+        internal bool UseMarquee => m_MarqueeSelect && !m_IsManipulateMode;
+
+        /// <summary>
+        /// Is Manipulation Mode active, including quick-selection (player holding Alt)?
+        /// </summary>
+        public bool IsManipulating => m_IsManipulateMode || (QKeyboard.Alt && ToolState == ToolStates.Default);
+        /// <summary>
+        /// Is Manipulation Mode active, NOT including quick-selection?
+        /// </summary>
+        internal bool m_IsManipulateMode;
+
+        // Selections
+        public SelectionBase Selection { get => _Selection; set => _Selection = value; }
+        private SelectionBase _Selection = null;
+        public bool m_SelectionDirty = true;
+
+        internal const float TERRAIN_UPDATE_MARGIN = 16f;
     }
 }

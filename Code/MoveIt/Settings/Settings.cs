@@ -16,22 +16,39 @@ namespace MoveIt.Settings
         public const string groupGeneral = "General Settings";
 
         public Settings(IMod mod) : base(mod)
-        {
-            Marquee = MIT.m_Instance.m_MarqueeSelect;
-        }
+        { }
 
         [SettingsUISection(tabMain, groupGeneral)]
         public bool InvertRotation { get => InvertRotationHack; set { InvertRotationHack = value; InvertRotationHackInv = !value; } }
-        [SettingsUISection(tabMain, groupGeneral)]
-        public bool Marquee
-        {
-            get => MIT.m_Instance.m_MarqueeSelect;
-            set => MIT.m_Instance.m_MarqueeSelect = value;
-        }
         [SettingsUIHidden]
         public bool InvertRotationHack { get; set; } = false;
         [SettingsUIHidden]
         public bool InvertRotationHackInv { get; set; } = false;
+
+        [SettingsUISection(tabMain, groupGeneral)]
+        public bool ShowDebugPanel { get; set; } = false;
+
+        [SettingsUISection(tabMain, groupGeneral)]
+        public bool HideMoveItIcon { get; set; } = false;
+
+        [SettingsUISection(tabMain, groupGeneral)]
+        public bool ExtraDebugLogging
+        {
+            get => _ExtraDebugLogging;
+            set
+            {
+                _ExtraDebugLogging = value;
+                if (MIT.Log is not null) MIT.Log.IsDebug = value;
+            }
+        }
+        private bool _ExtraDebugLogging = true;
+
+        [SettingsUISection(tabMain, groupGeneral)]
+        [SettingsUIButton]
+        public bool SaveLogsToDesktopBtn
+        {
+            set => SaveLogs.ToDesktop();
+        }
 
         public override void SetDefaults()
         { }

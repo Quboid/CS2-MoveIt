@@ -1,15 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using MoveIt.Moveables;
+using MoveIt.Tool;
+using QCommonLib;
 using System;
-using Unity.Collections;
-using Unity.Entities;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
+using Unity.Collections;
+using Unity.Entities;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using QCommonLib;
-using MoveIt.Tool;
-using MoveIt.Moveables;
-using Unity.Jobs;
 
 namespace MoveIt.QAccessor
 {
@@ -25,60 +25,26 @@ namespace MoveIt.QAccessor
         public FieldInfo m_FieldInfo;
     }
 
-    public interface IQEntity
-    {
-#pragma warning disable IDE1006 // Naming Styles
-        public Entity m_Entity { get; }
-        public bool m_IsTopLevel { get; }
-#pragma warning restore IDE1006 // Naming Styles
-
-        public float3 Position { get; }
-        public float Angle { get; }
-        public quaternion Rotation { get; }
-
-        public bool MoveBy(StateDataWrapper data, float3 newPosition, float3 delta);
-        public bool Move(StateDataWrapper data, float3 newPosition, float3 delta);
-        public bool RotateBy(StateDataWrapper data, float delta, ref Matrix4x4 matrix, float3 origin);
-        public bool RotateTo(StateDataWrapper data, float angle, ref Matrix4x4 matrix, float3 origin);
-
-        public T GetComponent<T>() where T : unmanaged, IComponentData;
-        public bool TryGetComponent<T>(out T component) where T : unmanaged, IComponentData;
-        public DynamicBuffer<T> GetBuffer<T>(bool isReadOnly = false) where T : unmanaged, IBufferElementData;
-        public bool TryGetBuffer<T>(out DynamicBuffer<T> buffer, bool isReadOnly = false) where T : unmanaged, IBufferElementData;
-    }
-
     /// <summary>
     /// Primary accessor for entities, including children
     /// </summary>
     public struct QObject : IDisposable, INativeDisposable
     {
-        internal readonly EntityManager EM => World.DefaultGameObjectInjectionWorld.EntityManager;
+        private readonly EntityManager Manager => World.DefaultGameObjectInjectionWorld.EntityManager;
 
-        public Entity m_Entity;
-        public QEntity m_Parent;
-        public QNode m_ParentNode;
-        public QControlPoint m_ParentCP;
-        public QSegment m_ParentSegment;
+        internal Entity m_Entity;
+        internal QEntity m_Parent;
         internal NativeList<QEntity> m_Children;
-        internal NativeList<QNode> m_ChildNodes;
-        internal NativeList<QControlPoint> m_ChildCPs;
-        internal NativeList<QSegmentChild> m_ChildSegments;
-        internal QTypes.Identity m_Identity;
+        internal Identity m_Identity;
 
-        internal QObject(Entity e, SystemBase system, QTypes.Identity identity = QTypes.Identity.None)
+        internal QObject(Entity e, SystemBase system, Identity identity = Identity.None)
         {
             if (e == Entity.Null) throw new ArgumentNullException("Creating QObject with null entity");
 
             m_Entity = e;
-            m_Identity = identity == QTypes.Identity.None ? QTypes.GetEntityIdentity(e) : identity;
-            m_Parent = new(e, system, m_Identity);
-            m_ParentNode = new(e, system, m_Identity);
-            m_ParentCP = new(e, system, m_Identity);
-            m_ParentSegment = new(e, system, m_Identity);
+            m_Identity = identity == Identity.None ? QTypes.GetEntityIdentity(e) : identity;
+            m_Parent = new(system, e, m_Identity);
             m_Children = new(0, Allocator.Persistent);
-            m_ChildNodes = new(0, Allocator.Persistent);
-            m_ChildCPs = new(0, Allocator.Persistent);
-            m_ChildSegments = new(0, Allocator.Persistent);
 
             var subEntities = GetSubEntities(e, m_Identity);
 
@@ -90,177 +56,70 @@ namespace MoveIt.QAccessor
 
                     if (system.EntityManager.HasComponent<Game.Net.ConnectionLane>(subEntities[i])) continue;
 
-                    QTypes.Identity subType = QTypes.GetEntityIdentity(subEntities[i]);
-                    switch (subType)
-                    {
-                        case QTypes.Identity.Segment:
-                            m_ChildSegments.Add(new(subEntities[i], system, subType));
-                            break;
-
-                        case QTypes.Identity.ControlPoint:
-                            m_ChildCPs.Add(new(subEntities[i], system, subType, false));
-                            break;
-
-                        case QTypes.Identity.Node:
-                            m_ChildNodes.Add(new(subEntities[i], system, subType, false));
-                            break;
-
-                        default:
-                            m_Children.Add(new(subEntities[i], system, subType, false));
-                            break;
-                    }
+                    Identity subType = QTypes.GetEntityIdentity(subEntities[i]);
+                    m_Children.Add(new(system, subEntities[i], subType));
                 }
             }
-
-            //DebugDumpAll();
         }
-
-        public readonly IQEntity Parent => m_Identity switch
-        {
-            QTypes.Identity.Node => m_ParentNode,
-            QTypes.Identity.ControlPoint => m_ParentCP,
-            QTypes.Identity.Segment => m_ParentSegment,
-            _ => m_Parent,
-        };
 
         public void Dispose()
         {
-            DisposeElements();
-
-            m_ChildCPs.Dispose();
             m_Children.Dispose();
-            m_ChildNodes.Dispose();
-            m_ChildSegments.Dispose();
         }
 
         public JobHandle Dispose(JobHandle handle)
         {
-            DisposeElements();
-
-            handle = m_ChildCPs.Dispose(handle);
             handle = m_Children.Dispose(handle);
-            handle = m_ChildNodes.Dispose(handle);
-            handle = m_ChildSegments.Dispose(handle);
             return handle;
         }
 
-        private void DisposeElements()
-        {
-            if (m_ChildNodes.IsCreated)
-            {
-                for (int i = 0; i < m_ChildNodes.Length; i++)
-                {
-                    m_ChildNodes[i].Dispose();
-                }
-            }
-            if (m_ChildCPs.IsCreated)
-            {
-                for (int i = 0; i < m_ChildCPs.Length; i++)
-                {
-                    m_ChildCPs[i].Dispose();
-                }
-            }
-            if (m_ChildSegments.IsCreated)
-            {
-                for (int i = 0; i < m_ChildSegments.Length; i++)
-                {
-                    m_ChildSegments[i].Dispose();
-                }
-            }
-        }
-
         #region Transforming
-        public void Transform(StateDataWrapper data, float3 position, float angle, bool move, bool rotate)
+        public void Transform(State state, float3 position, quaternion rotation, bool move, bool rotate)
         {
-            if (move || rotate) MoveTo(data, position);
-            if (rotate) RotateTo(data, angle);
+            if (move || rotate) MoveTo(state, position);
+            if (rotate) RotateTo(state, rotation);
         }
 
-        public void MoveTo(StateDataWrapper data, float3 newPosition)
+        public void MoveTo(State state, float3 newPosition)
         {
             //QLog.Debug($"QObj.MoveTo {m_Entity.D()} {newPosition.DX()}  CPs:{m_ChildCPs.Length}, nodes:{m_ChildNodes.Length}, other:{m_Children.Length}");
-            MoveBy(data, newPosition, newPosition - Parent.Position);
+            MoveBy(state, newPosition, newPosition - m_Parent.Position);
         }
 
-        public void MoveBy(StateDataWrapper data, float3 newPosition, float3 delta)
+        public void MoveBy(State state, float3 newPosition, float3 delta)
         {
             //QLog.Debug($"QObj.MoveBy {m_Entity.D()} {delta.DX()}  CPs:{m_ChildCPs.Length}, nodes:{m_ChildNodes.Length}, other:{m_Children.Length}");
-            Parent.MoveBy(data, newPosition, delta);
-
-            for (int i = 0; i < m_ChildCPs.Length; i++)
-            {
-                m_ChildCPs[i].MoveBy(data, newPosition, delta);
-            }
-
-            for (int i = 0; i < m_ChildNodes.Length; i++)
-            {
-                m_ChildNodes[i].MoveBy(data, newPosition, delta);
-            }
-
-            for (int i = 0; i < m_ChildSegments.Length; i++)
-            {
-                m_ChildSegments[i].MoveBy(data, newPosition,delta);
-            }
+            m_Parent.MoveBy(state, newPosition, delta);
 
             for (int i = 0; i < m_Children.Length; i++)
             {
-                m_Children[i].MoveBy(data, newPosition, delta);
+                m_Children[i].MoveBy(state, newPosition, delta);
             }
         }
 
-        public void RotateTo(StateDataWrapper data, float newAngle)
+        public void RotateTo(State state, quaternion newRotation)
         {
-            float delta = newAngle - Parent.Angle;
-            float3 origin = Parent.Position;
+            float delta = newRotation.Y() - m_Parent.Angle;
+            float3 origin = m_Parent.Position;
             GetMatrix(delta, origin, out Matrix4x4 matrix);
 
-            Parent.RotateTo(data, newAngle, ref matrix, origin);
-
-            for (int i = 0; i < m_ChildNodes.Length; i++)
-            {
-                m_ChildNodes[i].RotateBy(data, delta, ref matrix, origin);
-            }
-
-            for (int i = 0; i < m_ChildCPs.Length; i++)
-            {
-                m_ChildCPs[i].RotateBy(data, delta, ref matrix, origin);
-            }
-
-            for (int i = 0; i < m_ChildSegments.Length; i++)
-            {
-                m_ChildSegments[i].RotateBy(data, delta, ref matrix, origin);
-            }
+            m_Parent.RotateTo(state, newRotation, ref matrix, origin);
 
             for (int i = 0; i < m_Children.Length; i++)
             {
-                m_Children[i].RotateBy(data, delta, ref matrix, origin);
+                m_Children[i].RotateBy(state, delta, ref matrix, origin);
             }
         }
 
         public readonly void UpdateAll()
         {
-            EM.AddComponent<Game.Common.Updated>(m_Entity);
-            EM.AddComponent<Game.Common.BatchesUpdated>(m_Entity);
+            Manager.AddComponent<Game.Common.Updated>(m_Entity);
+            Manager.AddComponent<Game.Common.BatchesUpdated>(m_Entity);
 
-            foreach (var child in m_ChildNodes)
-            {
-                EM.AddComponent<Game.Common.Updated>(child.m_Entity);
-                EM.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
-            }
-            foreach (var child in m_ChildCPs)
-            {
-                EM.AddComponent<Game.Common.Updated>(child.m_Entity);
-                EM.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
-            }
-            foreach (var child in m_ChildSegments)
-            {
-                EM.AddComponent<Game.Common.Updated>(child.m_Entity);
-                EM.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
-            }
             foreach (var child in m_Children)
             {
-                EM.AddComponent<Game.Common.Updated>(child.m_Entity);
-                EM.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
+                Manager.AddComponent<Game.Common.Updated>(child.m_Entity);
+                Manager.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
             }
         }
 
@@ -272,24 +131,24 @@ namespace MoveIt.QAccessor
         #endregion
 
         #region Load children
-        private static List<Entity> GetSubEntities(Entity e, QTypes.Identity identity)
+        private static List<Entity> GetSubEntities(Entity e, Identity identity)
         {
-            List<Entity> entities = IterateSubEntities(e, e, 0, identity);
+            List<Entity> entities = IterateSubEntities(e, e, 0, identity, identity);
 
             return entities;
         }
 
-        private static List<Entity> IterateSubEntities(Entity top, Entity e, int depth, QTypes.Identity identity)
+        private static List<Entity> IterateSubEntities(Entity top, Entity e, int depth, Identity identity, Identity parentIdentity)
         {
             if (depth > 3) throw new Exception($"Moveable.IterateSubEntities depth ({depth}) too deep for {top.D()}/{e.D()}");
             depth++;
 
             List<QReferenceBufferType> referenceBufferTypes = identity switch
             {
-                QTypes.Identity.ControlPoint    => new(),
-                QTypes.Identity.Node            => new(),
-                QTypes.Identity.Segment         => new(),
-                _ => GetReferenceTypes()
+                Identity.ControlPoint   => new(),
+                Identity.Node           => GetReferenceTypesNode(),
+                Identity.Segment        => new(),
+                _ => GetReferenceTypesOther()
             };
 
             List<Entity> entities = new();
@@ -302,15 +161,11 @@ namespace MoveIt.QAccessor
                     foreach (IBufferElementData element in buffer)
                     {
                         Entity sub = (Entity)type.m_FieldInfo.GetValue(element);
-                        if (!entities.Contains(sub))
+                        if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub))
                         {
                             entities.Add(sub);
-                            entities.AddRange(IterateSubEntities(top, sub, depth, QTypes.Identity.None));
+                            entities.AddRange(IterateSubEntities(top, sub, depth, Identity.None, parentIdentity));
                         }
-                        //else
-                        //{
-                        //    QLog.Debug($"Duplicate subEntity found: {sub.D()}");
-                        //}
                     }
                 }
             }
@@ -318,7 +173,29 @@ namespace MoveIt.QAccessor
             return entities;
         }
 
-        private static List<QReferenceBufferType> GetReferenceTypes()
+        private static bool IsValidChild(Identity parentIdentity, Entity e)
+        {
+            switch (parentIdentity)
+            {
+                case Identity.Node:
+                    EntityManager EM = World.DefaultGameObjectInjectionWorld.EntityManager;
+                    if (EM.HasComponent<Game.Objects.Attached>(e)) return true;
+                    return false;
+
+                default:
+                    return true;
+            }
+        }
+
+        private static List<QReferenceBufferType> GetReferenceTypesNode()
+        {
+            return new()
+            {
+                new() { tParentComponent = typeof(Game.Objects.SubObject),          m_FieldInfo = GetEntityReferenceField(typeof(Game.Objects.SubObject)) },
+            };
+        }
+
+        private static List<QReferenceBufferType> GetReferenceTypesOther()
         {
             return new()
             {
@@ -363,74 +240,46 @@ namespace MoveIt.QAccessor
             return field;
         }
 
-        public readonly T GetComponent<T>() where T : unmanaged, IComponentData
-        {
-            return Parent.GetComponent<T>();
-        }
-
         public readonly bool TryGetComponent<T>(out T component) where T : unmanaged, IComponentData
         {
-            return Parent.TryGetComponent<T>(out component);
-        }
-
-        public readonly DynamicBuffer<T> GetBuffer<T>(bool isReadOnly = false) where T : unmanaged, IBufferElementData
-        {
-            return Parent.GetBuffer<T>(isReadOnly);
+            return m_Parent.TryGetComponent<T>(out component);
         }
 
         public readonly bool TryGetBuffer<T>(out DynamicBuffer<T> buffer, bool isReadOnly = false) where T : unmanaged, IBufferElementData
         {
-            return Parent.TryGetBuffer<T>(out buffer, isReadOnly);
+            return m_Parent.TryGetBuffer<T>(out buffer, isReadOnly);
         }
         #endregion
 
         public readonly override string ToString()
         {
-            return "Parent:" + m_Entity.D() + ", children: " + (m_Children.IsCreated ? m_Children.Length : "Not Created!");
+            return $"{m_Identity}/{m_Entity.DX()}  Children: {(m_Children.IsCreated ? m_Children.Length : "Not Created!")}";
         }
 
-        internal void DebugDumpAll()
+
+        internal readonly string DebugFullObject(bool forceAll = false)
         {
             StringBuilder sb = new();
-            sb.AppendFormat("Parent: {0}, children: {1}, nodes: {2}, CPs: {3}, segs:{4}", m_Entity.D(),
-                m_Children.IsCreated ? m_Children.Length : "Not Created!", 
-                m_ChildNodes.IsCreated ? m_ChildNodes.Length : "Not Created!", 
-                m_ChildCPs.IsCreated ? m_ChildCPs.Length : "Not Created!",
-                m_ChildSegments.IsCreated ? m_ChildSegments.Length : "Not Created!");
+            sb.AppendFormat("{0}", this);
 
             if (m_Children.IsCreated)
             {
-                for (int i = 0; i < m_Children.Length; i++)
+                int max = forceAll ? m_Children.Length : math.min(m_Children.Length, 20);
+                for (int i = 0; i < max; i++)
                 {
-                    sb.AppendFormat("\n    {0}:{1}", i, m_Children[i].m_Entity.DX(true));
+                    sb.AppendFormat("\n    {0}: {1}", i, m_Children[i].m_Entity.DX(true));
+                }
+                if (!forceAll && max < m_Children.Length)
+                {
+                    sb.AppendFormat("\n    {0} more truncated", m_Children.Length - max);
                 }
             }
+            return sb.ToString();
+        }
 
-            if (m_ChildNodes.IsCreated)
-            {
-                for (int i = 0; i < m_ChildNodes.Length; i++)
-                {
-                    sb.AppendFormat("\n    {0}:{1}", i, m_ChildNodes[i].m_Entity.DX(true));
-                }
-            }
-
-            if (m_ChildCPs.IsCreated)
-            {
-                for (int i = 0; i < m_ChildCPs.Length; i++)
-                {
-                    sb.AppendFormat("\n    {0}:{1}", i, m_ChildCPs[i].m_Entity.DX(true));
-                }
-            }
-
-            if (m_ChildSegments.IsCreated)
-            {
-                for (int i = 0; i < m_ChildSegments.Length; i++)
-                {
-                    sb.AppendFormat("\n    {0}:{1}", i, m_ChildSegments[i].m_Entity.DX(true));
-                }
-            }
-
-            QLog.Debug(sb.ToString());
+        internal readonly void DebugDumpFullObject(bool forceAll = false, string prefix = "")
+        {
+            QLog.Debug(prefix + DebugFullObject(forceAll));
         }
     }
 }

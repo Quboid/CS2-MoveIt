@@ -1,6 +1,7 @@
 ﻿using Game.Prefabs;
-using Game.Tools;
 using MoveIt.Actions;
+using MoveIt.Managers;
+using MoveIt.Moveables;
 using QCommonLib;
 using System;
 using Unity.Collections;
@@ -9,37 +10,30 @@ using Unity.Jobs;
 
 namespace MoveIt.Tool
 {
-    public partial class MIT : ObjectToolBaseSystem
+    public partial class MIT : Game.Tools.ObjectToolBaseSystem
     {
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
             m_InputDeps = base.OnUpdate(inputDeps);
-            ClearDebugOverlays();
+            //ClearDebugOverlays();
 
             if (!m_HasFocus) return inputDeps;
+            UpdateUIHasFocus();
 
-            NativeArray<Game.Common.RaycastResult> vanillaRaycastResults = _RaycastSystem.GetResult(m_ToolRaycastSystem);
-            
+            if (m_SelectionDirty && Selection is not null)
+            {
+                Selection.CalculateCenter();
+                m_SelectionDirty = false;
+            }
+
             m_PointerPos = m_RaycastTerrain.HitPosition;
 
-            QTypes.Manipulate f = QTypes.Manipulate.Parent | (_IsManipulateMode ? QTypes.Manipulate.Child : QTypes.Manipulate.Normal);
-            Searcher.Ray searcher = new(Searcher.Filters.All, vanillaRaycastResults, f);
-            (Entity e, float d)[] RaycastResults = searcher.OnLine(m_RaycastTerrain.Line, m_PointerPos);
-
-            if (RaycastResults.Length > 0)
-            {
-                Hover.Process(RaycastResults[0].e);
-            }
-            else
-            {
-                Hover.Process(Entity.Null);
-            }
+            Hover.Process(m_ToolRaycastSystem);
 
             m_ApplyAction.Update();
             m_SecondaryAction.Update();
             HotkeyManager.ProcessHotkeys();
 
-            //MIT_Tooltip.instance.Set("");
             switch (ToolState)
             {
                 case ToolStates.Default:
@@ -83,12 +77,11 @@ namespace MoveIt.Tool
                     }
             }
 
-            Queue.FireAction(ToolAction);
-
-            //MIT_Tooltip.instance.Set($"{Selection.Count}/{Selection.FullSelection.Count}, {Manipulation.Count}/{Manipulation.FullSelection.Count}");
+            Queue.FireAction();
 
             ManageCreation(Queue.Current);
 
+            //DebugDumpSelections();
 
             return m_InputDeps;
         }

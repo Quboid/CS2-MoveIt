@@ -13,7 +13,7 @@ namespace MoveIt.Searcher
 {
     internal class Marquee : Base
     {
-        internal Marquee(Filters flags, QTypes.Manipulate manipulate = QTypes.Manipulate.Normal) : base(flags, manipulate) { }
+        internal Marquee(Filters flags, bool isManipulating) : base(flags, isManipulating) { }
 
         /// <summary>
         /// Run the marquee search
@@ -40,6 +40,7 @@ namespace MoveIt.Searcher
 
             NativeList<Entity> results = new(Allocator.Temp);
 
+            // Non-network objects
             if ((m_Flags & Filters.AllObjects) != Filters.None)
             {
                 SearcherIterator iterator = default;
@@ -59,6 +60,7 @@ namespace MoveIt.Searcher
                 iterator.Dispose();
             }
 
+            // Networks
             if ((m_Flags & Filters.AllNets) != Filters.None)
             {
                 SearcherIterator iterator = default;
@@ -81,10 +83,12 @@ namespace MoveIt.Searcher
                 iterator.Dispose();
             }
 
-            if ((m_Flags & Filters.ControlPoints) != Filters.None && (m_Manipulation & QTypes.Manipulate.Child) != 0f && _Tool.ControlPointManager.Any)
+            // Control Points
+            if ((m_Flags & Filters.ControlPoints) != Filters.None && m_IsManipulating && _Tool.ControlPointManager.Any)
             {
-                foreach (Components.MIT_ControlPoint data in _Tool.ControlPointManager)
+                foreach (Components.MIT_ControlPoint data in _Tool.ControlPointManager.GetAllData())
                 {
+                    if (data.m_IsManipulatable != m_IsManipulating) continue;
                     Circle2 circle = new(data.m_Diameter / 2, data.Position2D);
                     if (MathUtils.Intersect(rect, circle))
                     {
@@ -121,11 +125,12 @@ namespace MoveIt.Searcher
             {
                 if (!_Tool.IsValid(e)) return;
                 if (!MathUtils.Intersect(m_SearchOuterBounds, bounds.m_Bounds.xz)) return;
+                if (m_EntityList.Length >= (Selection.SelectionBase.MAX_SELECTION_SIZE * 2)) return;
 
                 QAccessor.QObjectSimple obj = new(e, _Tool);
-                var prefab = obj.GetComponent<Game.Prefabs.PrefabRef>().m_Prefab;
+                var prefab = _Tool.EntityManager.GetComponentData<Game.Prefabs.PrefabRef>(e).m_Prefab;
 
-                if (obj.m_Identity == QTypes.Identity.Building)
+                if (obj.m_Identity == Identity.Building)
                 {
                     Quad2 objRect = CalculateBuildingCorners(ref obj, prefab);
 
@@ -154,11 +159,11 @@ namespace MoveIt.Searcher
                     return;
                 }
 
-                if (obj.m_Identity == QTypes.Identity.Node)
+                if (obj.m_Identity == Identity.Node)
                 {
-                    if (!_Tool.EntityManager.TryGetComponent(e, out Game.Net.NodeGeometry geoData)) return;
+                    if (!_Tool.EntityManager.TryGetComponent(e, out Game.Net.Node node)) return;
 
-                    Circle2 circle = Moveables.Node.GetCircle(geoData);
+                    Circle2 circle = GetCircle(e, node);
 
                     switch (m_Type)
                     {
@@ -248,8 +253,8 @@ namespace MoveIt.Searcher
                 int2 lotSize = _Tool.EntityManager.GetComponentData<Game.Prefabs.BuildingData>(prefab).m_LotSize;
                 float offX = lotSize.x * 4;
                 float offZ = lotSize.y * 4;
-                float2 position = obj.Parent.Position.XZ();
-                quaternion q = obj.Parent.Rotation;
+                float2 position = obj.m_Parent.Position.XZ();
+                quaternion q = obj.m_Parent.Rotation;
 
                 Quad2 result = new(
                     RotateAroundPivot(position, q, new(-offX, 0, -offZ)),
@@ -263,6 +268,15 @@ namespace MoveIt.Searcher
             {
                 float3 newPos = math.mul(q, offset);
                 return position + new float2(newPos.x, newPos.z);
+            }
+
+            private readonly Circle2 GetCircle(Entity e, Game.Net.Node node)
+            {
+                if (_Tool.EntityManager.TryGetComponent(e, out Game.Net.NodeGeometry geoData))
+                {
+                    return Moveables.MVNode.GetCircle(geoData);
+                }
+                return Moveables.MVNode.GetCircle(node);
             }
 
             public void Dispose()

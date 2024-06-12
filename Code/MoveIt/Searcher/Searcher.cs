@@ -57,13 +57,13 @@ namespace MoveIt.Searcher
         private static Game.Net.SearchSystem _NetSearch;
 
         internal Filters m_Flags;
-        internal QTypes.Manipulate m_Manipulation;
+        internal bool m_IsManipulating;
         internal NativeList<Entity> m_Results;
 
-        internal Base(Filters flags, QTypes.Manipulate manipulate = QTypes.Manipulate.Normal)
+        internal Base(Filters flags, bool isManipulating)
         {
             m_Flags = flags;
-            m_Manipulation = manipulate;
+            m_IsManipulating = isManipulating;
         }
 
         internal (Entity e, float d)[] CalculateDistances(float3 center)
@@ -71,12 +71,12 @@ namespace MoveIt.Searcher
             (Entity e, float d)[] data = new (Entity e, float d)[m_Results.Length];
             for (int i = 0; i < m_Results.Length; i++)
             {
-                QAccessor.QObject obj = new(m_Results[i], _Tool);
-                float distance = obj.Parent.Position.DistanceXZ(center);
+                QAccessor.QObjectSimple obj = new(m_Results[i], _Tool);
+                float distance = obj.m_Parent.Position.DistanceXZ(center);
                 data[i] = (m_Results[i], distance);
             }
             m_Results.Dispose();
-            var result = data.OrderBy(pair => pair.d).ToArray();// .ToDictionary(pair => pair.e, pair => pair.d);
+            var result = data.OrderBy(pair => pair.d).ToArray();
             //DebugDumpCalculateDistance(result);
             return result;
         }
@@ -103,7 +103,7 @@ namespace MoveIt.Searcher
         {
             (int b, int p, int n, int s, int u) count = (0, 0, 0, 0, 0);
 
-            _Tool.AddDebugBounds(bounds, Overlays.Colors.GetForced(Overlays.OverlayFlags.Unselect));
+            //_Tool.AddDebugBounds(bounds, Overlays.Colors.GetForced(Overlays.OverlayFlags.Deselect));
 
             StringBuilder sb = new();
             sb.AppendFormat("Nearby entities: {0}", list.Count);

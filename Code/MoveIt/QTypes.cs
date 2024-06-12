@@ -2,75 +2,122 @@
 
 namespace MoveIt
 {
+    /// <summary>
+    /// The type of object that a Moveable, State, or QAccessor is for
+    /// </summary>
+    public enum Identity
+    {
+        None,
+        Building,
+        ControlPoint,
+        Node,
+        Other,
+        Plant,
+        Segment,
+        NetLane,
+        Extension,
+        ServiceUpgrade,
+        Prop,
+        Decal,
+        Invalid
+    }
+
+    /// <summary>
+    /// Whether a Moveable or State refers to a normal vanilla object or something managed by Move It
+    /// </summary>
+    public enum ObjectType
+    {
+        None,
+        Normal,
+        Managed
+    }
+
     public class QTypes
     {
-        public enum Identity
+        public static bool IsManipulationPredict(Identity identity, bool isToolManipulating)
         {
-            None,
-            Building,
-            ControlPoint,
-            Node,
-            Other,
-            Plant,
-            Roundabout,
-            Segment,
-            SubEntity,
-            Invalid
+            if (identity == Identity.Segment || identity == Identity.NetLane || identity == Identity.ControlPoint)
+            {
+                return isToolManipulating;
+            }
+
+            return false;
         }
 
-        public enum ObjectType
-        {
-            None,
-            Normal,
-            Managed
-        }
-
-        public enum Manipulate
-        {
-            Normal = 1,
-            Parent = 2,
-            Child = 4,
-            All = 7,
-        }
+        public static string GetIdentityCode(Identity identity) => identity switch
+            {
+                Identity.None           => "##",
+                Identity.Building       => "BL",
+                Identity.ControlPoint   => "CP",
+                Identity.Node           => "ND",
+                Identity.Other          => "**",
+                Identity.Plant          => "PL",
+                Identity.Segment        => "SG",
+                Identity.NetLane        => "LN",
+                Identity.Extension      => "XT",
+                Identity.ServiceUpgrade => "SU",
+                Identity.Prop           => "PR",
+                Identity.Decal          => "DE",
+                Identity.Invalid        => "??",
+                _ => throw new System.NotImplementedException(),
+            };
 
         public static Identity GetEntityIdentity(Entity e)
         {
-            EntityManager EM = World.DefaultGameObjectInjectionWorld.EntityManager;
+            EntityManager manager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
             if (e.Equals(Entity.Null) ||
-                EM.HasComponent<Game.Common.Deleted>(e) ||
-                EM.HasComponent<Game.Common.Terrain>(e))
+                manager.HasComponent<Game.Common.Deleted>(e) ||
+                manager.HasComponent<Game.Common.Terrain>(e))
             {
                 return Identity.Invalid;
             }
 
-            if (EM.HasComponent<Game.Objects.Plant>(e))
+            if (manager.HasComponent<Game.Objects.Plant>(e))
             {
                 return Identity.Plant;
             }
-            else if (EM.HasComponent<Game.Buildings.Building>(e))
+            else if (manager.HasComponent<Game.Buildings.Extension>(e))
+            {
+                return Identity.Extension;
+            }
+            else if (manager.HasComponent<Game.Buildings.ServiceUpgrade>(e))
+            {
+                return Identity.ServiceUpgrade;
+            }
+            else if (manager.HasComponent<Game.Buildings.Building>(e))
             {
                 return Identity.Building;
             }
-            else if (EM.HasComponent<Game.Buildings.Extension>(e))
+            else if (manager.HasComponent<Game.Net.Edge>(e))
             {
-                return Identity.Building;
+                if (manager.HasComponent<Game.Net.EdgeGeometry>(e))
+                {
+                    return Identity.Segment;
+                }
+                else
+                {
+                    return Identity.NetLane;
+                }
             }
-            else if (EM.HasComponent<Game.Net.Edge>(e))
-            {
-                return Identity.Segment;
-            }
-            else if (EM.HasComponent<Game.Net.Node>(e))
+            else if (manager.HasComponent<Game.Net.Node>(e))
             {
                 return Identity.Node;
             }
-            else if (EM.HasComponent<Components.MIT_ControlPoint>(e))
+            else if (manager.HasComponent<Components.MIT_ControlPoint>(e))
             {
                 return Identity.ControlPoint;
             }
-            else if (EM.HasComponent<Game.Objects.Static>(e) && EM.HasComponent<Game.Objects.NetObject>(e))
+            else if (manager.HasComponent<Game.Objects.ObjectGeometry>(e))
             {
-                return Identity.Roundabout;
+                if (manager.HasComponent<Game.Objects.Surface>(e))
+                {
+                    return Identity.Prop;
+                }
+                else
+                {
+                    return Identity.Decal;
+                }
             }
             else
             {

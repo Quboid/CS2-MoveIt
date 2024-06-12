@@ -26,12 +26,13 @@ namespace MoveIt.Managers
             _KeyListener.RegisterKeyAction(KeyCode.M, EventModifiers.None, QKeyListenerContexts.Default, KeyHandler_Activate);
             _KeyListener.RegisterKeyAction(KeyCode.M, EventModifiers.None, QKeyListenerContexts.InTool, KeyHandler_Deactivate);
             _KeyListener.RegisterKeyAction(KeyCode.M, EventModifiers.Control, QKeyListenerContexts.InTool, KeyHandler_ToggleMarquee);
-            _KeyListener.RegisterKeyAction(KeyCode.M, EventModifiers.Alt, QKeyListenerContexts.InTool, KeyHandler_ToggleManipulate);
+            _KeyListener.RegisterKeyAction(KeyCode.M, EventModifiers.Alt, QKeyListenerContexts.InTool, KeyHandler_ToggleManipulationMode);
             _KeyListener.RegisterKeyAction(KeyCode.Z, EventModifiers.Control, QKeyListenerContexts.InTool, KeyHandler_Undo);
             _KeyListener.RegisterKeyAction(KeyCode.Z, EventModifiers.Control | EventModifiers.Shift, QKeyListenerContexts.InTool, KeyHandler_Redo);
             _KeyListener.RegisterKeyAction(KeyCode.D, EventModifiers.Control, QKeyListenerContexts.InTool, KeyHandler_DebugFreeze);
             _KeyListener.RegisterKeyAction(KeyCode.D, EventModifiers.Control | EventModifiers.Shift, QKeyListenerContexts.InTool, KeyHandler_DebugClear);
             _KeyListener.RegisterKeyAction(KeyCode.D, EventModifiers.Alt, QKeyListenerContexts.InTool, KeyHandler_ClearSelection);
+            _KeyListener.RegisterKeyAction(KeyCode.L, EventModifiers.Control, QKeyListenerContexts.InTool, KeyHandler_DejankNodes);
         }
 
         ~HotkeyManager()
@@ -41,17 +42,17 @@ namespace MoveIt.Managers
 
         internal bool ProcessHotkeys()
         {
-            if (_Tool.ToolState == ToolStates.Default && _Tool.ActiveSelection.Exists)
+            if (_Tool.ToolState == ToolStates.Default && _Tool.Selection.Any)
             {
                 if (ProcessKeyMovement(out float3 direction, out float _))
                 {
-                    if (Queue.Current is not TransformKeyAction)
+                    if (_Tool.Queue.Current is not TransformKeyAction)
                     {
                         TransformKeyAction ta = new();
-                        Queue.Push(ta);
+                        _Tool.Queue.Push(ta);
                     }
 
-                    TransformKeyAction tka = Queue.Current as TransformKeyAction;
+                    TransformKeyAction tka = _Tool.Queue.Current as TransformKeyAction;
                     tka.Process(direction);
 
                     return true;
@@ -111,12 +112,12 @@ namespace MoveIt.Managers
 
         public void KeyHandler_ToggleMarquee()
         {
-            _Tool.SetSelectionMode();
+            _Tool.ToggleSelectionMode();
         }
 
-        public void KeyHandler_ToggleManipulate()
+        public void KeyHandler_ToggleManipulationMode()
         {
-            _Tool.SetManipulationMode();
+            _Tool.ToggleManipulationMode();
         }
 
         public void KeyHandler_DebugFreeze()
@@ -126,15 +127,18 @@ namespace MoveIt.Managers
 
         public void KeyHandler_DebugClear()
         {
-            _Tool.m_OverlaySystem.DebugClear();
             _Tool.m_RenderSystem.Clear();
         }
         
         public void KeyHandler_ClearSelection()
         {
-            _Tool.Selection.Clear();
-            _Tool.ControlPointManager.Clear();
-            Queue.Invalidate();
+            _Tool.Queue.Push(new DeselectAllAction());
+            _Tool.Queue.Do();
+        }
+
+        public void KeyHandler_DejankNodes()
+        {
+            _Tool.DejankNodes();
         }
 
         public void KeyHandler_Undo()

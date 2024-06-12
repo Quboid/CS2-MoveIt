@@ -1,12 +1,16 @@
 ﻿using Colossal.Mathematics;
 using MoveIt.Moveables;
 using QCommonLib;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 
 namespace MoveIt.Snapper
 {
+//#if USE_BURST
+//    [BurstCompile]
+//#endif
     internal struct EvaluateCandidatesJob : IJobFor
     {
         public NativeArray<State> m_OldStates;

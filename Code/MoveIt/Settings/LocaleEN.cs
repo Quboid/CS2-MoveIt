@@ -23,11 +23,20 @@ namespace MoveIt.Settings
 
                 { m_Settings.GetOptionGroupLocaleID(Settings.groupGeneral), $"General Options | {Mod.MOD_NAME} {Mod.Version}" },
 
-                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Marquee)), "Marquee Selection" },
-                { m_Settings.GetOptionDescLocaleID(nameof(Settings.Marquee)), "Select objects by click-and-dragging a selection box. Hot-key: Control+M" },
-
                 { m_Settings.GetOptionLabelLocaleID(nameof(Settings.InvertRotation)), "Invert Rotation" },
                 { m_Settings.GetOptionDescLocaleID(nameof(Settings.InvertRotation)), "Set rotation direction to vanilla CS2 relocate. If unticked, use CS1 Move It's direction." },
+
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.ShowDebugPanel)), "Show Debug Panel" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.ShowDebugPanel)), "Show a panel with technical output to help track down problems." },
+
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.HideMoveItIcon)), "Hide Move It Icon" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.HideMoveItIcon)), "If you're having issues with Move It crashing, try hiding the icon. Enable or disable Move It with the M key." },
+
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.ExtraDebugLogging)), "Extended Debug Logging" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.ExtraDebugLogging)), "If you're having issues with Move It crashing, try hiding the icon. Enable or disable Move It with the M key." },
+
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.SaveLogsToDesktopBtn)), "Save Logs To Desktop" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.SaveLogsToDesktopBtn)), "Save a zip file to your desktop with logs for the game and mods for submitting with bug reports. Note: includes your Windows username, Steam ID, system specifications, and timezone." },
             };
         }
 

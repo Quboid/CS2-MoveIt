@@ -2,6 +2,8 @@
 using MoveIt.Tool;
 using QCommonLib;
 using System.Diagnostics;
+using Unity.Mathematics;
+using UnityEngine.InputSystem;
 
 namespace MoveIt.Input
 {
@@ -11,10 +13,11 @@ namespace MoveIt.Input
 
         protected readonly int DragThreshold = 250;
 
-        internal ProxyAction Action { get; set; }
-        internal long m_PressedTime;
-
-
+        protected ProxyAction Action { get; set; }
+        protected long m_PressedTime;
+        protected ButtonStatus m_Status     = ButtonStatus.None;
+        protected float2 m_PressedPosition  = float.MaxValue;
+        protected bool m_IsDragging         = false;
 
         internal bool Enabled
         {
@@ -34,9 +37,13 @@ namespace MoveIt.Input
 
         internal void Update()
         {
-            if (m_PressedTime == 0 && Action.IsPressed())
+            if (_Tool.UIHasFocus) return;
+
+            if (m_PressedTime == 0 && Action.WasPressedThisFrame())
             {
                 m_PressedTime = Stopwatch.GetTimestamp();
+                m_PressedPosition = Mouse.current.position.ReadValue();
+                m_IsDragging = false;
                 OnPress();
             }
 
@@ -47,6 +54,12 @@ namespace MoveIt.Input
                 if (!Action.IsPressed())
                 {
                     m_PressedTime = 0;
+
+                    if (m_IsDragging)
+                    {
+                        OnDragEnd();
+                        m_IsDragging = false;
+                    }
 
                     if (elapsed < DragThreshold)
                     {
@@ -59,9 +72,26 @@ namespace MoveIt.Input
 
                     OnRelease();
                 }
-                else if (elapsed >= DragThreshold)
+                else 
                 {
-                    OnHold();
+                    if (!m_IsDragging)
+                    {
+                        if (math.distance(Mouse.current.position.ReadValue(), m_PressedPosition) > 4f)
+                        {
+                            m_IsDragging = true;
+                            OnDragStart();
+                        }
+                    }
+
+                    if (m_IsDragging)
+                    {
+                        OnDrag();
+                    }
+
+                    if (elapsed >= DragThreshold)
+                    {
+                        OnHold();
+                    }
                 }
             }
         }
@@ -72,23 +102,44 @@ namespace MoveIt.Input
         internal abstract void OnPress();
 
         /// <summary>
-        /// Input button has been released, fired for every press regardless of length (fires after OnClick() and OnHoldEnd())
+        /// Input button has been released, fired for every press regardless of length (fires after OnClick and OnHoldEnd)
         /// </summary>
         internal abstract void OnRelease();
 
         /// <summary>
-        /// Input button is pressed for less than 250ms, fired after release within this time-frame
+        /// Input button is pressed for less than 250ms, fired after release within this time-frame (after OnDragEnd, instead of OnHoldEnd, before OnRelease)
         /// </summary>
         internal abstract void OnClick();
 
         /// <summary>
-        /// Input button has been held for at least 250ms, fired every frame
+        /// Input button is being held and has moved since press, fired once (before OnHold)
+        /// </summary>
+        internal virtual void OnDragStart() { }
+
+        /// <summary>
+        /// Input button is being held and has moved since press, fired every frame (before OnHold)
+        /// </summary>
+        internal virtual void OnDrag() { }
+
+        /// <summary>
+        /// Input button was being held and had moved since press, has now been released, fired once (before OnClick, OnHoldEnd, and OnRelease)
+        /// </summary>
+        internal virtual void OnDragEnd() { }
+
+        /// <summary>
+        /// Input button has been held for at least 250ms, fired every frame (after OnDrag)
         /// </summary>
         internal abstract void OnHold();
 
         /// <summary>
-        /// Input button was held for at least 250ms, fired upon release
+        /// Input button was held for at least 250ms, fired upon release (after OnDragEnd, instead of OnClick, before OnRelease)
         /// </summary>
         internal abstract void OnHoldEnd();
+
+        protected enum ButtonStatus
+        {
+            None,
+            Down,
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Colossal.Mathematics;
 using MoveIt.Actions;
+using MoveIt.Tool;
 using QCommonLib;
 using System.Collections.Generic;
 using Unity.Entities;
@@ -10,12 +11,16 @@ namespace MoveIt.Input
 {
     internal class Marquee
     {
+        protected static readonly MIT _Tool = MIT.m_Instance;
+
         internal float3 m_StartPosition;
         internal Quad3 m_SelectArea;
         internal Quad3 m_LastSelectArea;
         internal HashSet<Entity> m_Entities;
         internal Bounds3 m_LastBounds;
         internal bool m_HasMoved;
+
+        private readonly Overlays.OverlayMarquee _Overlay;
 
         internal Marquee(float3 position)
         {
@@ -25,15 +30,17 @@ namespace MoveIt.Input
             m_Entities = null;
             m_LastBounds = new(float.MaxValue, float.MaxValue);
             m_HasMoved = false;
+
+            _Overlay = Overlays.OverlayMarquee.HandlerFactory(2);
         }
 
         internal bool CheckIfMoved(float3 position)
         {
             if (m_HasMoved) return true;
-            if (position.Equals(default)) return false;
             if (position.Equals(m_StartPosition)) return false;
 
-            Queue.Push(new SelectAction(QKeyboard.Shift));
+            _Tool.Queue.Push(new SelectAction(false, QKeyboard.Shift));
+            _Tool.Queue.Do();
             m_HasMoved = true;
             return true;
         }
@@ -41,6 +48,7 @@ namespace MoveIt.Input
         internal bool Update(float3 position)
         {
             if (!m_HasMoved) return false;
+            if (position.Equals(default)) return false;
 
             m_LastSelectArea = m_SelectArea;
             m_SelectArea.a = m_StartPosition;
@@ -71,12 +79,19 @@ namespace MoveIt.Input
                 m_SelectArea.d = m_SelectArea.a + dotDown * down;
             }
 
+            _Overlay.Update(m_SelectArea);
+
             return true;
         }
 
         internal Bounds3 GetBounds()
         {
             return new(m_SelectArea.Min(), m_SelectArea.Max());
+        }
+
+        internal void Dispose()
+        {
+            _Overlay.Dispose();
         }
     }
 }

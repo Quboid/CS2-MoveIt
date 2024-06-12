@@ -1,7 +1,6 @@
-﻿using Colossal.Mathematics;
-using MoveIt.Managers;
+﻿using Colossal.IO.AssetDatabase.Internal;
+using Colossal.Mathematics;
 using MoveIt.Moveables;
-using MoveIt.Overlays;
 using MoveIt.Tool;
 using QCommonLib;
 using System;
@@ -17,24 +16,34 @@ namespace MoveIt.Actions
 {
     internal class TransformState : ActionState
     {
-        internal QNativeArray<State> m_States;
+        internal NativeArray<State> m_States;
         internal float3 m_MoveDelta = 0f;
         internal float m_AngleDelta = 0f;
         internal bool m_IsNew = false;
 
         internal int Count => m_States.Length;
 
-        internal TransformState(int length, bool isNew = false)
+        internal TransformState(int length, bool isNew)
         {
-            m_States = new QNativeArray<State>(length, Allocator.Persistent);
+            m_States = new NativeArray<State>(length, Allocator.Persistent);
             m_IsNew = isNew;
         }
 
-        public override void Dispose() => m_States.Dispose();
+        public override void Dispose()
+        {
+            if (m_States.IsCreated)
+            {
+                for (int i = 0; i < m_States.Length; i++)
+                {
+                    m_States[i].Dispose();
+                }
+            }
+            m_States.Dispose();
+        }
 
         public override string ToString()
         {
-            return $"[TrState:{(m_IsNew ? "New" : "Old")}]";
+            return $"[TrState:{(m_IsNew ? "New" : "Old")},#{m_States.Length}]";
         }
     }
 
@@ -75,8 +84,6 @@ namespace MoveIt.Actions
         internal TransformState m_New;
         internal TransformState m_Active;
 
-        private readonly Dictionary<Moveable, int> m_StateMap;
-
         public float AngleDelta
         {
             get => m_Active.m_AngleDelta;
@@ -103,16 +110,16 @@ namespace MoveIt.Actions
         {
             QAccessor.QLookup.Reset();
 
-            m_StateMap = new();
+            HashSet<MVDefinition> fullDefinitions = _Tool.Selection.GetObjectsToTransformFull();
+            HashSet<Moveable> fullSelection = new();
+            fullDefinitions.ForEach(mvd => fullSelection.Add(_Tool.Moveables.GetOrCreate(mvd)));
 
-            List<Moveable> fullSelection = _Tool.ActiveSelection.GetObjectsToTransformFull();
-            m_Old = new(fullSelection.Count);
+            m_Old = new(fullSelection.Count, false);
             m_New = new(fullSelection.Count, true);
             m_Active = m_New;
 
-            Bounds3 bounds = _Tool.ActiveSelection.GetTotalBounds();
-            m_UpdateArea = new(bounds.min.x, bounds.min.y, bounds.max.x, bounds.max.y);
-            m_Center = _Tool.ActiveSelection.Center;
+            m_UpdateArea = _Tool.Selection.GetTotalBounds().Expand(MIT.TERRAIN_UPDATE_MARGIN);
+            m_Center = _Tool.Selection.Center;
 
             int c = 0;
             foreach (Moveable mv in fullSelection)
@@ -121,14 +128,13 @@ namespace MoveIt.Actions
 
                 m_Old.m_States[c] = new(mv, _Tool);
                 m_New.m_States[c] = new(mv, _Tool);
-                m_StateMap.Add(mv, c);
                 c++;
             }
 
             m_Snapper = new(this);
 
             //m_Snapper.DebugDump();
-            //DebugDumpStates($"Ctor", showOld:true, showNew:false);
+            DebugDumpStates($"TransformAction.Ctor {_Tool.Selection.Name} ", showOld:true, showNew:false);
         }
 
         ~TransformAction()
@@ -145,9 +151,9 @@ namespace MoveIt.Actions
             float3 newMoveDelta = MoveDelta;
             float newAngleDelta = AngleDelta;
 
-            Bounds3 bounds = _Tool.ActiveSelection.GetTotalBounds();
-            m_UpdateArea.xy = math.min(m_UpdateArea.xy, bounds.xz.min);
-            m_UpdateArea.zw = math.max(m_UpdateArea.zw, bounds.xz.max);
+            QAccessor.QLookup.Update(_Tool);
+
+            m_UpdateArea = _Tool.Selection.GetTotalBounds().Expand(MIT.TERRAIN_UPDATE_MARGIN);
 
             m_Snapper.m_SnapType = Snapper.SnapTypes.None;
 
@@ -210,13 +216,12 @@ namespace MoveIt.Actions
 
             for (int i = 0; i < m_Old.Count; i++)
             {
-                //if (!CanActOn(m_Old.m_States[i])) continue;
-                //if (_IsSegmentMove && m_Old.m_States[i].m_Identity != QTypes.Identity.Segment) continue;
-
                 State old = m_Old.m_States[i];
 
                 float3 position = (float3)matrix.MultiplyPoint(m_Old.m_States[i].m_Position - m_Center);
-                float angle = (m_Old.m_States[i].m_Angle + AngleDelta + 360) % 360;
+                float3 oldAngles = m_Old.m_States[i].m_Rotation.ToEulerDegrees();
+                quaternion rotation = Quaternion.Euler(oldAngles.x, oldAngles.y + AngleDelta, oldAngles.z);
+                //float angle = (m_Old.m_States[i].m_Angle + AngleDelta + 360) % 360;
                 float newYOffset = m_Old.m_States[i].m_InitialYOffset + MoveDelta.y;
 
                 // Hack to work around the lack of unaltered original terrain height for terrain conforming
@@ -236,52 +241,27 @@ namespace MoveIt.Actions
                 m_New.m_States[i].Dispose();
                 m_New.m_States[i] = new()
                 {
-                    m_Entity = old.m_Entity,
-                    m_Accessor = new(old.m_Entity, _Tool, old.m_Identity),
-                    m_Prefab = old.m_Prefab,
-                    m_Position = position,
-                    m_InitialPosition = old.m_InitialPosition,
-                    m_Angle = angle,
-                    m_InitialAngle = old.m_InitialAngle,
-                    m_YOffset = newYOffset,
-                    m_InitialYOffset = old.m_InitialYOffset,
-                    m_Identity = old.m_Identity,
-                    m_ObjectType = old.m_ObjectType,
-                    m_Data = old.m_Data,
+                    m_Entity            = old.m_Entity,
+                    m_Accessor          = new(old.m_Entity, _Tool, old.m_Identity),
+                    m_Parent            = old.m_Parent,
+                    m_ParentKey         = old.m_ParentKey,
+                    m_Prefab            = old.m_Prefab,
+                    m_Position          = position,
+                    m_InitialPosition   = old.m_InitialPosition,
+                    m_Rotation          = rotation,
+                    m_InitialRotation   = old.m_InitialRotation,
+                    m_YOffset           = newYOffset,
+                    m_InitialYOffset    = old.m_InitialYOffset,
+                    m_Identity          = old.m_Identity,
+                    m_ObjectType        = old.m_ObjectType,
+                    m_IsManipulatable   = old.m_IsManipulatable,
+                    m_IsManaged         = old.m_IsManaged,
+                    m_InitialCurve      = old.m_InitialCurve,
                 };
             }
             m_Active = m_New;
 
-            //DumpStates($"Do", showOld:false, showNew:true);
-
-            m_IsManipulate.to = _Tool.Manipulating;
-        }
-
-        internal State GetState(CPDefinition cpd)
-        {
-            return m_Active.m_States[GetStateIndex(cpd)];
-        }
-
-        internal void SetState(CPDefinition cpd, State state)
-        {
-            int idx = GetStateIndex(cpd);
-            m_Active.m_States[idx] = state;
-        }
-
-        private int GetStateIndex(CPDefinition cpd)
-        {
-            for (int i = 0; i < m_Active.Count; i++)
-            {
-                if (m_Active.m_States[i].m_Identity == QTypes.Identity.ControlPoint)
-                {
-                    StateControlPoint scp = (StateControlPoint)m_Active.m_States[i].m_Data.Get();
-                    if (scp.m_Segment == cpd.m_Segment && scp.m_Curvekey == cpd.m_CurveKey)
-                    {
-                        return i;
-                    }
-                }
-            }
-            throw new Exception($"No State found for {cpd}");
+            //DebugDumpStates($"Do", showOld:false, showNew:true);
         }
 
         public override void Undo()
@@ -289,9 +269,10 @@ namespace MoveIt.Actions
             //MIT.Log.Debug($"{Time.frameCount} TA.Undo |{_Tool.ToolAction}|");
             m_UpdateMove = true;
             m_UpdateRotate = true;
-            _Tool.CreationPhase = CreationPhases.Create;
             m_Active = m_Old;
             UpdateStates();
+            _Tool.Create(this);
+            _Tool.Moveables.UpdateAllOverlays();
             //DebugDumpStates($"Undo");
 
             base.Undo();
@@ -302,9 +283,10 @@ namespace MoveIt.Actions
             //MIT.Log.Debug($"{Time.frameCount} TA.Redo |{_Tool.ToolAction}|");
             m_UpdateMove = true;
             m_UpdateRotate = true;
-            _Tool.CreationPhase = CreationPhases.Create;
             m_Active = m_New;
             UpdateStates();
+            _Tool.Create(this);
+            _Tool.Moveables.UpdateAllOverlays();
             //DebugDumpStates($"Redo");
 
             base.Redo();
@@ -312,25 +294,57 @@ namespace MoveIt.Actions
 
         /// <summary>
         /// Update states when the action queue is altered
-        /// Currently only used to renew controlpoints
         /// </summary>
         private void UpdateStates()
         {
-            //string msg = $"UpdateStates:{m_Active.Count}";
+            if (m_Active.m_States.Length == 0) { return; }
+            
+            List<int> toRemove = new();
             for (int i = 0; i < m_Active.m_States.Length; i++)
             {
-                if (m_Active.m_States[i].m_Identity == QTypes.Identity.ControlPoint)
+                if (m_Active.m_States[i].m_Identity == Identity.ControlPoint)
                 {
                     State state = m_Active.m_States[i];
-                    StateControlPoint scp = (StateControlPoint)state.m_Data.Get();
-                    CPDefinition cpd = new(scp);
-                    ControlPoint cp = _Tool.ControlPointManager.GetOrCreate(cpd);
+                    MVDefinition mvd = state.Definition;
+                    if (!State.IsValid(mvd.m_Parent))
+                    {
+                        toRemove.Add(i);
+                        continue;
+                    }
+                    MVControlPoint cp = _Tool.ControlPointManager.GetOrCreate(mvd);
                     state.UpdateEntity(cp.m_Entity, _Tool);
                     m_Active.m_States[i] = state;
-                    //msg += $"\n    {cp.m_Entity.DX()} {cpd} (was:{scp.m_EntityIndex}.{scp.m_EntityVersion})";
+                }
+                else if (!m_Active.m_States[i].IsThisValid)
+                {
+                    toRemove.Add(i);
+                    continue;
                 }
             }
-            //QLog.Debug(msg);
+
+            if (toRemove.Count == m_Active.m_States.Length)
+            {
+                m_Active.m_States.Dispose();
+                m_Active.m_States = new(0, Allocator.Persistent);
+            }
+            else if (toRemove.Count > 0)
+            {
+                int newLength = m_Active.m_States.Length - toRemove.Count;
+                List<State> newStates = new(newLength);
+                for (int i = 0; i < m_Active.m_States.Length; i++)
+                {
+                    if (!toRemove.Contains(i))
+                    {
+                        newStates.Add(m_Active.m_States[i]);
+                    }
+                }
+                m_Active.m_States.Dispose();
+                m_Active.m_States = new(newLength, Allocator.Persistent);
+                for (int i = 0; i < newLength; i++)
+                {
+                    m_Active.m_States[i] = newStates[i];
+                }
+            }
         }
 
         /// <summary>
@@ -339,33 +353,42 @@ namespace MoveIt.Actions
         /// <returns>Did the JobStates data include any buildings?</returns>
         internal bool Transform()
         {
-            //string msg = $"{Time.frameCount} TA.Trans {m_Active} {m_Active.Count} |TAct:{_Tool.ToolAction}| Manip:{_Tool.Manipulating}";
+            //string msg = $"{Time.frameCount} TA.Trans {m_Active} {m_Active.Count} |TAct:{_Tool.ToolAction}| Manip:{_Tool.m_IsManipulateMode}";
 
             bool includesBuilding = false;
-            foreach ((Moveable mv, int i) in m_StateMap)
+
+            for (int i = 0; i < m_Active.m_States.Length; i++)
             {
-                if (!_Tool.Manipulating && (mv.m_Manipulatable & (QTypes.Manipulate.Normal | QTypes.Manipulate.Child)) == 0) continue;
-                //msg += $"\n    {mv.D()} Now:{mv.Transform.m_Position.DX()} State:{m_Active.m_States[i].m_Position.DX()}";
+                Moveable mv = _Tool.Moveables.GetOrCreate(m_Active.m_States[i].Definition);
+                //msg += $"\n    {mv.D()} {m_Active.m_States[i].Definition} ";
+
+                if (!_Tool.IsManipulating && mv.IsManipulatable) continue;
+                if (_Tool.IsManipulating && !mv.IsManipulatable) continue;
+                //msg += $" Now:{mv.Transform.m_Position.DX()} State:{m_Active.m_States[i].m_Position.DX()}";
+
                 mv.MoveIt(this, m_Active.m_States[i], m_UpdateMove, m_UpdateRotate);
 
-                if (!includesBuilding && m_Active.m_States[i].m_Identity == QTypes.Identity.Building)
+                if (!includesBuilding && m_Active.m_States[i].m_Identity == Identity.Building)
                 {
                     includesBuilding = true;
                 }
+                mv.UpdateOverlay();
             }
+
             //QLog.Debug(msg);
+            _Tool.m_SelectionDirty = true;
 
             return includesBuilding;
         }
 
-        public override HashSet<Utils.IOverlay> GetOverlays()
-        {
-            return m_Snapper.GetOverlays();
-        }
+        //public override HashSet<Overlays.Overlay> GetOverlays(Overlays.ToolFlags toolFlags)
+        //{
+        //    return m_Snapper.GetOverlays(toolFlags);
+        //}
 
-        public override void UpdateEntityReferences(Dictionary<Entity, Entity> toUpdate)
+        public override string ToString()
         {
-            MIT.Log.Debug($"TransformAction.UpdateEntityReferences");
+            return $"{base.ToString()} o{(m_Active == m_Old ? "*" : "")}:{m_Old.Count},n{(m_Active == m_New ? "*" : "")}:{m_New.Count}";
         }
 
         internal override void OnHoldEnd()
@@ -385,12 +408,14 @@ namespace MoveIt.Actions
                 sb.AppendFormat($"States:{m_Old.Count}:");
                 for (int i = 0; i < m_Old.Count; i++)
                 {
-                    string b = _Tool.ActiveSelection.Has(m_Old.m_States[i].m_Entity) ? "B" : "b";
-                    string f = _Tool.ActiveSelection.HasFull(m_Old.m_States[i].m_Entity) ? "F" : "f";
+                    MVDefinition oldState = new(m_Old.m_States[i].m_Identity, m_Old.m_States[i].m_Entity, m_IsManipulationMode, m_Old.m_States[i].m_IsManaged, m_Old.m_States[i].m_Parent, m_Old.m_States[i].m_ParentKey);
+                    MVDefinition newState = new(m_New.m_States[i].m_Identity, m_New.m_States[i].m_Entity, m_IsManipulationMode, m_New.m_States[i].m_IsManaged, m_New.m_States[i].m_Parent, m_New.m_States[i].m_ParentKey);
+                    string b = _Tool.Selection.Has(oldState) ? "B" : "b";
+                    string f = _Tool.Selection.HasFull(oldState) ? "F" : "f";
                     if (showOld) sb.AppendFormat("\n  {0}{1} Old: {2}", b, f, m_Old.m_States[i]);
 
-                    b = _Tool.ActiveSelection.Has(m_New.m_States[i].m_Entity) ? "B" : "b";
-                    f = _Tool.ActiveSelection.HasFull(m_New.m_States[i].m_Entity) ? "F" : "f";
+                    b = _Tool.Selection.Has(newState) ? "B" : "b";
+                    f = _Tool.Selection.HasFull(newState) ? "F" : "f";
                     if (showNew) sb.AppendFormat("\n  {0}{1} New: {2}", b, f, m_New.m_States[i]);
                 }
             }
@@ -413,8 +438,7 @@ namespace MoveIt.Actions
                     }
                 }
             }
-           
-
+            
             QLog.Debug(sb.ToString());
         }
     }

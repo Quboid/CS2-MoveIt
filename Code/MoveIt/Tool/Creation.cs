@@ -18,7 +18,7 @@ namespace MoveIt.Tool
         {
             if (CreationPhase == CreationPhases.None)
             {
-                if (m_TempQuery.CalculateEntityCount() == 0) BaseApplyMode = ApplyMode.None;
+                if (m_TempQuery.IsEmpty) BaseApplyMode = ApplyMode.None;
                 return;
             }
 
@@ -30,19 +30,13 @@ namespace MoveIt.Tool
                 return;
             }
 
-            //if (CreationPhase == CreationPhases.Finalize)
-            //{
-            //    Finish();
-            //    return;
-            //}
-
             if (CreationPhase == CreationPhases.Create)
             {
                 Create(action);
                 return;
             }
 
-            if (!ActiveSelection.Exists)
+            if (!Selection.Any)
             {
                 return;
             }
@@ -59,30 +53,11 @@ namespace MoveIt.Tool
         private void Cleanup()
         {
             //m_InputDeps = DestroyDefinitions(GetDefinitionQuery(), m_ToolOutputBarrier, m_InputDeps);
-            //UpdateTerrain(ActiveSelection.GetTotalBounds(), 10f);
-
-            //Bounds3 bounds = ActiveSelection.GetTotalBounds();
-            //float4 area = Queue.Current.m_UpdateArea;
-            //area.xy = math.min(area.xy, bounds.xz.min) - 10;
-            //area.zw = math.max(area.zw, bounds.xz.max) + 10;
-            //Queue.Current.m_UpdateArea = area;
-            //SetUpdateAreaField(area);
 
             UpdateTerrain(Queue.Current.m_UpdateArea);
             CreationPhase = CreationPhases.None;
             BaseApplyMode = ApplyMode.None;
-
-            //BaseApplyMode = ApplyMode.Clear;
-            //CreationPhase = CreationPhases.Finalize;
         }
-
-        //private void Finish()
-        //{
-        //    SetUpdateAreaField(Queue.Current.m_UpdateArea);
-
-        //    CreationPhase = CreationPhases.None;
-        //    BaseApplyMode = ApplyMode.None;
-        //}
 
         private bool Transform(Actions.Action action)
         {
@@ -93,14 +68,14 @@ namespace MoveIt.Tool
                 return false;
             }
 
-            //QLog.Debug($"{UnityEngine.Time.frameCount} Creat.Trans {ta.Name} {ta.m_Active}");
+            //QLog.Debug($"{UnityEngine.Time.frameCount} Create.Trans {ta.Name} {ta.m_Active}");
 
             UpdateTerrain();
 
             return ta.Transform();
         }
 
-        private void Create(Actions.Action action)
+        internal void Create(Actions.Action action)
         {
             try
             {
@@ -138,16 +113,18 @@ namespace MoveIt.Tool
 
         private void UpdateNearbyNetworks()
         {
-            Quad2 rect = ActiveSelection.GetTotalRectangle(out Bounds3 bounds, 8f, true);
-            Bounds2 outerBounds = new(bounds.min.XZ() - 12f, bounds.max.XZ() + 12f);
-            using Searcher.Marquee searcher = new(Searcher.Filters.AllNets, QTypes.Manipulate.All);
+            Quad2 rect = Selection.GetTotalRectangle(out Bounds3 bounds, TERRAIN_UPDATE_MARGIN);
+            Bounds2 outerBounds = new(bounds.min.XZ() - TERRAIN_UPDATE_MARGIN, bounds.max.XZ() + TERRAIN_UPDATE_MARGIN);
+            using Searcher.Marquee searcher = new(Searcher.Filters.AllNets, false);
             searcher.Search(rect, outerBounds);
+
+            //Overlays.DebugBounds.Factory(outerBounds, 25, new(0.8f, 0.8f, 0.0f, 0.8f));
 
             if (Queue.Current is TransformAction ta)
             {
                 foreach (State state in ta.m_Active.m_States)
                 {
-                    if (state.m_Identity == QTypes.Identity.Building)
+                    if (state.m_Identity == Identity.Building)
                     {
                         state.m_Accessor.UpdateAll();
                     }
@@ -165,37 +142,32 @@ namespace MoveIt.Tool
             }
         }
 
-        //private void UpdateTerrain(float4 area, float expand = 0f)
-        //{
-        //    if (expand != 0f)
-        //    {
-        //        area = area.Expand(expand);
-        //    }
-        //    UpdateTerrain(area);
-        //}
-
-        private void UpdateTerrain(float4 area = default)
+        private void UpdateTerrain(Bounds3 area = default)
         {
-            Bounds3 bounds = ActiveSelection.GetTotalBounds();
+            Bounds3 bounds = Selection.GetTotalBounds();
             if (area.Equals(default))
             {
-                area.xy = bounds.xz.min - 10;
-                area.zw = bounds.xz.max + 10;
+                area.min = bounds.min - TERRAIN_UPDATE_MARGIN;
+                area.max = bounds.max + TERRAIN_UPDATE_MARGIN;
             }
             else
             {
-                area.xy = math.min(area.xy, bounds.xz.min) - 10;
-                area.zw = math.max(area.zw, bounds.xz.max) + 10;
+                area.min = math.min(area.min, bounds.min - TERRAIN_UPDATE_MARGIN);
+                area.max = math.max(area.max, bounds.max + TERRAIN_UPDATE_MARGIN);
             }
             Queue.Current.m_UpdateArea = area;
+
+            //Overlays.DebugBounds.Factory(area, 2, new(0.9f, 0f, 0.2f, 0.6f));
+            
             SetUpdateAreaField(area);
         }
 
-        private void SetUpdateAreaField(float4 area)
+        private void SetUpdateAreaField(Bounds3 bounds)
         {
-            if (area.x == area.z || area.y == area.w) return;
-            FieldInfo field = _TerrainSystem.GetType().GetField("m_UpdateArea", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("Failed to find TerrainSystem.m_UpdateArea");
-            field.SetValue(_TerrainSystem, area);
+            if (bounds.min.x == bounds.max.x || bounds.min.z == bounds.max.z) return;
+            float4 area = new(bounds.min.x, bounds.min.z, bounds.max.x, bounds.max.z);
+            FieldInfo field = m_TerrainSystem.GetType().GetField("m_UpdateArea", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("Failed to find TerrainSystem.m_UpdateArea");
+            field.SetValue(m_TerrainSystem, area);
         }
 
         //private void Positioning(Actions.Action action)

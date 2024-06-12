@@ -1,134 +1,121 @@
-﻿using MoveIt.Tool;
-using System.Collections.Generic;
+﻿using Unity.Burst;
+using Unity.Collections;
 using UnityEngine;
 
 namespace MoveIt.Overlays
 {
-    public static class Colors
+    public abstract class ColorData
     {
-        public enum Styles
+        public enum Contexts
         {
             None,
+            Hovering,
+            Selected,
+            Deselect,
+            ToolSelect,
+            Shadow,
             Background,
-            Foreground,
+            ManipParentHovering,
+            ManipParentSelected,
+            ManipChildHovering,
+            ManipChildSelected,
+            Other,
         }
 
-        public static Dictionary<string, Dictionary<Styles, Dictionary<OverlayFlags, Color>>> s_Themes = new()
-        {
-            {
-                "Default", new()
-            {
-                { Styles.None, new() {
-                    { OverlayFlags.None,            new Color32(255, 0, 0, 220) },
-                    { OverlayFlags.Hovering,        new Color32(255, 0, 0, 220) },
-                    { OverlayFlags.Selected,        new Color32(255, 0, 0, 220) },
-                    { OverlayFlags.Moving,          new Color32(255, 0, 0, 220) },
-                    { OverlayFlags.Unselect,        new Color32(255, 0, 0, 220) },
-                    { OverlayFlags.Tool,            new Color32(255, 0, 0, 220) },
-                } },
-                { Styles.Background, new() {
-                    { OverlayFlags.None,            new Color32(165, 165, 180, 120) },
-                } },
-                { Styles.Foreground, new() {
-                    { OverlayFlags.Hovering,        new Color32(0, 181, 255, 250) },
-                    { OverlayFlags.Selected,        new Color32(95, 166, 0, 244) },
-                    { OverlayFlags.Moving,          new Color32(95, 166, 0, 44) },
-                    { OverlayFlags.Unselect,        new Color32(255, 160, 47, 191) },
-                    { OverlayFlags.Tool,            new Color32(245, 25, 250, 160) },
-                } },
-            } },
-            {
-                "ManipulateParent", new()
-            {
-                { Styles.Foreground, new() {
-                    { OverlayFlags.Hovering,        new Color32(240, 140, 255, 190) },
-                    { OverlayFlags.Selected,        new Color32(240, 140, 255, 150) },
-                } },
-            } },
-            {
-                "ManipulateChild", new()
-            {
-                { Styles.Foreground, new() {
-                    { OverlayFlags.Hovering,        new Color32(215, 145, 255, 230) },
-                    { OverlayFlags.Selected,        new Color32(200, 130, 240, 180) },
-                } },
-            } },
-        };
+        public static readonly SharedStatic<NativeHashMap<int, Color>> s_Lookup = SharedStatic<NativeHashMap<int, Color>>.GetOrCreate<ColorData, LookupKey>();
+        private class LookupKey { }
 
-        public static Color GetForced(OverlayFlags flag, Styles style = Styles.Foreground, string theme = "Default")
+        public static void Init()
         {
-            return s_Themes[theme][style][flag];
+            s_Lookup.Data = new(6, Allocator.Persistent)
+            {
+                { (int)Contexts.None,                   new Color32(0, 0, 0, 0) },
+                { (int)Contexts.Hovering,               new Color32(0, 181, 255, 250) },
+                { (int)Contexts.Selected,               new Color32(95, 166, 0, 244) },
+                { (int)Contexts.Deselect,               new Color32(255, 160, 47, 191) },
+                { (int)Contexts.ToolSelect,             new Color32(255, 0, 0, 220) },
+                { (int)Contexts.Shadow,                 new Color32(165, 165, 170, 50) },
+                { (int)Contexts.Background,             new Color32(165, 165, 180, 150) },
+                { (int)Contexts.ManipParentHovering,    new Color32(235, 120, 250, 135) },
+                { (int)Contexts.ManipParentSelected,    new Color32(235, 120, 250, 90) },
+                { (int)Contexts.ManipChildHovering,     new Color32(215, 185, 255, 230) },
+                { (int)Contexts.ManipChildSelected,     new Color32(200, 160, 240, 190) },
+            };
         }
 
-        public static Color Get(Utils.OverlayCommon common, Styles style)
+        public static void Dispose()
         {
-            Color result = GetBase(common, style);
+            s_Lookup.Data.Dispose();
+        }
+    }
 
-            if (MIT.m_Instance.Manipulating)
-            {
-                if (common.Manipulatable == QTypes.Manipulate.Normal)
-                {
-                    result.a *= 0.25f;
-                }
-            }
+    public readonly struct Colors
+    {
+        public static Color Get(MIO_Common common, ToolFlags toolFlags, float opacity = 1f)
+        {
+            if ((common.m_Flags & Tool.InteractionFlags.Static) != 0) return common.m_OutlineColor;
 
-            return result;
+            ColorData.Contexts context = GetContext(common, toolFlags);
+            Color c = Get(context);
+            c.a *= opacity;
+            return c;
         }
 
-        public static Color GetBase(Utils.OverlayCommon common, Styles style)
+        public static Color Get(ColorData.Contexts context)
         {
-            if (common.PrimaryFlag == OverlayFlags.Custom)
-            {
-                return common.CustomColor;
-            }
+            if (!ColorData.s_Lookup.Data.ContainsKey((int)context)) return new(1f, 0f, 0f, 0.75f);
 
-            string themeName = GetThemeName(common);
-
-            if (s_Themes[themeName].ContainsKey(style))
-            {
-                if (s_Themes[themeName][style].ContainsKey(common.PrimaryFlag))
-                {
-                    return s_Themes[themeName][style][common.PrimaryFlag];
-                }
-                if (s_Themes[themeName][style].ContainsKey(OverlayFlags.None))
-                {
-                    return s_Themes[themeName][style][OverlayFlags.None];
-                }
-            }
-
-            // Fallback to Default
-            if (s_Themes["Default"].ContainsKey(style))
-            {
-                if (s_Themes["Default"][style].ContainsKey(common.PrimaryFlag))
-                {
-                    return s_Themes["Default"][style][common.PrimaryFlag];
-                }
-                if (s_Themes["Default"][style].ContainsKey(OverlayFlags.None))
-                {
-                    return s_Themes["Default"][style][OverlayFlags.None];
-                }
-            }
-            if (s_Themes["Default"][Styles.None].ContainsKey(common.PrimaryFlag))
-            {
-                return s_Themes["Default"][Styles.None][common.PrimaryFlag];
-            }
-            return s_Themes["Default"][Styles.None][OverlayFlags.None];
+            return ColorData.s_Lookup.Data[(int)context];
         }
 
-        private static string GetThemeName(Utils.OverlayCommon common)
+        public static void Dispose()
         {
-            string themeName = "Default";
-            if (common.Manipulatable == QTypes.Manipulate.Parent)
+            ColorData.Dispose();
+        }
+
+        public static ColorData.Contexts GetContext(MIO_Common common, ToolFlags toolFlags)
+        {
+            if ((common.m_Flags & Tool.InteractionFlags.Static) != 0) return ColorData.Contexts.Other;
+
+            if (((toolFlags & ToolFlags.HasShift) != 0) && ((common.m_Flags & Tool.InteractionFlags.Hovering) != 0) && ((common.m_Flags & Tool.InteractionFlags.Selected) != 0))
             {
-                themeName = "ManipulateParent";
-            }
-            else if (common.Manipulatable == QTypes.Manipulate.Child)
-            {
-                themeName = "ManipulateChild";
+                return ColorData.Contexts.Deselect;
             }
 
-            if (!s_Themes.ContainsKey(themeName)) throw new System.Exception($"{themeName} is not in palette");
-            return themeName;
+            return ((toolFlags & ToolFlags.ManipulationMode) > 0) ? GetContextManip(common) : GetContextNormal(common);
+        }
+
+        private static ColorData.Contexts GetContextNormal(MIO_Common common)
+        {
+            if (common.m_IsManipulatable) return ColorData.Contexts.None;
+
+            if ((common.m_Flags & Tool.InteractionFlags.Tool) != 0)             return ColorData.Contexts.ToolSelect;
+            if ((common.m_Flags & Tool.InteractionFlags.Hovering) != 0)         return ColorData.Contexts.Hovering;
+            if ((common.m_Flags & Tool.InteractionFlags.ParentHovering) != 0)   return ColorData.Contexts.Hovering;
+            if ((common.m_Flags & Tool.InteractionFlags.Selected) != 0)         return ColorData.Contexts.Selected;
+            if ((common.m_Flags & Tool.InteractionFlags.ParentSelected) != 0)   return ColorData.Contexts.Selected;
+
+            return ColorData.Contexts.None;
+        }
+
+        private static ColorData.Contexts GetContextManip(MIO_Common common)
+        {
+            if (!common.m_IsManipulatable) return ColorData.Contexts.None;
+
+            if (common.m_IsManipChild)
+            {
+                if ((common.m_Flags & Tool.InteractionFlags.Hovering) != 0)             return ColorData.Contexts.ManipChildHovering;
+                if ((common.m_Flags & Tool.InteractionFlags.Selected) != 0)             return ColorData.Contexts.ManipChildSelected;
+                if ((common.m_Flags & Tool.InteractionFlags.ParentHovering) != 0)       return ColorData.Contexts.ManipParentHovering;
+                if ((common.m_Flags & Tool.InteractionFlags.ParentManipulating) != 0)   return ColorData.Contexts.ManipParentSelected;
+            }
+            else
+            {
+                if ((common.m_Flags & Tool.InteractionFlags.Hovering) != 0)             return ColorData.Contexts.ManipParentHovering;
+                if ((common.m_Flags & Tool.InteractionFlags.Selected) != 0)             return ColorData.Contexts.ManipParentSelected;
+            }
+
+            return ColorData.Contexts.None;
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using MoveIt.Tool;
+using QCommonLib;
+using System;
 using Unity.Entities;
 
 namespace MoveIt.QAccessor
@@ -9,52 +11,47 @@ namespace MoveIt.QAccessor
     public struct QObjectSimple : IDisposable
     {
         public Entity m_Entity;
-        public QEntity m_Parent;
-        public QNode m_ParentNode;
-        public QControlPoint m_ParentCP;
-        public QSegment m_ParentSegment;
-        internal QTypes.Identity m_Identity;
+        internal QEntity m_Parent;
+        internal Identity m_Identity;
 
         internal QObjectSimple(Entity e, SystemBase system)
         {
             if (e == Entity.Null) throw new ArgumentNullException("Creating QObject with null entity");
 
-            m_Entity = e;
-            m_Identity = QTypes.GetEntityIdentity(e);
-            m_Parent = new(e, system, m_Identity);
-            m_ParentNode = new(e, system, m_Identity);
-            m_ParentCP = new(e, system, m_Identity);
-            m_ParentSegment = new(e, system, m_Identity);
-        }
+            m_Entity =              e;
+            m_Identity =            QTypes.GetEntityIdentity(e);
+            m_Parent =              new(system, e, m_Identity);
 
-        public readonly IQEntity Parent => m_Identity switch
-        {
-            QTypes.Identity.Node => m_ParentNode,
-            QTypes.Identity.ControlPoint => m_ParentCP,
-            QTypes.Identity.Segment => m_ParentSegment,
-            _ => m_Parent,
-        };
-
-        public readonly T GetComponent<T>() where T : unmanaged, IComponentData
-        {
-            return Parent.GetComponent<T>();
+            //DebugDumpFullObject();
         }
 
         public readonly bool TryGetComponent<T>(out T component) where T : unmanaged, IComponentData
         {
-            return Parent.TryGetComponent<T>(out component);
-        }
-
-        public readonly DynamicBuffer<T> GetBuffer<T>(bool isReadOnly = false) where T : unmanaged, IBufferElementData
-        {
-            return Parent.GetBuffer<T>(isReadOnly);
+            return m_Parent.TryGetComponent<T>(out component);
         }
 
         public readonly bool TryGetBuffer<T>(out DynamicBuffer<T> buffer, bool isReadOnly = false) where T : unmanaged, IBufferElementData
         {
-            return Parent.TryGetBuffer<T>(out buffer, isReadOnly);
+            return m_Parent.TryGetBuffer<T>(out buffer, isReadOnly);
         }
 
-        public readonly void Dispose() {}
+        public readonly void Dispose() { }
+
+
+        public readonly override string ToString()
+        {
+            return $"{m_Identity}/{m_Entity.DX()}";
+        }
+
+
+        internal readonly string DebugFullObject()
+        {
+            return ToString();
+        }
+
+        internal readonly void DebugDumpFullObject(string prefix = "")
+        {
+            QLog.Debug(prefix + DebugFullObject());
+        }
     }
 }
