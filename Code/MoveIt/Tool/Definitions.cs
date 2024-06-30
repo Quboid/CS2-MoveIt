@@ -56,7 +56,7 @@ namespace MoveIt.Tool
         internal static MIT m_Instance;
 
         internal ControlPointManager ControlPointManager;
-        internal HotkeyManager HotkeyManager;
+        internal InputManager InputManager;
         internal HoverManager Hover;
         internal MoveablesManager Moveables;
         internal QueueManager Queue;
@@ -66,6 +66,7 @@ namespace MoveIt.Tool
         internal MIT_RenderSystem m_RenderSystem;
         internal MIT_UISystem m_UISystem;
         internal MIT_PostToolSystem m_PostToolSystem;
+        internal MIT_HotkeySystem m_HotkeySystem;
         //internal MIT_HoverSystem m_HoverSystem;
         internal Overlays.MIT_OverlaySystem m_OverlaySystem;
 
@@ -85,17 +86,14 @@ namespace MoveIt.Tool
 
         internal JobHandle m_InputDeps;
 
-        internal Input.InputButton m_ApplyAction;
-        internal Input.InputButton m_SecondaryAction;
-
         internal EntityQuery m_TempQuery;
         internal EntityQuery m_ControlPointQuery;
 
         // Options
-        internal bool ShowDebugPanel    => Mod.Settings.ShowDebugPanel;
-        internal bool HideMoveItIcon    => Mod.Settings.HideMoveItIcon;
-        internal bool ExtraDebugLogging => Mod.Settings.ExtraDebugLogging;
-        internal int RotationDirection  => Mod.Settings.InvertRotation ? 1 : -1;
+        internal bool ShowDebugPanel        => Mod.Settings.ShowDebugPanel;
+        internal bool HideMoveItIcon        => Mod.Settings.HideMoveItIcon;
+        internal bool ExtraDebugLogging     => Mod.Settings.ExtraDebugLogging;
+        internal int RotationDirection      => Mod.Settings.InvertRotation ? 1 : -1;
 
         /// <summary>
         /// Get the currently hovered entity, readonly. For other mods to access.

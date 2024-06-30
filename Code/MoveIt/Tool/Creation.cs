@@ -6,6 +6,7 @@ using MoveIt.Moveables;
 using QCommonLib;
 using System;
 using System.Reflection;
+using System.Text;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -14,6 +15,8 @@ namespace MoveIt.Tool
 {
     public partial class MIT : ObjectToolBaseSystem
     {
+        //private TransformAction m_CleanUpAction;
+
         internal void ManageCreation(Actions.Action action)
         {
             if (CreationPhase == CreationPhases.None)
@@ -52,37 +55,49 @@ namespace MoveIt.Tool
 
         private void Cleanup()
         {
-            //m_InputDeps = DestroyDefinitions(GetDefinitionQuery(), m_ToolOutputBarrier, m_InputDeps);
+            UpdateTerrain(Queue.CreationAction.m_TerrainUpdateBounds);
 
-            UpdateTerrain(Queue.Current.m_UpdateArea);
+            if (Queue.CreationAction is TransformAction ta)
+            {
+                int oldC = UpdateNearbyBuildingConnections(EntityManager, ta, ta.m_InitialBounds);
+                int newC = UpdateNearbyBuildingConnections(EntityManager, ta, ta.m_FinalBounds);
+                Log.Debug($"UpdateNearbyBldgConns {ta.Name} old:{oldC}, new:{newC}" +
+                    //$"\n  old:{oldC} : {m_CleanUpAction.m_InitialBounds.min.DX()} : {m_CleanUpAction.m_InitialBounds.max.DX()}" +
+                    //$"\n  new:{newC} : {m_CleanUpAction.m_FinalBounds.min.DX()} : {m_CleanUpAction.m_FinalBounds.max.DX()}" +
+                    "");
+                //m_CleanUpAction = null;
+            }
+
             CreationPhase = CreationPhases.None;
             BaseApplyMode = ApplyMode.None;
+            Queue.CreationAction = null;
         }
 
-        private bool Transform(Actions.Action action)
+        private void Transform(Actions.Action action)
         {
             if (action is not TransformAction ta)
             {
                 Log.Error($"Error: action is {action.Name} during CreationMods.Create");
                 CreationPhase = CreationPhases.Cleanup;
-                return false;
+                return;
             }
-
-            //QLog.Debug($"{UnityEngine.Time.frameCount} Create.Trans {ta.Name} {ta.m_Active}");
 
             UpdateTerrain();
 
-            return ta.Transform();
+            ta.Transform();
         }
 
         internal void Create(Actions.Action action)
         {
             try
             {
-                if (Transform(action))
+                Transform(action);
+                if (action.m_FinalBounds.Equals(default))
                 {
-                    UpdateNearbyNetworks();
+                    action.m_FinalBounds = Selection.GetTotalBounds(TERRAIN_UPDATE_MARGIN);
                 }
+
+                //m_CleanUpAction = action is TransformAction ta ? ta : null;
             }
             finally
             {
@@ -111,35 +126,102 @@ namespace MoveIt.Tool
             #endregion
         }
 
-        private void UpdateNearbyNetworks()
+
+        /// <summary>
+        /// Update buildings and networks in or near the passed location
+        /// </summary>
+        /// <param name="manager">an EntityManager</param>
+        /// <param name="ta">The TransformAction to update for</param>
+        /// <param name="bounds">The outer bounds of the rectangle</param>
+        /// <returns>The number of search results found</returns>
+        internal int UpdateNearbyBuildingConnections(EntityManager manager, TransformAction ta, Bounds3 bounds)
         {
-            Quad2 rect = Selection.GetTotalRectangle(out Bounds3 bounds, TERRAIN_UPDATE_MARGIN);
-            Bounds2 outerBounds = new(bounds.min.XZ() - TERRAIN_UPDATE_MARGIN, bounds.max.XZ() + TERRAIN_UPDATE_MARGIN);
-            using Searcher.Marquee searcher = new(Searcher.Filters.AllNets, false);
-            searcher.Search(rect, outerBounds);
-
-            //Overlays.DebugBounds.Factory(outerBounds, 25, new(0.8f, 0.8f, 0.0f, 0.8f));
-
-            if (Queue.Current is TransformAction ta)
+            bool isRelevant = false;
+            foreach (State state in ta.m_Active.m_States)
             {
-                foreach (State state in ta.m_Active.m_States)
+                if (
+                    state.m_Identity == Identity.Building || state.m_Identity == Identity.ServiceUpgrade || state.m_Identity == Identity.Extension ||
+                    state.m_Identity == Identity.Node || state.m_Identity == Identity.Segment
+                    )
                 {
-                    if (state.m_Identity == Identity.Building)
+                    isRelevant = true;
+                    break;
+                }
+            }
+            if (!isRelevant) return -1;
+
+            //StringBuilder sb = new("UpdateNearbyBuildingConnections");
+            Bounds2 outerBounds = new(bounds.min.XZ(), bounds.max.XZ());
+            using Searcher.Marquee searcher = new(Searcher.Filters.AllNets | Searcher.Filters.Buildings, false);
+            searcher.Search(outerBounds);
+            //searcher.DebugDumpSearchResults();
+
+            Overlays.DebugBounds.Factory(outerBounds, Overlays.Overlay.DEBUG_TTL, new UnityEngine.Color(0.9f, 0.2f, 0f, 0.6f));
+
+            //sb.AppendFormat("\nStates: {0}", ta.m_Active.m_States.Length);
+            foreach (State state in ta.m_Active.m_States)
+            {
+                if (
+                    state.m_Identity == Identity.Building || state.m_Identity == Identity.ServiceUpgrade || state.m_Identity == Identity.Extension ||
+                    state.m_Identity == Identity.Node || state.m_Identity == Identity.Segment
+                    )
+                {
+                    state.m_Accessor.UpdateAll();
+                    //sb.AppendFormat("\n    {0} (updated: {1})", state.m_Entity.DX(true), c);
+                }
+            }
+
+            //sb.AppendFormat("\nResults: {0}", searcher.m_Results.Length);
+            foreach (Entity e in searcher.m_Results)
+            {
+                QAccessor.QObject accessor = new(manager, ref QAccessor.QLookupFactory.Get(), e);
+                accessor.UpdateAll();
+
+                if (!Mod.Settings.ShowDebugLines) continue;
+
+                //sb.AppendFormat("\n    {0} - (updated: {1})", e.DX(true), c);
+
+                // Segment
+                if (EntityManager.TryGetComponent(e, out Game.Net.Edge edge))
+                {
+                    float3 posA = EntityManager.GetComponentData<Game.Net.Node>(edge.m_Start).m_Position;
+                    float3 posB = EntityManager.GetComponentData<Game.Net.Node>(edge.m_End).m_Position;
+                    Overlays.DebugLine.Factory(new(posA, posB), Overlays.Overlay.DEBUG_TTL, new(1f, 0.5f, 0f, 0.8f));
+
+                    if (!searcher.m_Results.Contains(edge.m_Start))
                     {
-                        state.m_Accessor.UpdateAll();
+                        Overlays.DebugCircle.Factory(posA, 8, Overlays.Overlay.DEBUG_TTL, new(1f, 0.4f, 0.3f, 0.4f));
+                    }
+                    if (!searcher.m_Results.Contains(edge.m_End))
+                    {
+                        Overlays.DebugCircle.Factory(posB, 8, Overlays.Overlay.DEBUG_TTL, new(1f, 0.4f, 0.3f, 0.4f));
+                    }
+                }
+
+                // Node
+                else if (EntityManager.TryGetComponent(e, out Game.Net.Node node))
+                {
+                    Overlays.DebugCircle.Factory(node.m_Position, 8, Overlays.Overlay.DEBUG_TTL, new(1f, 0.5f, 0.0f, 0.8f));
+                }
+
+                // Building
+                else if (EntityManager.TryGetComponent(e, out Game.Objects.Transform tform))
+                {
+                    if (EntityManager.TryGetComponent(e, out Game.Buildings.Building _))
+                    {
+                        var prefab = EntityManager.GetComponentData<Game.Prefabs.PrefabRef>(e).m_Prefab;
+                        Quad2 corners = Searcher.SearcherBase.CalculateBuildingCorners(EntityManager, ref accessor, prefab, -0.5f);
+                        Overlays.DebugQuad.Factory(corners, (int)(Overlays.Overlay.DEBUG_TTL * 1.5), new(0.0f, 0.6f, 0.9f, 0.8f));
+                    }
+                    else
+                    {
+                        Overlays.DebugCircle.Factory(tform.m_Position, 8f, (int)(Overlays.Overlay.DEBUG_TTL * 1.5f), new(0.0f, 0.8f, 0.8f, 0.7f));
                     }
                 }
             }
 
-            foreach (Entity e in searcher.m_Results)
-            {
-                EntityManager.AddComponent<Game.Common.Updated>(e);
-                if (EntityManager.TryGetComponent(e, out Game.Net.Edge edge))
-                {
-                    if (!searcher.m_Results.Contains(edge.m_Start)) EntityManager.AddComponent<Game.Common.Updated>(edge.m_Start);
-                    if (!searcher.m_Results.Contains(edge.m_End)) EntityManager.AddComponent<Game.Common.Updated>(edge.m_End);
-                }
-            }
+            //QLog.Debug(sb.ToString());
+            return searcher.m_Results.Length;
         }
 
         private void UpdateTerrain(Bounds3 area = default)
@@ -155,9 +237,9 @@ namespace MoveIt.Tool
                 area.min = math.min(area.min, bounds.min - TERRAIN_UPDATE_MARGIN);
                 area.max = math.max(area.max, bounds.max + TERRAIN_UPDATE_MARGIN);
             }
-            Queue.Current.m_UpdateArea = area;
+            Queue.Current.m_TerrainUpdateBounds = area;
 
-            //Overlays.DebugBounds.Factory(area, 2, new(0.9f, 0f, 0.2f, 0.6f));
+            //Overlays.DebugBounds.Factory(area, Overlays.Overlay.DEBUG_TTL, new(0.1f, 0.1f, 0.8f, 0.6f));
             
             SetUpdateAreaField(area);
         }

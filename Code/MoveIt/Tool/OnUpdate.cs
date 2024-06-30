@@ -1,10 +1,8 @@
 ﻿using Game.Prefabs;
 using MoveIt.Actions;
 using MoveIt.Managers;
-using MoveIt.Moveables;
 using QCommonLib;
 using System;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 
@@ -16,6 +14,9 @@ namespace MoveIt.Tool
         {
             m_InputDeps = base.OnUpdate(inputDeps);
             //ClearDebugOverlays();
+
+            // If tool is opened before OnUpdate runs, m_RaycastTerrain won't be set. Skip this frame.
+            if (m_RaycastTerrain is null) return inputDeps;
 
             if (!m_HasFocus) return inputDeps;
             UpdateUIHasFocus();
@@ -30,56 +31,45 @@ namespace MoveIt.Tool
 
             Hover.Process(m_ToolRaycastSystem);
 
-            m_ApplyAction.Update();
-            m_SecondaryAction.Update();
-            HotkeyManager.ProcessHotkeys();
+            InputManager.Process();
 
             switch (ToolState)
             {
                 case ToolStates.Default:
                 case ToolStates.ToolActive:
-                    {
-                        break;
-                    }
+                    break;
 
                 case ToolStates.ApplyButtonHeld:
                 case ToolStates.SecondaryButtonHeld:
-                    {
-                        ToolAction = ToolActions.Do;
-
-                        break;
-                    }
+                    ToolAction = ToolActions.Do;
+                    break;
 
                 case ToolStates.DrawingSelection:
+                    if (m_Marquee is null)
                     {
-                        if (m_Marquee is null)
-                        {
-                            Log.Warning($"Drawing selection but m_Marquee is null");
-                            break;
-                        }
-
-                        if (!m_Marquee.CheckIfMoved(m_PointerPos))
-                        {
-                            break;
-                        }
-
-                        if (Queue.Current is not SelectAction sa)
-                        {
-                            Log.Debug($"Update DrawingSelection but current action is {Queue.Current.Name}");
-                            break;
-                        }
-
-                        UpdateMarqueeList(m_Marquee);
-                        sa.AddMarqueeSelection(m_Marquee);
-                        ToolAction = ToolActions.Do;
-
+                        Log.Warning($"Drawing selection but m_Marquee is null");
                         break;
                     }
+
+                    if (!m_Marquee.CheckIfMoved(m_PointerPos))
+                    {
+                        break;
+                    }
+
+                    if (Queue.Current is not SelectMarqueeAction sma)
+                    {
+                        Log.Debug($"Update DrawingSelection but current action is {Queue.Current.Name}");
+                        break;
+                    }
+
+                    UpdateMarqueeList(m_Marquee);
+                    sma.AddMarqueeSelection(m_Marquee, true);
+                    //ToolAction = ToolActions.Do;
+                    break;
             }
 
             Queue.FireAction();
-
-            ManageCreation(Queue.Current);
+            ManageCreation(Queue.CreationAction);
 
             //DebugDumpSelections();
 

@@ -1,9 +1,8 @@
-﻿using MoveIt.Moveables;
+﻿using Colossal.Entities;
+using MoveIt.Moveables;
 using MoveIt.Tool;
 using QCommonLib;
 using System;
-using System.Collections.Generic;
-using System.Reflection;
 using System.Text;
 using Unity.Collections;
 using Unity.Entities;
@@ -13,53 +12,43 @@ using UnityEngine;
 
 namespace MoveIt.QAccessor
 {
-    public struct QReferenceBufferType
-    {
-        /// <summary>
-        /// The type of the buffer component
-        /// </summary>
-        public Type tParentComponent;
-        /// <summary>
-        /// The FieldInfo of the buffer component's Entity field
-        /// </summary>
-        public FieldInfo m_FieldInfo;
-    }
-
     /// <summary>
     /// Primary accessor for entities, including children
     /// </summary>
     public struct QObject : IDisposable, INativeDisposable
     {
-        private readonly EntityManager Manager => World.DefaultGameObjectInjectionWorld.EntityManager;
-
+        internal static EntityManager m_Manager;
         internal Entity m_Entity;
         internal QEntity m_Parent;
         internal NativeList<QEntity> m_Children;
         internal Identity m_Identity;
 
-        internal QObject(Entity e, SystemBase system, Identity identity = Identity.None)
+        internal QObject(EntityManager manager, ref QLookup lookup, Entity e, Identity identity = Identity.None)
         {
             if (e == Entity.Null) throw new ArgumentNullException("Creating QObject with null entity");
 
-            m_Entity = e;
-            m_Identity = identity == Identity.None ? QTypes.GetEntityIdentity(e) : identity;
-            m_Parent = new(system, e, m_Identity);
-            m_Children = new(0, Allocator.Persistent);
+            m_Manager   = manager;
+            m_Entity    = e;
+            m_Identity  = identity == Identity.None ? QTypes.GetEntityIdentity(manager, e) : identity;
+            m_Parent    = new(ref lookup, e, m_Identity);
+            m_Children  = new(0, Allocator.Persistent);
 
-            var subEntities = GetSubEntities(e, m_Identity);
+            NativeArray<Entity> subEntities = GetSubEntities(e, m_Identity);
 
-            if (subEntities.Count > 0)
+            if (subEntities.Length > 0)
             {
-                for (int i = 0; i < subEntities.Count; i++)
+                for (int i = 0; i < subEntities.Length; i++)
                 {
                     if (subEntities[i] == Entity.Null) throw new NullReferenceException($"Creating child for {e.D()} with null entity");
 
-                    if (system.EntityManager.HasComponent<Game.Net.ConnectionLane>(subEntities[i])) continue;
+                    if (m_Manager.HasComponent<Game.Net.ConnectionLane>(subEntities[i])) continue;
 
-                    Identity subType = QTypes.GetEntityIdentity(subEntities[i]);
-                    m_Children.Add(new(system, subEntities[i], subType));
+                    Identity subType = QTypes.GetEntityIdentity(manager, subEntities[i]);
+                    m_Children.Add(new(ref lookup, subEntities[i], subType, m_Entity));
                 }
             }
+
+            //DebugDumpFullObject(new(Allocator.Temp) { (int)Identity.Node, (int)Identity.Segment, (int)Identity.NetLane }, true, $"QObject.Ctor {m_Entity.D()}: ");
         }
 
         public void Dispose()
@@ -111,16 +100,20 @@ namespace MoveIt.QAccessor
             }
         }
 
-        public readonly void UpdateAll()
+        public readonly int UpdateAll()
         {
-            Manager.AddComponent<Game.Common.Updated>(m_Entity);
-            Manager.AddComponent<Game.Common.BatchesUpdated>(m_Entity);
+            //m_Manager.AddComponent<Game.Common.Updated>(m_Entity);
+            //m_Manager.AddComponent<Game.Common.BatchesUpdated>(m_Entity);
 
             foreach (var child in m_Children)
             {
-                Manager.AddComponent<Game.Common.Updated>(child.m_Entity);
-                Manager.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
+                m_Manager.AddComponent<Game.Common.Updated>(child.m_Entity);
+                m_Manager.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
             }
+
+            m_Parent.SetUpdated();
+
+            return m_Children.Length + 1;
         }
 
         private readonly void GetMatrix(float delta, float3 origin, out Matrix4x4 matrix)
@@ -131,36 +124,34 @@ namespace MoveIt.QAccessor
         #endregion
 
         #region Load children
-        private static List<Entity> GetSubEntities(Entity e, Identity identity)
+        private static NativeArray<Entity> GetSubEntities(Entity e, Identity identity)
         {
-            List<Entity> entities = IterateSubEntities(e, e, 0, identity, identity);
+            NativeArray<Entity> entities = IterateSubEntities(e, e, 0, identity, identity);
 
             return entities;
         }
 
-        private static List<Entity> IterateSubEntities(Entity top, Entity e, int depth, Identity identity, Identity parentIdentity)
+        private static NativeArray<Entity> IterateSubEntities(Entity top, Entity e, int depth, Identity identity, Identity parentIdentity)
         {
             if (depth > 3) throw new Exception($"Moveable.IterateSubEntities depth ({depth}) too deep for {top.D()}/{e.D()}");
             depth++;
 
-            List<QReferenceBufferType> referenceBufferTypes = identity switch
-            {
-                Identity.ControlPoint   => new(),
-                Identity.Node           => GetReferenceTypesNode(),
-                Identity.Segment        => new(),
-                _ => GetReferenceTypesOther()
-            };
+            NativeList<Entity> entities = new(Allocator.Temp);
 
-            List<Entity> entities = new();
-
-            foreach (QReferenceBufferType type in referenceBufferTypes)
+            // Handle Control Points, Segments, and Netlanes
+            if (identity == Identity.ControlPoint || identity == Identity.Segment || identity == Identity.NetLane)
             {
-                if (QByType.HasBuffer(type.tParentComponent, e))
+                // Do nothing
+            }
+
+            // Handle Nodes
+            else if (identity == Identity.Node)
+            {
+                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Objects.SubObject> buffer))
                 {
-                    QByType.GetRefBufferComponents(type.tParentComponent, e, out List<IBufferElementData> buffer, true);
-                    foreach (IBufferElementData element in buffer)
+                    for (int i = 0; i < buffer.Length; i++)
                     {
-                        Entity sub = (Entity)type.m_FieldInfo.GetValue(element);
+                        Entity sub = buffer[i].m_SubObject;
                         if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub))
                         {
                             entities.Add(sub);
@@ -170,7 +161,53 @@ namespace MoveIt.QAccessor
                 }
             }
 
-            return entities;
+            // Handle everything else
+            else
+            {
+                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Areas.SubArea> buffer1))
+                {
+                    for (int i = 0; i < buffer1.Length; i++)
+                    {
+                        Entity sub = buffer1[i].m_Area;
+                        if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub))
+                        {
+                            entities.Add(sub);
+                            entities.AddRange(IterateSubEntities(top, sub, depth, Identity.None, parentIdentity));
+                        }
+                    }
+                }
+
+                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Net.SubNet> buffer2))
+                {
+                    for (int i = 0; i < buffer2.Length; i++)
+                    {
+                        Entity sub = buffer2[i].m_SubNet;
+                        if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub))
+                        {
+                            entities.Add(sub);
+                            entities.AddRange(IterateSubEntities(top, sub, depth, Identity.None, parentIdentity));
+                        }
+                    }
+                }
+
+                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Net.SubLane> buffer3))
+                {
+                    for (int i = 0; i < buffer3.Length; i++)
+                    {
+                        Entity sub = buffer3[i].m_SubLane;
+                        if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub))
+                        {
+                            entities.Add(sub);
+                            entities.AddRange(IterateSubEntities(top, sub, depth, Identity.None, parentIdentity));
+                        }
+                    }
+                }
+
+                //        //new() { tParentComponent = typeof(Game.Buildings.InstalledUpgrade), m_FieldInfo = GetEntityReferenceField(typeof(Game.Buildings.InstalledUpgrade)) },
+                //        //new() { tParentComponent = typeof(Game.Objects.SubObject),  m_FieldInfo = GetEntityReferenceField(typeof(Game.Objects.SubObject)) },
+            }
+
+            return entities.ToArray(Allocator.Temp);
         }
 
         private static bool IsValidChild(Identity parentIdentity, Entity e)
@@ -186,78 +223,20 @@ namespace MoveIt.QAccessor
                     return true;
             }
         }
-
-        private static List<QReferenceBufferType> GetReferenceTypesNode()
-        {
-            return new()
-            {
-                new() { tParentComponent = typeof(Game.Objects.SubObject),          m_FieldInfo = GetEntityReferenceField(typeof(Game.Objects.SubObject)) },
-            };
-        }
-
-        private static List<QReferenceBufferType> GetReferenceTypesOther()
-        {
-            return new()
-            {
-                new() { tParentComponent = typeof(Game.Areas.SubArea),              m_FieldInfo = GetEntityReferenceField(typeof(Game.Areas.SubArea)) },
-                new() { tParentComponent = typeof(Game.Net.SubNet),                 m_FieldInfo = GetEntityReferenceField(typeof(Game.Net.SubNet)) },
-                new() { tParentComponent = typeof(Game.Net.SubLane),                m_FieldInfo = GetEntityReferenceField(typeof(Game.Net.SubLane)) },
-                //new() { tParentComponent = typeof(Game.Buildings.InstalledUpgrade), m_FieldInfo = GetEntityReferenceField(typeof(Game.Buildings.InstalledUpgrade)) },
-                //new() { tParentComponent = typeof(Game.Objects.SubObject),  m_FieldInfo = GetEntityReferenceField(typeof(Game.Objects.SubObject)) },
-            };
-        }
-        #endregion
-
-        #region Low level entity access
-        /// <summary>
-        /// Get the field in an IBufferElementData reference buffer component that holds the actual entity reference
-        /// For example for Game.Areas.SubArea.m_area, it returns m_area
-        /// </summary>
-        /// <param name="type">The IBufferElementData struct type to search</param>
-        /// <param name="index">How many entity fields to skip over</param>
-        /// <returns>FieldInfo of this field</returns>
-        /// <exception cref="Exception">If no such field is found</exception>
-        public static FieldInfo GetEntityReferenceField(Type type, int index = 0)
-        {
-            int c = 0;
-            FieldInfo field = null;
-            foreach (FieldInfo f in type.GetFields())
-            {
-                if (f.FieldType == typeof(Entity))
-                {
-                    if (c == index)
-                    {
-                        field = f;
-                        break;
-                    }
-                    else
-                    {
-                        c++;
-                    }
-                }
-            }
-            if (field == null) throw new Exception($"Entity field not found for type {type}");
-            return field;
-        }
-
-        public readonly bool TryGetComponent<T>(out T component) where T : unmanaged, IComponentData
-        {
-            return m_Parent.TryGetComponent<T>(out component);
-        }
-
-        public readonly bool TryGetBuffer<T>(out DynamicBuffer<T> buffer, bool isReadOnly = false) where T : unmanaged, IBufferElementData
-        {
-            return m_Parent.TryGetBuffer<T>(out buffer, isReadOnly);
-        }
         #endregion
 
         public readonly override string ToString()
         {
-            return $"{m_Identity}/{m_Entity.DX()}  Children: {(m_Children.IsCreated ? m_Children.Length : "Not Created!")}";
+            return $"{m_Identity}/{m_Entity.D()}  Children: {(m_Children.IsCreated ? m_Children.Length : "Not Created!")}";
         }
 
+#if USE_BURST
+        internal readonly void DebugDumpFullObject(NativeList<int> ids, bool forceAll = false, string prefix = "")
+        { } // Do nothing if in burst mode
 
-        internal readonly string DebugFullObject(bool forceAll = false)
+        internal readonly string DebugFullObject() => ""; // Do nothing if in burst mode
+#else
+        internal readonly string DebugFullObject(NativeList<int> ids, bool forceAll = false)
         {
             StringBuilder sb = new();
             sb.AppendFormat("{0}", this);
@@ -265,21 +244,46 @@ namespace MoveIt.QAccessor
             if (m_Children.IsCreated)
             {
                 int max = forceAll ? m_Children.Length : math.min(m_Children.Length, 20);
-                for (int i = 0; i < max; i++)
+                int idMatch = 0;
+                int idMismatch = 0;
+                for (int i = 0; i < m_Children.Length; i++)
                 {
-                    sb.AppendFormat("\n    {0}: {1}", i, m_Children[i].m_Entity.DX(true));
+                    if (ids.Contains((int)m_Children[i].m_Identity))
+                    {
+                        sb.AppendFormat("\n    {0}: {1} ({2})", i, m_Children[i].m_Entity.DX(true), m_Children[i].m_Parent.D());
+
+                        if (idMatch++ > max) break;
+                    }
+                    else
+                    {
+                        idMismatch++;
+                    }
                 }
-                if (!forceAll && max < m_Children.Length)
+                sb.Append("\n    ");
+                if (forceAll)
                 {
-                    sb.AppendFormat("\n    {0} more truncated", m_Children.Length - max);
+                    sb.AppendFormat("Showing {0}/{1} children ", idMatch, m_Children.Length);
+                }
+                else
+                {
+                    sb.AppendFormat("Showing {0}/{1} children ({2} more truncated) ", idMatch, m_Children.Length, m_Children.Length - idMatch);
+                }
+                if (ids.Length == 0)
+                {
+                    sb.Append("of all identities.");
+                }
+                else
+                {
+                    sb.AppendFormat("of {0} identities, {1} not matched.", ids.Length, idMismatch);
                 }
             }
             return sb.ToString();
         }
 
-        internal readonly void DebugDumpFullObject(bool forceAll = false, string prefix = "")
+        internal readonly void DebugDumpFullObject(NativeList<int> ids, bool forceAll = false, string prefix = "")
         {
-            QLog.Debug(prefix + DebugFullObject(forceAll));
+            QLog.Debug(prefix + DebugFullObject(ids, forceAll));
         }
+#endif
     }
 }

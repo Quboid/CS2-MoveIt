@@ -1,7 +1,5 @@
-﻿using Colossal.IO.AssetDatabase.Internal;
-using Colossal.Mathematics;
+﻿using Colossal.Mathematics;
 using MoveIt.Moveables;
-using QCommonLib;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -69,7 +67,7 @@ namespace MoveIt.Overlays
         private void UpdateRelatedOverlays()
         {
             // If the segment has been deleted, return now
-            //if (!GetMoveable<MVSegment>().IsValid) return;
+            if (!GetMoveable<MVSegment>().IsValid) return;
 
             Game.Net.Edge edge = GetMoveable<MVSegment>().Edge;
             if (_Tool.Moveables.TryGet<MVNode>(new MVDefinition(Identity.Node, edge.m_Start, _Tool.IsManipulating), out var nodeA))
@@ -81,19 +79,12 @@ namespace MoveIt.Overlays
                 _Tool.QueueOverlayUpdate(nodeB.m_Overlay);
             }
 
-            //string msg = $"CPDefs:{GetMoveable<MVSegment>().m_CPDefinitions.Count}  ";
-            //GetMoveable<MVSegment>().m_CPDefinitions.ForEach(mvd => msg += $"{mvd},  ");
-            //QLog.Debug(msg);
-
             foreach (var mvd in GetMoveable<MVSegment>().m_CPDefinitions)
             {
+                // It won't count as existing if the selection is being cleared and a selected node is cleaned up first
                 if (_Tool.ControlPointManager.GetIfExists(mvd, out var cp))
                 {
                     cp.m_Overlay.EnqueueUpdate();
-                }
-                else
-                {
-                    QLog.Warning($"Segment {m_Moveable.D()} has no CP for {mvd}!\n{QCommon.GetStackTrace()}");
                 }
             }
         }

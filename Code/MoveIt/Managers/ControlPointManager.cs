@@ -166,10 +166,10 @@ namespace MoveIt.Managers
 
         public void RemoveIfUnused(List<MVDefinition> mvds)
         {
-            //string msg = $"CPM.RemoveIfUnused {cpds.Count}";
+            //string msg = $"CPM.RemoveIfUnused {mvds.Count}";
             foreach (var mvd in mvds)
             {
-                //msg += $"  {cpd}";
+                //msg += $"\n    {mvd}";
                 if (GetIfExists(mvd, out var cp))
                 {
                     //msg += $"-E";

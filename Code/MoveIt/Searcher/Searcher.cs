@@ -1,4 +1,5 @@
 ﻿using Colossal.Mathematics;
+using MoveIt.QAccessor;
 using MoveIt.Tool;
 using QCommonLib;
 using System;
@@ -17,24 +18,41 @@ namespace MoveIt.Searcher
         None = 0,
         Buildings = 1,
         Plants = 2,
-        AllObjects = 3,
-        Nodes = 4,
-        Segments = 8,
-        ControlPoints = 16,
-        AllNets = 28,
-        All = 31,
+        Props = 4,
+        Decals = 8,
+        AllStatics = 15,
+        Nodes = 16,
+        Segments = 32,
+        ControlPoints = 64,
+        AllNets = 112,
+        All = 127,
     }
 
-    internal enum SelectionTypes
+    internal enum SearchTypes
     {
         Point,
         Marquee,
+        Bounds,
         Ray,
     }
 
-    internal abstract class Base : IDisposable, INativeDisposable
+    internal abstract class SearcherBase : IDisposable, INativeDisposable
     {
         protected static readonly MIT _Tool = MIT.m_Instance;
+
+        protected QLookup _Lookup;
+
+        internal Filters m_Flags;
+        internal bool m_IsManipulating;
+        internal NativeList<Entity> m_Results;
+
+        internal SearcherBase(Filters flags, bool isManipulating)
+        {
+            m_Flags = flags;
+            m_IsManipulating = isManipulating;
+            QLookupFactory.Init(_Tool);
+            _Lookup = QLookupFactory.Get();
+        }
 
         internal static Game.Objects.SearchSystem ObjSearch
         {
@@ -56,22 +74,12 @@ namespace MoveIt.Searcher
         }
         private static Game.Net.SearchSystem _NetSearch;
 
-        internal Filters m_Flags;
-        internal bool m_IsManipulating;
-        internal NativeList<Entity> m_Results;
-
-        internal Base(Filters flags, bool isManipulating)
-        {
-            m_Flags = flags;
-            m_IsManipulating = isManipulating;
-        }
-
         internal (Entity e, float d)[] CalculateDistances(float3 center)
         {
             (Entity e, float d)[] data = new (Entity e, float d)[m_Results.Length];
             for (int i = 0; i < m_Results.Length; i++)
             {
-                QAccessor.QObjectSimple obj = new(m_Results[i], _Tool);
+                QObjectSimple obj = new(_Tool.EntityManager, ref _Lookup, m_Results[i]);
                 float distance = obj.m_Parent.Position.DistanceXZ(center);
                 data[i] = (m_Results[i], distance);
             }
@@ -91,47 +99,69 @@ namespace MoveIt.Searcher
             return m_Results.Dispose(handle);
         }
 
-        ~Base()
+        ~SearcherBase()
         {
             m_Results.Dispose();
+        }
+
+        internal static Quad2 CalculateBuildingCorners(EntityManager manager, ref QObject obj, Entity prefab, float expand = 0f)
+        {
+            return CalculateBuildingCorners(manager, obj.m_Parent.Position.XZ(), obj.m_Parent.Rotation, prefab, expand);
+        }
+
+        internal static Quad2 CalculateBuildingCorners(EntityManager manager, ref QObjectSimple obj, Entity prefab, float expand = 0f)
+        {
+            return CalculateBuildingCorners(manager, obj.m_Parent.Position.XZ(), obj.m_Parent.Rotation, prefab, expand);
+        }
+
+        internal static Quad2 CalculateBuildingCorners(EntityManager manager, float2 position, quaternion rotation, Entity prefab, float expand = 0f)
+        {
+            int2 lotSize = manager.GetComponentData<Game.Prefabs.BuildingData>(prefab).m_LotSize;
+            float offX = lotSize.x * 4 + expand;
+            float offZ = lotSize.y * 4 + expand;
+
+            Quad2 result = new(
+                RotateAroundPivot(manager, position, rotation, new(-offX, 0, -offZ)),
+                RotateAroundPivot(manager, position, rotation, new(offX, 0, -offZ)),
+                RotateAroundPivot(manager, position, rotation, new(offX, 0, offZ)),
+                RotateAroundPivot(manager, position, rotation, new(-offX, 0, offZ)));
+
+            return result;
+        }
+
+        internal static float2 RotateAroundPivot(EntityManager manager, float2 position, quaternion q, float3 offset)
+        {
+            float3 newPos = math.mul(q, offset);
+            return position + new float2(newPos.x, newPos.z);
         }
 
 
         #region Debug
 
-        internal static void DebugDumpSearchResults(HashSet<Entity> list, Bounds3 bounds)
+        internal string DebugSearchResults()
         {
-            (int b, int p, int n, int s, int u) count = (0, 0, 0, 0, 0);
-
-            //_Tool.AddDebugBounds(bounds, Overlays.Colors.GetForced(Overlays.OverlayFlags.Deselect));
-
             StringBuilder sb = new();
-            sb.AppendFormat("Nearby entities: {0}", list.Count);
-            foreach (Entity e in list)
+            sb.AppendFormat("Search results: {0}", m_Results.Length);
+            Dictionary<string, int> results = new();
+            for (int i = 0; i < m_Results.Length; i++)
             {
-                if (_Tool.EntityManager.HasComponent<Game.Buildings.Building>(e))
+                string code = QTypes.GetIdentityCode(QTypes.GetEntityIdentity(m_Results[i]));
+                if (!results.ContainsKey(code))
                 {
-                    count.b++;
+                    results[code] = 0;
                 }
-                else if (_Tool.EntityManager.HasComponent<Game.Objects.Plant>(e))
-                {
-                    count.p++;
-                }
-                else if (_Tool.EntityManager.HasComponent<Game.Net.Node>(e))
-                {
-                    count.n++;
-                }
-                else if (_Tool.EntityManager.HasComponent<Game.Net.Edge>(e))
-                {
-                    count.s++;
-                }
-                else
-                {
-                    count.u++;
-                }
+                results[code]++;
             }
-            sb.AppendFormat(": b:{0}, p:{1}, n:{2}, s:{3}, ?:{4}", count.b, count.p, count.n, count.s, count.u);
-            MIT.Log.Debug(sb.ToString());
+            foreach ((string code, int c) in results)
+            {
+                sb.AppendFormat("\n    {0}: {1}", code, c);
+            }
+            return sb.ToString();
+        }
+
+        internal void DebugDumpSearchResults(string prefix = "")
+        {
+            QLog.Debug(prefix + DebugSearchResults());
         }
 
         internal static void DebugDumpCalculateDistance((Entity e, float d)[] entities)

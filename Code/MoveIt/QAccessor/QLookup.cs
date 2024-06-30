@@ -2,40 +2,8 @@
 
 namespace MoveIt.QAccessor
 {
-    public interface IQLookupContainer
+    public struct QLookup
     {
-        void Init(SystemBase system);
-        void UpdateAll(SystemBase system);
-    }
-
-    public struct QLookup : IQLookupContainer
-    {
-        public static QLookup s_Lookup;
-        private static bool _Initialized;
-
-        public static void Reset()
-        {
-            _Initialized = false;
-        }
-
-        public static void Update(SystemBase system)
-        {
-            Get(system);
-            s_Lookup.UpdateAll(system);
-        }
-
-        public static ref QLookup Get(SystemBase system)
-        {
-            if (!_Initialized)
-            {
-                s_Lookup = new();
-                s_Lookup.Init(system);
-                _Initialized = true;
-            }
-            return ref s_Lookup;
-        }
-
-
         internal BufferLookup<Game.Areas.Node> gaNode;
         //internal BufferLookup<Game.Net.ConnectedEdge> gnConnectedEdge;
         internal ComponentLookup<Game.Areas.Geometry> gaGeometry;
@@ -51,39 +19,51 @@ namespace MoveIt.QAccessor
         internal ComponentLookup<Game.Objects.Elevation> goElevation;
         internal ComponentLookup<Game.Objects.Transform> goTransform;
         //internal ComponentLookup<Game.Prefabs.ObjectGeometryData> gpObjectGeometryData;
-        //internal ComponentLookup<Game.Rendering.CullingInfo> grCullingInfo;
+        internal ComponentLookup<Game.Rendering.CullingInfo> grCullingInfo;
         internal ComponentLookup<Components.MIT_ControlPoint> MIT_ControlPoint;
+    }
 
-        internal int test;
-
-        public void Init(SystemBase system)
+    public static class QLookupFactory
+    {
+        private static SystemBase _System;
+        private static QLookup _Lookup;
+        
+        public static void Init(SystemBase system)
         {
-            gaNode = system.GetBufferLookup<Game.Areas.Node>();
-            gaGeometry = system.GetComponentLookup<Game.Areas.Geometry>();
-            gnAggregated = system.GetComponentLookup<Game.Net.Aggregated>();
-            gnCurve = system.GetComponentLookup<Game.Net.Curve>();
-            gnEdge = system.GetComponentLookup<Game.Net.Edge>();
-            gnElevation = system.GetComponentLookup<Game.Net.Elevation>();
-            gnNode = system.GetComponentLookup<Game.Net.Node>();
-            gnNodeGeometry = system.GetComponentLookup<Game.Net.NodeGeometry>();
-            goElevation = system.GetComponentLookup<Game.Objects.Elevation>();
-            goTransform = system.GetComponentLookup<Game.Objects.Transform>();
-            MIT_ControlPoint = system.GetComponentLookup<Components.MIT_ControlPoint>();
+            _System = system;
+            _Lookup = new()
+            {
+                gaNode              = _System.GetBufferLookup<Game.Areas.Node>(),
+                gaGeometry          = _System.GetComponentLookup<Game.Areas.Geometry>(),
+                gnAggregated        = _System.GetComponentLookup<Game.Net.Aggregated>(),
+                gnCurve             = _System.GetComponentLookup<Game.Net.Curve>(),
+                gnEdge              = _System.GetComponentLookup<Game.Net.Edge>(),
+                gnElevation         = _System.GetComponentLookup<Game.Net.Elevation>(),
+                gnNode              = _System.GetComponentLookup<Game.Net.Node>(),
+                gnNodeGeometry      = _System.GetComponentLookup<Game.Net.NodeGeometry>(),
+                goElevation         = _System.GetComponentLookup<Game.Objects.Elevation>(),
+                goTransform         = _System.GetComponentLookup<Game.Objects.Transform>(),
+                grCullingInfo       = _System.GetComponentLookup<Game.Rendering.CullingInfo>(),
+                MIT_ControlPoint    = _System.GetComponentLookup<Components.MIT_ControlPoint>()
+            };
         }
 
-        public void UpdateAll(SystemBase system)
+        public static void UpdateAll()
         {
-            gaNode.Update(system);
-            gaGeometry.Update(system);
-            gnAggregated.Update(system);
-            gnCurve.Update(system);
-            gnEdge.Update(system);
-            gnElevation.Update(system);
-            gnNode.Update(system);
-            gnNodeGeometry.Update(system);
-            goElevation.Update(system);
-            goTransform.Update(system);
-            MIT_ControlPoint.Update(system);
+            _Lookup.gaNode.Update(_System);
+            _Lookup.gaGeometry.Update(_System);
+            _Lookup.gnAggregated.Update(_System);
+            _Lookup.gnCurve.Update(_System);
+            _Lookup.gnEdge.Update(_System);
+            _Lookup.gnElevation.Update(_System);
+            _Lookup.gnNode.Update(_System);
+            _Lookup.gnNodeGeometry.Update(_System);
+            _Lookup.goElevation.Update(_System);
+            _Lookup.goTransform.Update(_System);
+            _Lookup.grCullingInfo.Update(_System);
+            _Lookup.MIT_ControlPoint.Update(_System);
         }
+
+        public static ref QLookup Get() => ref _Lookup;
     }
 }

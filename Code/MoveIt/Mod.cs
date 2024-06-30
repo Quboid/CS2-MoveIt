@@ -11,21 +11,27 @@ namespace MoveIt
 
 #if IS_DEBUG
         public const bool ISDEBUG = true;
+        public static string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString(4);
 #else
-        public const bool IS_DEBUG = false;
+        public const bool ISDEBUG = false;
+        public static string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
 #endif
 
-        //public static Colossal.Logging.ILog log = Colossal.Logging.LogManager.GetLogger($"{nameof(MoveIt)}.{nameof(Mod)}").SetShowsErrorsInUI(false);
         public static Settings.Settings Settings;
-
-        public static string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
 
         public void OnLoad(UpdateSystem updateSystem)
         {
             if (ISDEBUG) QCommonLib.QLog.Init(true);
 
+            Settings = new Settings.Settings(this);
+            Settings.RegisterInOptionsUI();
+            Settings.RegisterKeyBindings();
+            Game.SceneFlow.GameManager.instance.localizationManager.AddSource("en-US", new Settings.LocaleEN(Settings));
+            Colossal.IO.AssetDatabase.AssetDatabase.global.LoadSettings(nameof(MoveIt), Settings, new Settings.Settings(this));
+
             //updateSystem.UpdateAt<MIT_HoverSystem>(SystemUpdatePhase.ToolUpdate);
             updateSystem.UpdateAt<Tool.MIT>(SystemUpdatePhase.ToolUpdate);
+            updateSystem.UpdateAt<MIT_HotkeySystem>(SystemUpdatePhase.PreTool);
             updateSystem.UpdateAt<MIT_PostToolSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateBefore<MIT_RemoveOverriddenSystem>(SystemUpdatePhase.ModificationEnd);
             updateSystem.UpdateBefore<MIT_VanillaOverlaySystem>(SystemUpdatePhase.Rendering);
@@ -33,16 +39,6 @@ namespace MoveIt
             updateSystem.UpdateAt<Overlays.MIT_OverlaySystem>(SystemUpdatePhase.Rendering);
             updateSystem.UpdateAt<MIT_UISystem>(SystemUpdatePhase.UIUpdate);
             updateSystem.UpdateAt<MIT_ToolTipSystem>(SystemUpdatePhase.UITooltip);
-
-            //log.Info(nameof(OnLoad));
-
-            //if (GameManager.instance.modManager.TryGetExecutableAsset(this, out var asset))
-            //    log.Info($"Current mod asset at {asset.path}");
-
-            Settings = new Settings.Settings(this);
-            Settings.RegisterInOptionsUI();
-            Game.SceneFlow.GameManager.instance.localizationManager.AddSource("en-US", new Settings.LocaleEN(Settings));
-            Colossal.IO.AssetDatabase.AssetDatabase.global.LoadSettings(nameof(MoveIt), Settings, new Settings.Settings(this));
         }
 
         public void OnDispose()

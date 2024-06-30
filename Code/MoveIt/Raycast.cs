@@ -28,6 +28,7 @@ namespace MoveIt
         private readonly RaycastSystem _RaycastSystem;
         private readonly World _World;
 
+        // Will be float.MaxValue,float.MaxValue,float.MaxValue when tool is activated
         internal float3 HitPosition => GetHit().m_HitPosition;
 
         internal Line3.Segment Line => ToolRaycastSystem.CalculateRaycastLine(Camera.main);
@@ -49,7 +50,12 @@ namespace MoveIt
             NativeArray<RaycastResult> result = _RaycastSystem.GetResult(this);
             if (result == null || result.Length == 0)
             {
-                throw new System.Exception($"Failed to get raycast result");
+                RaycastHit res = new()
+                {
+                    m_HitPosition = new(float.MaxValue, float.MaxValue, float.MaxValue)
+                };
+                return res;
+                //throw new System.Exception($"Failed to get raycast result");
             }
             RaycastHit hit = result[0].m_Hit;
             result.Dispose();

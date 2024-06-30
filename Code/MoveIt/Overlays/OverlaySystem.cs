@@ -74,8 +74,10 @@ namespace MoveIt.Overlays
             //QLog.Bundle("OVRL", msg);
 
             ToolFlags toolFlags = ToolFlags.None;
-            if (_Tool.IsManipulating)   toolFlags |= ToolFlags.ManipulationMode;
-            if (QKeyboard.Shift)        toolFlags |= ToolFlags.HasShift;
+            if (_Tool.IsManipulating)                           toolFlags |= ToolFlags.ManipulationMode;
+            if (QKeyboard.Shift)                                toolFlags |= ToolFlags.HasShift;
+            if (_Tool.ToolState == ToolStates.DrawingSelection) toolFlags |= ToolFlags.IsMarquee;
+            if (Mod.Settings.ShowDebugLines)                    toolFlags |= ToolFlags.ShowDebug;
 
             #region old overlays
             //    // Action overlays
@@ -129,6 +131,7 @@ namespace MoveIt.Overlays
                     cth_Circle              = GetComponentTypeHandle<MIO_Circle>(true),
                     cth_Line                = GetComponentTypeHandle<MIO_Line>(true),
                     cth_Quad                = GetComponentTypeHandle<MIO_Quad>(true),
+                    cth_Debug               = GetComponentTypeHandle<MIO_Debug>(true),
                     bth_Circles             = GetBufferTypeHandle<MIO_Circles>(true),
                     bth_Lines               = GetBufferTypeHandle<MIO_Lines>(true),
                     bth_DashedLines         = GetBufferTypeHandle<MIO_DashedLines>(true),

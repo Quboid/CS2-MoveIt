@@ -1,11 +1,9 @@
 ﻿using Colossal.IO.AssetDatabase.Internal;
-using Colossal.Mathematics;
 using MoveIt.Moveables;
+using MoveIt.QAccessor;
 using MoveIt.Tool;
 using QCommonLib;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Unity.Collections;
 using Unity.Entities;
@@ -108,7 +106,7 @@ namespace MoveIt.Actions
 
         public TransformAction() : base()
         {
-            QAccessor.QLookup.Reset();
+            QLookupFactory.Init(_Tool);
 
             HashSet<MVDefinition> fullDefinitions = _Tool.Selection.GetObjectsToTransformFull();
             HashSet<Moveable> fullSelection = new();
@@ -118,7 +116,8 @@ namespace MoveIt.Actions
             m_New = new(fullSelection.Count, true);
             m_Active = m_New;
 
-            m_UpdateArea = _Tool.Selection.GetTotalBounds().Expand(MIT.TERRAIN_UPDATE_MARGIN);
+            m_InitialBounds = _Tool.Selection.GetTotalBounds(MIT.TERRAIN_UPDATE_MARGIN);
+            m_TerrainUpdateBounds = m_InitialBounds;
             m_Center = _Tool.Selection.Center;
 
             int c = 0;
@@ -126,8 +125,8 @@ namespace MoveIt.Actions
             {
                 mv.UpdateYOffset();
 
-                m_Old.m_States[c] = new(mv, _Tool);
-                m_New.m_States[c] = new(mv, _Tool);
+                m_Old.m_States[c] = new(_Tool.EntityManager, ref QLookupFactory.Get(), mv);
+                m_New.m_States[c] = new(_Tool.EntityManager, ref QLookupFactory.Get(), mv);
                 c++;
             }
 
@@ -151,9 +150,9 @@ namespace MoveIt.Actions
             float3 newMoveDelta = MoveDelta;
             float newAngleDelta = AngleDelta;
 
-            QAccessor.QLookup.Update(_Tool);
+            QLookupFactory.Init(_Tool);
 
-            m_UpdateArea = _Tool.Selection.GetTotalBounds().Expand(MIT.TERRAIN_UPDATE_MARGIN);
+            m_TerrainUpdateBounds = _Tool.Selection.GetTotalBounds(MIT.TERRAIN_UPDATE_MARGIN);
 
             m_Snapper.m_SnapType = Snapper.SnapTypes.None;
 
@@ -242,7 +241,7 @@ namespace MoveIt.Actions
                 m_New.m_States[i] = new()
                 {
                     m_Entity            = old.m_Entity,
-                    m_Accessor          = new(old.m_Entity, _Tool, old.m_Identity),
+                    m_Accessor          = new(_Tool.EntityManager, ref QLookupFactory.Get(), old.m_Entity, old.m_Identity),
                     m_Parent            = old.m_Parent,
                     m_ParentKey         = old.m_ParentKey,
                     m_Prefab            = old.m_Prefab,
@@ -271,8 +270,10 @@ namespace MoveIt.Actions
             m_UpdateRotate = true;
             m_Active = m_Old;
             UpdateStates();
-            _Tool.Create(this);
-            _Tool.Moveables.UpdateAllOverlays();
+            _Tool.CreationPhase = CreationPhases.Create;
+            _Tool.Queue.CreationAction = this;
+            //_Tool.Create(this);
+            //_Tool.Moveables.UpdateAllOverlays();
             //DebugDumpStates($"Undo");
 
             base.Undo();
@@ -285,8 +286,10 @@ namespace MoveIt.Actions
             m_UpdateRotate = true;
             m_Active = m_New;
             UpdateStates();
-            _Tool.Create(this);
-            _Tool.Moveables.UpdateAllOverlays();
+            _Tool.CreationPhase = CreationPhases.Create;
+            _Tool.Queue.CreationAction = this;
+            //_Tool.Create(this);
+            //_Tool.Moveables.UpdateAllOverlays();
             //DebugDumpStates($"Redo");
 
             base.Redo();
@@ -306,16 +309,16 @@ namespace MoveIt.Actions
                 {
                     State state = m_Active.m_States[i];
                     MVDefinition mvd = state.Definition;
-                    if (!State.IsValid(mvd.m_Parent))
+                    if (!State.IsValid(_Tool.EntityManager, mvd.m_Parent))
                     {
                         toRemove.Add(i);
                         continue;
                     }
                     MVControlPoint cp = _Tool.ControlPointManager.GetOrCreate(mvd);
-                    state.UpdateEntity(cp.m_Entity, _Tool);
+                    state.UpdateEntity(_Tool.EntityManager, ref QLookupFactory.Get(), cp.m_Entity);
                     m_Active.m_States[i] = state;
                 }
-                else if (!m_Active.m_States[i].IsThisValid)
+                else if (!m_Active.m_States[i].IsValid(_Tool.EntityManager))
                 {
                     toRemove.Add(i);
                     continue;
@@ -350,12 +353,9 @@ namespace MoveIt.Actions
         /// <summary>
         /// Update selected objects to the new JobStates data
         /// </summary>
-        /// <returns>Did the JobStates data include any buildings?</returns>
-        internal bool Transform()
+        internal void Transform()
         {
             //string msg = $"{Time.frameCount} TA.Trans {m_Active} {m_Active.Count} |TAct:{_Tool.ToolAction}| Manip:{_Tool.m_IsManipulateMode}";
-
-            bool includesBuilding = false;
 
             for (int i = 0; i < m_Active.m_States.Length; i++)
             {
@@ -368,17 +368,11 @@ namespace MoveIt.Actions
 
                 mv.MoveIt(this, m_Active.m_States[i], m_UpdateMove, m_UpdateRotate);
 
-                if (!includesBuilding && m_Active.m_States[i].m_Identity == Identity.Building)
-                {
-                    includesBuilding = true;
-                }
                 mv.UpdateOverlay();
             }
 
             //QLog.Debug(msg);
             _Tool.m_SelectionDirty = true;
-
-            return includesBuilding;
         }
 
         //public override HashSet<Overlays.Overlay> GetOverlays(Overlays.ToolFlags toolFlags)
@@ -398,6 +392,7 @@ namespace MoveIt.Actions
             _Tool.CreationPhase = CreationPhases.Create;
             _Tool.ToolAction = ToolActions.Do;
         }
+
 
         public void DebugDumpStates(string prefix = "", bool showOld = true, bool showNew = true)
         {

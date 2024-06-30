@@ -24,12 +24,10 @@ namespace MoveIt.Tool
             m_RenderSystem = World.GetOrCreateSystemManaged<Systems.MIT_RenderSystem>();
             m_UISystem = World.GetOrCreateSystemManaged<Systems.MIT_UISystem>();
             m_PostToolSystem = World.GetOrCreateSystemManaged<Systems.MIT_PostToolSystem>();
+            m_HotkeySystem = World.GetOrCreateSystemManaged<Systems.MIT_HotkeySystem>();
             //m_HoverSystem = World.GetOrCreateSystemManaged<MIT_HoverSystem>();
 
             m_RaycastSystem = World.GetOrCreateSystemManaged<Game.Common.RaycastSystem>();
-
-            m_ApplyAction = new Input.ApplyButton("Tool", "Apply");
-            m_SecondaryAction = new Input.SecondaryButton("Tool", "Secondary Apply");
 
             QKeyboard.Init();
 
@@ -51,9 +49,10 @@ namespace MoveIt.Tool
 
             m_Instance = this;
             Enabled = false;
+            //m_HotkeySystem.Initialise();
 
             ControlPointManager = new();
-            HotkeyManager = new();
+            InputManager = new();
             Hover = new();
             Moveables = new();
             Queue = new();
@@ -66,6 +65,7 @@ namespace MoveIt.Tool
             m_IsManipulateMode = false;
             Selection ??= new SelectionNormal();
 
+            m_HotkeySystem.Initialise();
             m_RenderSystem.m_Widgets.Clear();
 
             m_OverlaySystem.DestroyAllEntities();
@@ -79,13 +79,16 @@ namespace MoveIt.Tool
 
             MIT_ToolTipSystem.instance.EnableIfPopulated();
             //m_HoverSystem.Start();
+            m_HotkeySystem.OnToolEnable();
             m_RemoveOverriddenSystem.Start();
             m_PostToolSystem.Start();
             m_VanillaOverlaySystem.Start();
             m_OverlaySystem.Start();
             m_RenderSystem.Start();
-            m_ApplyAction.Enabled = true;
-            m_SecondaryAction.Enabled = true;
+            InputManager.OnToolEnable();
+
+            Moveables.Refresh();
+            Selection.Refresh();
             m_SelectionDirty = true;
         }
 
@@ -95,13 +98,13 @@ namespace MoveIt.Tool
             base.OnStopRunning();
 
             Hover.Clear();
-            m_SecondaryAction.Enabled = false;
-            m_ApplyAction.Enabled = false;
+            InputManager.OnToolDisable();
             m_RenderSystem.End();
             m_OverlaySystem.End();
             m_VanillaOverlaySystem.End();
             m_PostToolSystem.End();
             m_RemoveOverriddenSystem.End();
+            m_HotkeySystem.OnToolDisable();
             //m_HoverSystem.End();
             MIT_ToolTipSystem.instance.Enabled = false;
 
@@ -122,9 +125,6 @@ namespace MoveIt.Tool
                 m_ToolSystem.selected = Entity.Null;
                 m_ToolSystem.activeTool = this;
                 applyMode = ApplyMode.Clear;
-
-                Moveables.Refresh();
-                Selection.Refresh();
 
                 _UIHasFocusStep = 0;
             }

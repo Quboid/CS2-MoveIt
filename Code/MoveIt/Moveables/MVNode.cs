@@ -1,8 +1,10 @@
 ﻿using Colossal.Mathematics;
 using MoveIt.Actions;
 using MoveIt.Overlays;
+using MoveIt.QAccessor;
 using MoveIt.Tool;
 using QCommonLib;
+using System;
 using System.Collections.Generic;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -28,6 +30,10 @@ namespace MoveIt.Moveables
 
     public class MVNode : Moveable
     {
+        /// <summary>
+        /// The segments (edges) attached to this segment; Entity -> IsStart
+        /// IsStart = true when this node is that edge's m_Start node, false for m_End
+        /// </summary>
         internal Dictionary<Entity, bool> m_Segments;
         internal List<MVDefinition> m_CPDefinitions;
 
@@ -111,7 +117,7 @@ namespace MoveIt.Moveables
             for (int i = 0; i < m_CPDefinitions.Count; i++)
             {
                 MVControlPoint cp = _Tool.ControlPointManager.GetOrCreate(m_CPDefinitions[i]);
-                State cpState = new(cp, _Tool);// action.GetState(m_CPDefinitions[i]);
+                State cpState = new(_Tool.EntityManager, ref QLookupFactory.Get(), cp);// action.GetState(m_CPDefinitions[i]);
 
                 cpState.m_Position = (float3)matrix.MultiplyPoint(cpState.m_InitialPosition - action.m_Center);
                 float3 oldAngles = cpState.m_InitialRotation.ToEulerDegrees();
@@ -123,6 +129,26 @@ namespace MoveIt.Moveables
             }
 
             nodeState.Transform(move, rotate);
+        }
+
+        internal override Bounds3 GetBounds()
+        {
+            try
+            {
+                Game.Rendering.CullingInfo cullingInfo = _Tool.EntityManager.GetComponentData<Game.Rendering.CullingInfo>(m_Entity);
+                Bounds3 bounds = cullingInfo.m_Bounds;
+                foreach ((Entity e, bool _) in m_Segments)
+                {
+                    MVSegment seg = _Tool.Moveables.GetOrCreate<MVSegment>(new(Identity.Segment, e, false));
+                    bounds = bounds.Encapsulate(seg.GetBounds());
+                }
+                return bounds;
+            }
+            catch (Exception ex)
+            {
+                MIT.Log.Error($"Failed to get CullingInfo on node {m_Entity.D()} for GetBounds ({ex.Message})");
+                return new Bounds3(Vector3.zero, Vector3.zero);
+            }
         }
 
         internal override float GetRadius()

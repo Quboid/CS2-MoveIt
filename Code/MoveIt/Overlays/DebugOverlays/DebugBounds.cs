@@ -15,6 +15,7 @@ namespace MoveIt.Overlays
                 typeof(MIO_Type),
                 typeof(MIO_Common),
                 typeof(MIO_SingleFrame),
+                typeof(MIO_Debug),
                 typeof(MIO_Bounds),
             });
 
@@ -23,6 +24,7 @@ namespace MoveIt.Overlays
                 typeof(MIO_Type),
                 typeof(MIO_Common),
                 typeof(MIO_TTL),
+                typeof(MIO_Debug),
                 typeof(MIO_Bounds),
             });
 

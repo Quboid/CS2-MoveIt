@@ -1,14 +1,9 @@
-﻿using Colossal.Mathematics;
-using Game.Common;
+﻿using Game.Common;
 using Game.Net;
 using Game.Tools;
 using MoveIt.Actions;
-using MoveIt.Moveables;
 using MoveIt.Overlays;
 using QCommonLib;
-using System.Collections.Generic;
-using System.Linq;
-using Unity.Entities;
 using Unity.Mathematics;
 
 namespace MoveIt.Tool
@@ -172,187 +167,187 @@ namespace MoveIt.Tool
             return posA.DistanceXZ(posB);
         }
 
-        internal void DejankNodes()
-        {
-            bool previousFailed = false;
-            string msg = $"Dejanking selection ({Selection.Count})";
-            foreach (MVDefinition mvd in Selection.Definitions)
-            {
-                if (previousFailed) msg += " No, skipping Moveable.";
-                previousFailed = true;
+        //internal void DejankNodes()
+        //{
+        //    bool previousFailed = false;
+        //    string msg = $"Dejanking selection ({Selection.Count})";
+        //    foreach (MVDefinition mvd in Selection.Definitions)
+        //    {
+        //        if (previousFailed) msg += " No, skipping Moveable.";
+        //        previousFailed = true;
 
-                msg += $"\n   Check {mvd.m_Entity}, node?";
-                if (mvd.m_Identity != Identity.Node) continue;
-                msg += $" yes, 2 segments?";
-                MVNode node = Moveables.GetOrCreate<MVNode>(mvd);
-                if (node.m_Segments.Count != 2) continue;
-                msg += $" yes, same prefab?";
-                KeyValuePair<Entity, bool> segAPair = node.m_Segments.ElementAt(0);
-                Entity segAEntity = segAPair.Key;
-                bool segAIsStart = segAPair.Value;
-                KeyValuePair<Entity, bool> segBPair = node.m_Segments.ElementAt(1);
-                Entity segBEntity = segBPair.Key;
-                bool segBIsStart = segBPair.Value;
-                Entity segAPrefab = EntityManager.GetComponentData<Game.Prefabs.PrefabRef>(segAEntity).m_Prefab;
-                Entity segBPrefab = EntityManager.GetComponentData<Game.Prefabs.PrefabRef>(segBEntity).m_Prefab;
-                if (!segAPrefab.Equals(segBPrefab)) continue;
-                msg += $" yes, straight?";
+        //        msg += $"\n   Check {mvd.m_Entity}, node?";
+        //        if (mvd.m_Identity != Identity.Node) continue;
+        //        msg += $" yes, 2 segments?";
+        //        MVNode node = Moveables.GetOrCreate<MVNode>(mvd);
+        //        if (node.m_Segments.Count != 2) continue;
+        //        msg += $" yes, same prefab?";
+        //        KeyValuePair<Entity, bool> segAPair = node.m_Segments.ElementAt(0);
+        //        Entity segAEntity = segAPair.Key;
+        //        bool segAIsStart = segAPair.Value;
+        //        KeyValuePair<Entity, bool> segBPair = node.m_Segments.ElementAt(1);
+        //        Entity segBEntity = segBPair.Key;
+        //        bool segBIsStart = segBPair.Value;
+        //        Entity segAPrefab = EntityManager.GetComponentData<Game.Prefabs.PrefabRef>(segAEntity).m_Prefab;
+        //        Entity segBPrefab = EntityManager.GetComponentData<Game.Prefabs.PrefabRef>(segBEntity).m_Prefab;
+        //        if (!segAPrefab.Equals(segBPrefab)) continue;
+        //        msg += $" yes, straight?";
 
-                Curve segACurve = EntityManager.GetComponentData<Curve>(segAEntity);
-                Curve segBCurve = EntityManager.GetComponentData<Curve>(segBEntity);
-                Bezier4x3 segABezier = segACurve.m_Bezier;
-                Bezier4x3 segBBezier = segBCurve.m_Bezier;
-                Bezier4x3 smooth3D = new(
-                    segAIsStart ? segABezier.b : segABezier.c, segAIsStart ? segABezier.a : segABezier.d,
-                    segBIsStart ? segBBezier.a : segBBezier.d, segBIsStart ? segBBezier.b : segBBezier.c);
-                Bezier4x2 smooth = new(
-                    segAIsStart ? segABezier.b.XZ() : segABezier.c.XZ(), segAIsStart ? segABezier.a.XZ() : segABezier.d.XZ(), 
-                    segBIsStart ? segBBezier.a.XZ() : segBBezier.d.XZ(), segBIsStart ? segBBezier.b.XZ() : segBBezier.c.XZ());
-                MathUtils.Distance(new Line2(smooth.a, smooth.d), smooth.b, out float segAT);
-                MathUtils.Distance(new Line2(smooth.a, smooth.d), smooth.c, out float segBT);
-                MathUtils.Distance(smooth, smooth.b, out float segATx);
-                MathUtils.Distance(smooth, smooth.c, out float segBTx);
+        //        Curve segACurve = EntityManager.GetComponentData<Curve>(segAEntity);
+        //        Curve segBCurve = EntityManager.GetComponentData<Curve>(segBEntity);
+        //        Bezier4x3 segABezier = segACurve.m_Bezier;
+        //        Bezier4x3 segBBezier = segBCurve.m_Bezier;
+        //        Bezier4x3 smooth3D = new(
+        //            segAIsStart ? segABezier.b : segABezier.c, segAIsStart ? segABezier.a : segABezier.d,
+        //            segBIsStart ? segBBezier.a : segBBezier.d, segBIsStart ? segBBezier.b : segBBezier.c);
+        //        Bezier4x2 smooth = new(
+        //            segAIsStart ? segABezier.b.XZ() : segABezier.c.XZ(), segAIsStart ? segABezier.a.XZ() : segABezier.d.XZ(), 
+        //            segBIsStart ? segBBezier.a.XZ() : segBBezier.d.XZ(), segBIsStart ? segBBezier.b.XZ() : segBBezier.c.XZ());
+        //        MathUtils.Distance(new Line2(smooth.a, smooth.d), smooth.b, out float segAT);
+        //        MathUtils.Distance(new Line2(smooth.a, smooth.d), smooth.c, out float segBT);
+        //        MathUtils.Distance(smooth, smooth.b, out float segATx);
+        //        MathUtils.Distance(smooth, smooth.c, out float segBTx);
 
-                QLog.Debug($"Curve {segAT}, {segBT};   {segATx}, {segBTx}\n    {smooth3D.a.D()};  {smooth3D.b.D()};  {smooth3D.c.D()};  {smooth3D.d.D()}");
+        //        QLog.Debug($"Curve {segAT}, {segBT};   {segATx}, {segBTx}\n    {smooth3D.a.D()};  {smooth3D.b.D()};  {smooth3D.c.D()};  {smooth3D.d.D()}");
 
-                segATx -= segAT;
-                segBTx -= segBT;
-                if ((segATx < -0.05 || segATx > 0.05) || (segBTx < -0.05 || segBTx > 0.05)) continue;
-                msg += $" yes, attempting dejank;";
+        //        segATx -= segAT;
+        //        segBTx -= segBT;
+        //        if ((segATx < -0.05 || segATx > 0.05) || (segBTx < -0.05 || segBTx > 0.05)) continue;
+        //        msg += $" yes, attempting dejank;";
 
-                float3 mag = smooth3D.d - smooth3D.a;
-                float3 segAOffset = math.lerp(smooth3D.a, smooth3D.d, segAT);
-                float3 segBOffset = math.lerp(smooth3D.a, smooth3D.d, segBT);
-                if (segAIsStart) segABezier.a = segAOffset;
-                else segABezier.d = segAOffset;
-                if (segBIsStart) segBBezier.a = segBOffset;
-                else segBBezier.d = segBOffset;
+        //        float3 mag = smooth3D.d - smooth3D.a;
+        //        float3 segAOffset = math.lerp(smooth3D.a, smooth3D.d, segAT);
+        //        float3 segBOffset = math.lerp(smooth3D.a, smooth3D.d, segBT);
+        //        if (segAIsStart) segABezier.a = segAOffset;
+        //        else segABezier.d = segAOffset;
+        //        if (segBIsStart) segBBezier.a = segBOffset;
+        //        else segBBezier.d = segBOffset;
 
-                segACurve.m_Bezier = segABezier;
-                segBCurve.m_Bezier = segBBezier;
-                EntityManager.SetComponentData(segAEntity, segACurve);
-                EntityManager.SetComponentData(segBEntity, segBCurve);
+        //        segACurve.m_Bezier = segABezier;
+        //        segBCurve.m_Bezier = segBBezier;
+        //        EntityManager.SetComponentData(segAEntity, segACurve);
+        //        EntityManager.SetComponentData(segBEntity, segBCurve);
 
-                EdgeGeometry edge = EntityManager.GetComponentData<EdgeGeometry>(segAEntity);
-                if (segAIsStart)
-                {
-                    StartNodeGeometry nodeGeo = EntityManager.GetComponentData<StartNodeGeometry>(segAEntity);
-                    EdgeNodeGeometry geo = nodeGeo.m_Geometry;
+        //        EdgeGeometry edge = EntityManager.GetComponentData<EdgeGeometry>(segAEntity);
+        //        if (segAIsStart)
+        //        {
+        //            StartNodeGeometry nodeGeo = EntityManager.GetComponentData<StartNodeGeometry>(segAEntity);
+        //            EdgeNodeGeometry geo = nodeGeo.m_Geometry;
 
-                    Segment segL = geo.m_Left;
-                    segL.m_Left = new(segL.m_Left.d, segL.m_Left.d, segL.m_Left.d, segL.m_Left.d);
-                    segL.m_Right = new(segL.m_Right.d, segL.m_Right.d, segL.m_Right.d, segL.m_Right.d);
-                    float3 a = segL.m_Left.a;
-                    edge.m_Start.m_Right.a = a; // Start node is Left-Right
-                    segL.m_Length = new(0f, 0f);
-                    geo.m_Left = segL;
+        //            Segment segL = geo.m_Left;
+        //            segL.m_Left = new(segL.m_Left.d, segL.m_Left.d, segL.m_Left.d, segL.m_Left.d);
+        //            segL.m_Right = new(segL.m_Right.d, segL.m_Right.d, segL.m_Right.d, segL.m_Right.d);
+        //            float3 a = segL.m_Left.a;
+        //            edge.m_Start.m_Right.a = a; // Start node is Left-Right
+        //            segL.m_Length = new(0f, 0f);
+        //            geo.m_Left = segL;
 
-                    Segment segR = geo.m_Right;
-                    segR.m_Left = new(segR.m_Left.d, segR.m_Left.d, segR.m_Left.d, segR.m_Left.d);
-                    segR.m_Right = new(segR.m_Right.d, segR.m_Right.d, segR.m_Right.d, segR.m_Right.d);
-                    float3 b = segR.m_Right.a;
-                    edge.m_Start.m_Left.a = b;
-                    segR.m_Length = new(0f, 0f);
-                    geo.m_Right = segL;
+        //            Segment segR = geo.m_Right;
+        //            segR.m_Left = new(segR.m_Left.d, segR.m_Left.d, segR.m_Left.d, segR.m_Left.d);
+        //            segR.m_Right = new(segR.m_Right.d, segR.m_Right.d, segR.m_Right.d, segR.m_Right.d);
+        //            float3 b = segR.m_Right.a;
+        //            edge.m_Start.m_Left.a = b;
+        //            segR.m_Length = new(0f, 0f);
+        //            geo.m_Right = segL;
 
-                    geo.m_Middle = new(geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d);
-                    geo.m_Bounds = new(new float3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z)), new float3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z)));
-                    nodeGeo.m_Geometry = geo;
-                    EntityManager.SetComponentData(segAEntity, nodeGeo);
-                }
-                else
-                {
-                    EndNodeGeometry nodeGeo = EntityManager.GetComponentData<EndNodeGeometry>(segAEntity);
-                    EdgeNodeGeometry geo = nodeGeo.m_Geometry;
+        //            geo.m_Middle = new(geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d);
+        //            geo.m_Bounds = new(new float3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z)), new float3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z)));
+        //            nodeGeo.m_Geometry = geo;
+        //            EntityManager.SetComponentData(segAEntity, nodeGeo);
+        //        }
+        //        else
+        //        {
+        //            EndNodeGeometry nodeGeo = EntityManager.GetComponentData<EndNodeGeometry>(segAEntity);
+        //            EdgeNodeGeometry geo = nodeGeo.m_Geometry;
 
-                    Segment segL = geo.m_Left;
-                    segL.m_Left = new(segL.m_Left.d, segL.m_Left.d, segL.m_Left.d, segL.m_Left.d);
-                    segL.m_Right = new(segL.m_Right.d, segL.m_Right.d, segL.m_Right.d, segL.m_Right.d);
-                    float3 a = segL.m_Left.a;
-                    edge.m_End.m_Left.d = a; // End node is Left-Left
-                    segL.m_Length = new(0f, 0f);
-                    geo.m_Left = segL;
+        //            Segment segL = geo.m_Left;
+        //            segL.m_Left = new(segL.m_Left.d, segL.m_Left.d, segL.m_Left.d, segL.m_Left.d);
+        //            segL.m_Right = new(segL.m_Right.d, segL.m_Right.d, segL.m_Right.d, segL.m_Right.d);
+        //            float3 a = segL.m_Left.a;
+        //            edge.m_End.m_Left.d = a; // End node is Left-Left
+        //            segL.m_Length = new(0f, 0f);
+        //            geo.m_Left = segL;
 
-                    Segment segR = geo.m_Right;
-                    segR.m_Left = new(segR.m_Left.d, segR.m_Left.d, segR.m_Left.d, segR.m_Left.d);
-                    segR.m_Right = new(segR.m_Right.d, segR.m_Right.d, segR.m_Right.d, segR.m_Right.d);
-                    float3 b = segR.m_Right.a;
-                    edge.m_End.m_Right.d = b;
-                    segR.m_Length = new(0f, 0f);
-                    geo.m_Right = segL;
+        //            Segment segR = geo.m_Right;
+        //            segR.m_Left = new(segR.m_Left.d, segR.m_Left.d, segR.m_Left.d, segR.m_Left.d);
+        //            segR.m_Right = new(segR.m_Right.d, segR.m_Right.d, segR.m_Right.d, segR.m_Right.d);
+        //            float3 b = segR.m_Right.a;
+        //            edge.m_End.m_Right.d = b;
+        //            segR.m_Length = new(0f, 0f);
+        //            geo.m_Right = segL;
 
-                    geo.m_Middle = new(geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d);
-                    geo.m_Bounds = new(new float3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z)), new float3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z)));
-                    nodeGeo.m_Geometry = geo;
-                    EntityManager.SetComponentData(segAEntity, nodeGeo);
-                }
-                EntityManager.SetComponentData(segAEntity, edge);
-                EntityManager.AddComponent<BatchesUpdated>(segAEntity);
-                msg += $" A done,";
+        //            geo.m_Middle = new(geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d);
+        //            geo.m_Bounds = new(new float3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z)), new float3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z)));
+        //            nodeGeo.m_Geometry = geo;
+        //            EntityManager.SetComponentData(segAEntity, nodeGeo);
+        //        }
+        //        EntityManager.SetComponentData(segAEntity, edge);
+        //        EntityManager.AddComponent<BatchesUpdated>(segAEntity);
+        //        msg += $" A done,";
 
-                edge = EntityManager.GetComponentData<EdgeGeometry>(segBEntity);
-                if (segBIsStart)
-                {
-                    StartNodeGeometry nodeGeo = EntityManager.GetComponentData<StartNodeGeometry>(segBEntity);
-                    EdgeNodeGeometry geo = nodeGeo.m_Geometry;
+        //        edge = EntityManager.GetComponentData<EdgeGeometry>(segBEntity);
+        //        if (segBIsStart)
+        //        {
+        //            StartNodeGeometry nodeGeo = EntityManager.GetComponentData<StartNodeGeometry>(segBEntity);
+        //            EdgeNodeGeometry geo = nodeGeo.m_Geometry;
 
-                    Segment segL = geo.m_Left;
-                    segL.m_Left = new(segL.m_Left.d, segL.m_Left.d, segL.m_Left.d, segL.m_Left.d);
-                    segL.m_Right = new(segL.m_Right.d, segL.m_Right.d, segL.m_Right.d, segL.m_Right.d);
-                    float3 a = segL.m_Left.a;
-                    edge.m_Start.m_Right.a = a; // Start node is Left-Right
-                    segL.m_Length = new(0f, 0f);
-                    geo.m_Left = segL;
+        //            Segment segL = geo.m_Left;
+        //            segL.m_Left = new(segL.m_Left.d, segL.m_Left.d, segL.m_Left.d, segL.m_Left.d);
+        //            segL.m_Right = new(segL.m_Right.d, segL.m_Right.d, segL.m_Right.d, segL.m_Right.d);
+        //            float3 a = segL.m_Left.a;
+        //            edge.m_Start.m_Right.a = a; // Start node is Left-Right
+        //            segL.m_Length = new(0f, 0f);
+        //            geo.m_Left = segL;
 
-                    Segment segR = geo.m_Right;
-                    segR.m_Left = new(segR.m_Left.d, segR.m_Left.d, segR.m_Left.d, segR.m_Left.d);
-                    segR.m_Right = new(segR.m_Right.d, segR.m_Right.d, segR.m_Right.d, segR.m_Right.d);
-                    float3 b = segR.m_Right.a;
-                    edge.m_Start.m_Left.a = b;
-                    segR.m_Length = new(0f, 0f);
-                    geo.m_Right = segR;
+        //            Segment segR = geo.m_Right;
+        //            segR.m_Left = new(segR.m_Left.d, segR.m_Left.d, segR.m_Left.d, segR.m_Left.d);
+        //            segR.m_Right = new(segR.m_Right.d, segR.m_Right.d, segR.m_Right.d, segR.m_Right.d);
+        //            float3 b = segR.m_Right.a;
+        //            edge.m_Start.m_Left.a = b;
+        //            segR.m_Length = new(0f, 0f);
+        //            geo.m_Right = segR;
 
-                    geo.m_Middle = new(geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d);
-                    geo.m_Bounds = new(new float3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z)), new float3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z)));
-                    nodeGeo.m_Geometry = geo;
-                    EntityManager.SetComponentData(segBEntity, nodeGeo);
-                }
-                else
-                {
-                    EndNodeGeometry nodeGeo = EntityManager.GetComponentData<EndNodeGeometry>(segBEntity);
-                    EdgeNodeGeometry geo = nodeGeo.m_Geometry;
+        //            geo.m_Middle = new(geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d);
+        //            geo.m_Bounds = new(new float3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z)), new float3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z)));
+        //            nodeGeo.m_Geometry = geo;
+        //            EntityManager.SetComponentData(segBEntity, nodeGeo);
+        //        }
+        //        else
+        //        {
+        //            EndNodeGeometry nodeGeo = EntityManager.GetComponentData<EndNodeGeometry>(segBEntity);
+        //            EdgeNodeGeometry geo = nodeGeo.m_Geometry;
 
-                    Segment segL = geo.m_Left;
-                    segL.m_Left = new(segL.m_Left.d, segL.m_Left.d, segL.m_Left.d, segL.m_Left.d);
-                    segL.m_Right = new(segL.m_Right.d, segL.m_Right.d, segL.m_Right.d, segL.m_Right.d);
-                    float3 a = segL.m_Left.a;
-                    edge.m_End.m_Left.d = a; // End node is Left-Left
-                    segL.m_Length = new(0f, 0f);
-                    geo.m_Left = segL;
+        //            Segment segL = geo.m_Left;
+        //            segL.m_Left = new(segL.m_Left.d, segL.m_Left.d, segL.m_Left.d, segL.m_Left.d);
+        //            segL.m_Right = new(segL.m_Right.d, segL.m_Right.d, segL.m_Right.d, segL.m_Right.d);
+        //            float3 a = segL.m_Left.a;
+        //            edge.m_End.m_Left.d = a; // End node is Left-Left
+        //            segL.m_Length = new(0f, 0f);
+        //            geo.m_Left = segL;
 
-                    Segment segR = geo.m_Right;
-                    segR.m_Left = new(segR.m_Left.d, segR.m_Left.d, segR.m_Left.d, segR.m_Left.d);
-                    segR.m_Right = new(segR.m_Right.d, segR.m_Right.d, segR.m_Right.d, segR.m_Right.d);
-                    float3 b = segR.m_Right.a;
-                    edge.m_End.m_Right.d = b;
-                    segR.m_Length = new(0f, 0f);
-                    geo.m_Right = segR;
+        //            Segment segR = geo.m_Right;
+        //            segR.m_Left = new(segR.m_Left.d, segR.m_Left.d, segR.m_Left.d, segR.m_Left.d);
+        //            segR.m_Right = new(segR.m_Right.d, segR.m_Right.d, segR.m_Right.d, segR.m_Right.d);
+        //            float3 b = segR.m_Right.a;
+        //            edge.m_End.m_Right.d = b;
+        //            segR.m_Length = new(0f, 0f);
+        //            geo.m_Right = segR;
 
-                    geo.m_Middle = new(geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d);
-                    geo.m_Bounds = new(new float3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z)), new float3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z)));
-                    nodeGeo.m_Geometry = geo;
-                    EntityManager.SetComponentData(segBEntity, nodeGeo);
-                }
-                EntityManager.SetComponentData(segBEntity, edge);
-                EntityManager.AddComponent<BatchesUpdated>(segBEntity);
-                msg += $" B done!";
+        //            geo.m_Middle = new(geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d, geo.m_Middle.d);
+        //            geo.m_Bounds = new(new float3(math.min(a.x, b.x), math.min(a.y, b.y), math.min(a.z, b.z)), new float3(math.max(a.x, b.x), math.max(a.y, b.y), math.max(a.z, b.z)));
+        //            nodeGeo.m_Geometry = geo;
+        //            EntityManager.SetComponentData(segBEntity, nodeGeo);
+        //        }
+        //        EntityManager.SetComponentData(segBEntity, edge);
+        //        EntityManager.AddComponent<BatchesUpdated>(segBEntity);
+        //        msg += $" B done!";
 
-                EntityManager.AddComponent<BatchesUpdated>(node.m_Entity);
-                previousFailed = false;
-            }
-            if (previousFailed) msg += " No, skipping Moveable.";
-            Log.Debug(msg);
-        }
+        //        EntityManager.AddComponent<BatchesUpdated>(node.m_Entity);
+        //        previousFailed = false;
+        //    }
+        //    if (previousFailed) msg += " No, skipping Moveable.";
+        //    Log.Debug(msg);
+        //}
 
         //internal static HashSet<Bounds2> MergeBounds(HashSet<Bounds2> outerList)
         //{
@@ -424,79 +419,6 @@ namespace MoveIt.Tool
         //    QLog.Debug($"\nStart:{originalCount}\nInner:{innerList.Count}");
         //    return innerList;
         //}
-
-        #region Debug lines
-        //internal void AddDebugLine(Line3.Segment line, OverlayRenderSystem.StyleFlags projection = OverlayRenderSystem.StyleFlags.Projected)
-        //{
-        //    AddDebugLine(line, GetRandomColor(), projection);
-        //}
-
-        //internal void AddDebugLine(Line3.Segment line, Color color, OverlayRenderSystem.StyleFlags projection = OverlayRenderSystem.StyleFlags.Projected)
-        //{
-        //    Overlay overlay = Overlay.CreateLine(new Entity() { Index = 3, Version = 1 }, line);
-        //    overlay.m_Common.m_OutlineColor = color;
-        //    overlay.m_Common.m_Style = projection;
-        //    m_OverlaySystem.DebugAdd(overlay);
-        //}
-
-        //internal void AddDebugBounds2(Bounds2 b, OverlayRenderSystem.StyleFlags projection = OverlayRenderSystem.StyleFlags.Projected)
-        //{
-        //    Bounds3 bounds = new(new(b.min.x, float.MinValue, b.min.y), new(b.max.x, float.MaxValue, b.max.y));
-        //    AddDebugBounds(bounds, GetRandomColor(), projection);
-        //}
-
-        //internal void AddDebugBounds2(Bounds2 b, Color color, OverlayRenderSystem.StyleFlags projection = OverlayRenderSystem.StyleFlags.Projected)
-        //{
-        //    Bounds3 bounds = new(new(b.min.x, float.MinValue, b.min.y), new(b.max.x, float.MaxValue, b.max.y));
-        //    AddDebugBounds(bounds, color, projection);
-        //}
-
-        //internal void AddDebugBounds(Bounds3 bounds, OverlayRenderSystem.StyleFlags projection = OverlayRenderSystem.StyleFlags.Projected)
-        //{
-        //    AddDebugBounds(bounds, GetRandomColor(), projection);
-        //}
-
-        //internal void AddDebugBounds(Bounds3 bounds, Color color, OverlayRenderSystem.StyleFlags projection = OverlayRenderSystem.StyleFlags.Projected)
-        //{
-        //    Utils.Bounds overlay = new(bounds, color, projection);
-        //    m_OverlaySystem.DebugAdd(overlay);
-        //}
-
-        //internal void AddDebugRectangle(float4 area, OverlayRenderSystem.StyleFlags projection = OverlayRenderSystem.StyleFlags.Projected)
-        //{
-        //    AddDebugRectangle(area, GetRandomColor(), projection);
-        //}
-
-        //internal void AddDebugRectangle(float4 area, Color color, OverlayRenderSystem.StyleFlags projection = OverlayRenderSystem.StyleFlags.Projected)
-        //{
-        //    Utils.Rectangle overlay = new(area, color, projection);
-        //    m_OverlaySystem.DebugAdd(overlay);
-        //}
-
-        //internal void AddDebugCircle(float3 position, float diameter, OverlayRenderSystem.StyleFlags projection = OverlayRenderSystem.StyleFlags.Projected)
-        //{
-        //    AddDebugCircle(position, diameter, GetRandomColor(), projection);
-        //}
-
-        //internal void AddDebugCircle(float3 position, float diameter, Color color, OverlayRenderSystem.StyleFlags projection = OverlayRenderSystem.StyleFlags.Projected)
-        //{
-        //    Overlay overlay = Overlay.CreateCircle(new Entity() { Index = 3, Version = 1 }, diameter);
-        //    overlay.m_Common.m_OutlineColor = color;
-        //    overlay.m_Common.m_Style = projection;
-        //    overlay.m_Common.m_Position = position;
-        //    m_OverlaySystem.DebugAdd(overlay);
-        //}
-
-        //internal void ClearDebugOverlays()
-        //{
-        //    m_OverlaySystem.DebugClear();
-        //}
-
-        //private Color GetRandomColor()
-        //{
-        //    return new(UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0f, 1f), UnityEngine.Random.Range(0.6f, 1f));
-        //}
-        #endregion
 
         public override string toolID => "MoveItTool";
         public override Game.Prefabs.PrefabBase GetPrefab() => null;

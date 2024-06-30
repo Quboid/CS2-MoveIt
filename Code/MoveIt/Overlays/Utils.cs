@@ -46,7 +46,7 @@ namespace MoveIt.Overlays
         Circle,
         Diamond,
         Line,
-        Lines,
+        Quad,
         Marquee,
         SelectionCenter,
         MVBuilding,
@@ -61,16 +61,18 @@ namespace MoveIt.Overlays
 
     public enum ToolFlags
     {
-        None = 0,
-        ManipulationMode = 1,
-        HasShift = 2,
+        None                = 0,
+        ManipulationMode    = 1,
+        HasShift            = 2,
+        IsMarquee           = 4,
+        ShowDebug           = 8,
     }
 
     public enum Projection
     {
-        Unset = 0,
-        Ground = 1,
-        Fixed = 2,
+        Unset               = 0,
+        Ground              = 1,
+        Fixed               = 2,
     }
 
     public struct MIO_Type : IComponentData
@@ -85,6 +87,7 @@ namespace MoveIt.Overlays
 
     public struct MIO_Updateable : IComponentData { }
     public struct MIO_SingleFrame : IComponentData { }
+    public struct MIO_Debug : IComponentData { }
 
     public struct MIO_TTL : IComponentData
     {

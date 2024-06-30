@@ -9,6 +9,8 @@ using System;
 using System.Text;
 using Unity.Collections;
 using Unity.Entities;
+using System.Linq;
+using Game.Input;
 
 namespace MoveIt.Systems
 {
@@ -21,6 +23,8 @@ namespace MoveIt.Systems
         private ValueBinding<bool>          _ShowDebugPanelBinding;
         private ValueBinding<string>        _DebugPanelContentsBinding;
         private ValueBinding<bool>          _HideMoveItIcon;
+        private ValueBinding<bool>          _ShowMConflict;
+        private ValueBinding<string>        _RebindExistingMsg;
         private PanelState _DefaultState;
         private PanelState _PanelState;
 
@@ -36,14 +40,19 @@ namespace MoveIt.Systems
             _DefaultState = new PanelState();
             _PanelState = new PanelState();
 
-            base.OnCreate();
+            base.OnCreate(); 
             AddBinding(_ToolEnabledBinding          = new ValueBinding<bool>(Mod.MOD_UI, "MIT_ToolEnabled", false));
             AddBinding(_PanelStateBinding           = new ValueBinding<PanelState>(Mod.MOD_UI, "MIT_PanelState", _DefaultState));
             AddBinding(_ShowDebugPanelBinding       = new ValueBinding<bool>(Mod.MOD_UI, "MIT_ShowDebugPanel", false));
             AddBinding(_DebugPanelContentsBinding   = new ValueBinding<string>(Mod.MOD_UI, "MIT_DebugPanelContents", "Hello World"));
             AddBinding(_HideMoveItIcon              = new ValueBinding<bool>(Mod.MOD_UI, "MIT_HideMoveItIcon", false));
+            AddBinding(_ShowMConflict               = new ValueBinding<bool>(Mod.MOD_UI, "MIT_ShowRebindConfirm", false));
+            AddBinding(_RebindExistingMsg           = new ValueBinding<string>(Mod.MOD_UI, "MIT_RebindExistingMsg", "[Error]"));
             AddBinding(new TriggerBinding(Mod.MOD_UI, "MIT_EnableToggle", MIT_EnableToggle));
             AddBinding(new TriggerBinding<string>(Mod.MOD_UI, "MIT_PanelButtonPress", MIT_PanelButtonPress));
+            AddBinding(new TriggerBinding<bool>(Mod.MOD_UI, "MIT_ShowRebindConfirm", MIT_ShowRebindConfirm));
+
+            Enabled = true;
         }
 
         protected override void OnUpdate()
@@ -52,11 +61,26 @@ namespace MoveIt.Systems
             _PanelStateBinding.Update(_PanelState);
             _ToolEnabledBinding.Update(_Tool.Enabled);
             _ShowDebugPanelBinding.Update(_Tool.ShowDebugPanel);
-            _DebugPanelContentsBinding.Update(DebugPanelContents());
+            _DebugPanelContentsBinding.Update(GenerateDebugPanelContents());
             _HideMoveItIcon.Update(_Tool.HideMoveItIcon);
+
+            bool hasShownMConflictPanel = Mod.Settings.HasShownMConflictPanel;
+            List<ProxyBinding> conflicts = GetActionKeyConflicts(MIT_HotkeySystem.KEY_TOGGLETOOL);
+            bool showMConflictPanel = !hasShownMConflictPanel && conflicts.Count > 0;
+            _ShowMConflict.Update(showMConflictPanel);
+            StringBuilder msg = new();
+            if (showMConflictPanel)
+            {
+                msg.AppendFormat("Do you want the '**M**' key to open Move It?\nIt will be removed from:");
+                foreach (ProxyBinding binding in conflicts)
+                {
+                    msg.AppendFormat("\n - {0}: **{1}**", binding.m_MapName, binding.m_ActionName);
+                }
+            }
+            _RebindExistingMsg.Update(msg.ToString());
         }
 
-        private string DebugPanelContents()
+        private string GenerateDebugPanelContents()
         {
             if (!_Tool.ShowDebugPanel) return string.Empty;
             if (_Tool.Queue is null || _Tool.Queue.Current is null) return string.Empty;
@@ -65,7 +89,7 @@ namespace MoveIt.Systems
 
             StringBuilder sb = new();
             sb.AppendFormat("**{0}** Tool:**{1}**/**{2}**\n", _Tool.IsManipulating ? "Manip" : (_Tool.m_MarqueeSelect ? "Marquee" : "Single"), _Tool.ToolState, _Tool.ToolAction);
-            sb.AppendFormat("Action:**{0}** {1}\n", _Tool.Queue.Current, _Tool.Queue.GetQueueIndexes());
+            sb.AppendFormat("Action:**{0}**{1} {2}\n", _Tool.Queue.Current, _Tool.Queue.HasCreationAction ? "*" : "", _Tool.Queue.GetQueueIndexes());
             if (_Tool.Hover.IsNull)
             {
                 sb.AppendFormat("Nothing hovered\n");
@@ -78,8 +102,8 @@ namespace MoveIt.Systems
             }
             sb.AppendFormat("**{0}**\n", _Tool.m_PointerPos.DX());
             sb.AppendFormat("MVs:**{0}** (CPs:{1}), Sel:**{2}** ({3})\n",
-                _Tool.Moveables.Count, _Tool.Moveables.CountOf<MVControlPoint>(),
-                _Tool.Selection.Count, _Tool.Selection.CountFull - _Tool.Selection.Count);
+                _Tool.Moveables.Count, _Tool.Moveables.CountOf<MVControlPoint>(), _Tool.Selection.Count,
+                _Tool.Selection.CountFull - _Tool.Selection.Count >= 0 ? _Tool.Selection.CountFull - _Tool.Selection.Count : "...");
             sb.AppendFormat("Overlays:**{0}** ({1} types), Util:**{2}**, CPs:**{3}**\n",
                 GetOverlayCount(),
                 GetOverlayTypeCount(),
@@ -136,6 +160,44 @@ namespace MoveIt.Systems
             }
         }
 
+        private void MIT_ShowRebindConfirm(bool doRebind)
+        {
+            if (doRebind)
+            {
+                var conflicts = GetActionKeyConflicts(MIT_HotkeySystem.KEY_TOGGLETOOL);
+                for (int i = 0; i < conflicts.Count; i++)
+                {
+                    ProxyBinding binding = conflicts[i];
+                    binding.path = string.Empty;
+                    InputManager.instance.SetBinding(binding, out _);
+                }
+
+                MIT.Log.Info($"Set {conflicts.Count} bindings to empty ({string.Join(",", conflicts)})");
+            }
+            else
+            {
+                ProxyAction toggleTool = Mod.Settings.GetAction(MIT_HotkeySystem.KEY_TOGGLETOOL);
+                ProxyBinding binding = toggleTool.bindings.First();
+                binding.AddModifier(new()
+                {
+                    m_Name              = "modifier",
+                    m_IsProhibition     = false,
+                    m_Component         = ActionComponent.Press,
+                    m_Path              = "<Keyboard>/shift",
+                });
+                InputManager.instance.SetBinding(binding, out _);
+                Mod.Settings.Key_ToggleTool = binding;
+
+                MIT.Log.Info($"Set ToggleTool to Shift+M");
+                
+                //QLog.Debug($"Binding Paths for ToggleTool and ToggleManip:" +
+                //    $"\n{binding.path} {binding.modifiers.Count}:{string.Join(",", binding.modifiers)}" +
+                //    $"\n{t2.path} {t2.modifiers.Count}:{string.Join(",", t2.modifiers)}" +
+                //    $"\n+ {t2.modifiers.First().m_Name}, {t2.modifiers.First().m_Path}, {t2.modifiers.First().m_Component}, {t2.modifiers.First().m_IsProhibition}");
+            }
+
+            Mod.Settings.HasShownMConflictPanel = true;
+        }
 
 
         internal int GetOverlayCount()
@@ -193,6 +255,28 @@ namespace MoveIt.Systems
                 return -1;
             }
         }
+
+        internal static List<ProxyBinding> GetActionKeyConflicts(string actionName)
+        {
+            List<ProxyBinding> results = new();
+            var bindings = Mod.Settings.GetAction(actionName).bindings;
+            foreach (var binding in bindings)
+            {
+                results.AddRange(binding.conflicts);
+            }
+            return results;
+        }
+
+        //internal static List<ProxyAction> GetMKeyConflictsX => InputManager.instance.actions.Where(a =>
+        //    a.usedKeys.Count() == 1 &&
+        //    a.usedKeys.Any(k => k.Equals("<Keyboard>/m")) &&
+        //    a.bindings.Any(b =>
+        //        b.modifiers.Count == 0 &&
+        //        !b.m_MapName.Equals("Editor") &&
+        //        !b.m_MapName.Equals("MoveIt.MoveIt.Mod")
+        //        )
+        //    ).ToList();
+
 
         internal string DebugDrawQuery()
         {

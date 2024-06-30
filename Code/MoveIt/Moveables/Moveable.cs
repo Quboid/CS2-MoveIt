@@ -87,7 +87,7 @@ namespace MoveIt.Moveables
             m_Overlay?.EnqueueUpdate();
         }
 
-        internal Bounds3 GetBounds()
+        internal virtual Bounds3 GetBounds()
         {
             try
             {
@@ -175,7 +175,7 @@ namespace MoveIt.Moveables
         {
             Game.Prefabs.PrefabRef prefab = _Tool.EntityManager.GetComponentData<Game.Prefabs.PrefabRef>(m_Entity);
             Game.Prefabs.ObjectGeometryData geoData = _Tool.EntityManager.GetComponentData<Game.Prefabs.ObjectGeometryData>(prefab);
-            return math.max(math.cmax(new float2(geoData.m_Size.x, geoData.m_Size.z)), 3f) / 2;
+            return math.max(math.cmax(new float2(geoData.m_Size.x, geoData.m_Size.z)), 2f) / 2;
         }
 
         internal virtual List<MVDefinition> GetAllChildren() => new();

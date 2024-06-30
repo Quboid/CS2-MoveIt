@@ -3,8 +3,6 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
-Code/MoveIt/Properties/PublishConfiguration.xml
-
 # User-specific files
 *.rsuser
 *.suo
@@ -398,3 +396,4 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+/Code/MoveIt/Library

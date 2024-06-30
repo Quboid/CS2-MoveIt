@@ -14,20 +14,30 @@ namespace MoveIt.Overlays
                 typeof(MIO_Type),
                 typeof(MIO_Common),
                 typeof(MIO_SingleFrame),
+                typeof(MIO_Debug),
                 typeof(MIO_Line),
             });
 
-        public static Entity Factory(Line3.Segment line, UnityEngine.Color color = default, int index = 4, int version = 1)
+        private static EntityArchetype _ArchetypeTTL = _Tool.EntityManager.CreateArchetype(
+            new ComponentType[] {
+                typeof(MIO_Type),
+                typeof(MIO_Common),
+                typeof(MIO_TTL),
+                typeof(MIO_Debug),
+                typeof(MIO_Line),
+            });
+
+        public static Entity Factory(Line3.Segment line, int ttl = 0, UnityEngine.Color color = default, int index = 6, int version = 1)
         {
             Entity owner = new() { Index = index, Version = version };
-            Entity e = _Tool.EntityManager.CreateEntity(_Archetype);
+            Entity e = _Tool.EntityManager.CreateEntity(ttl == 0 ? _Archetype : _ArchetypeTTL);
 
             float3 position = line.a + (line.ab / 2);
 
             MIO_Common common = new()
             {
                 m_Flags = InteractionFlags.Static,
-                m_OutlineColor = Colors.Get(ColorData.Contexts.Deselect),
+                m_OutlineColor = color.Equals(default) ? Colors.Get(ColorData.Contexts.Hovering) : color,
                 m_Owner = owner,
                 m_TerrainHeight = position.y,
                 m_Transform = new(position, default),
@@ -36,6 +46,10 @@ namespace MoveIt.Overlays
             _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.Line));
             _Tool.EntityManager.SetComponentData(e, common);
             _Tool.EntityManager.SetComponentData<MIO_Line>(e, new(line));
+            if (ttl > 0)
+            {
+                _Tool.EntityManager.SetComponentData<MIO_TTL>(e, new(ttl));
+            }
 
             return e;
         }

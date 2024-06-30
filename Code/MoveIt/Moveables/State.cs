@@ -15,8 +15,6 @@ namespace MoveIt.Moveables
 {
     public struct State : IDisposable, INativeDisposable
     {
-        private readonly static EntityManager Manager = World.DefaultGameObjectInjectionWorld.EntityManager;
-
         internal Entity m_Entity;
         internal QObject m_Accessor;
         internal Entity m_Parent;
@@ -34,48 +32,47 @@ namespace MoveIt.Moveables
         internal bool m_IsManaged;
         internal Bezier4x3 m_InitialCurve;
 
-        internal readonly bool IsThisValid          => IsValid(m_Entity);
-        internal readonly MVDefinition Definition   => new(m_Identity, m_Entity, m_IsManipulatable, m_IsManaged, m_Parent, m_ParentKey);
+        internal readonly MVDefinition Definition => new(m_Identity, m_Entity, m_IsManipulatable, m_IsManaged, m_Parent, m_ParentKey);
 
-        internal State(Moveable mv, SystemBase system)
+        internal State(EntityManager manager, ref QLookup lookup, Moveable mv)
         {
-            if (!Manager.Exists(mv.m_Entity))
+            if (!manager.Exists(mv.m_Entity))
             {
                 throw new Exception($"Creating Moveable State for missing entity {mv.m_Entity.D()}");
             }
-            if (!Manager.HasComponent<Game.Prefabs.PrefabRef>(mv.m_Entity))
+            if (!manager.HasComponent<Game.Prefabs.PrefabRef>(mv.m_Entity))
             {
                 throw new Exception($"Creating Moveable State but no PrefabRef found for {mv.m_Entity.D()}");
             }
 
-            m_Entity                    = mv.m_Entity;
-            m_Accessor                  = new(m_Entity, system, mv.m_Identity);
-            m_Parent                    = mv.m_Parent;
-            m_ParentKey                 = mv.m_ParentKey;
-            m_Prefab                    = Manager.GetComponentData<Game.Prefabs.PrefabRef>(m_Entity).m_Prefab;
-            m_Position                  = mv.Transform.m_Position;
-            m_InitialPosition           = m_Position;
-            m_Rotation                  = mv.Transform.m_Rotation;
-            m_InitialRotation           = m_Rotation;
-            m_YOffset                   = mv.m_YOffset;
-            m_InitialYOffset            = mv.m_YOffset;
-            m_Identity                  = mv.m_Identity;
-            m_ObjectType                = mv.m_ObjectType;
-            m_IsManipulatable           = mv.IsManipulatable;
-            m_IsManaged                 = mv.IsManaged;
-            m_InitialCurve              = default;
+            m_Entity            = mv.m_Entity;
+            m_Accessor          = new(manager, ref lookup, m_Entity, mv.m_Identity);
+            m_Parent            = mv.m_Parent;
+            m_ParentKey         = mv.m_ParentKey;
+            m_Prefab            = manager.GetComponentData<Game.Prefabs.PrefabRef>(m_Entity).m_Prefab;
+            m_Position          = mv.Transform.m_Position;
+            m_InitialPosition   = m_Position;
+            m_Rotation          = mv.Transform.m_Rotation;
+            m_InitialRotation   = m_Rotation;
+            m_YOffset           = mv.m_YOffset;
+            m_InitialYOffset    = mv.m_YOffset;
+            m_Identity          = mv.m_Identity;
+            m_ObjectType        = mv.m_ObjectType;
+            m_IsManipulatable   = mv.IsManipulatable;
+            m_IsManaged         = mv.IsManaged;
+            m_InitialCurve      = default;
 
             if (m_Identity == Identity.Segment || m_Identity == Identity.NetLane)
             {
-                m_InitialCurve = Manager.GetComponentData<Game.Net.Curve>(m_Entity).m_Bezier;
+                m_InitialCurve = manager.GetComponentData<Game.Net.Curve>(m_Entity).m_Bezier;
             }
         }
 
-        internal void UpdateEntity(Entity e, SystemBase system)
+        internal void UpdateEntity(EntityManager manager, ref QLookup lookup, Entity e)
         {
             m_Entity = e;
             m_Accessor.Dispose();
-            m_Accessor = new(m_Entity, system, m_Identity);
+            m_Accessor = new(manager, ref lookup, m_Entity, m_Identity);
         }
 
         public void Transform(bool move, bool rotate)
@@ -86,25 +83,27 @@ namespace MoveIt.Moveables
         /// <summary>
         /// States can have owners, if they are extensions or service upgrades
         /// </summary>
+        /// <param name="manager">An EntityManager struct</param>
         /// <param name="e">The Entity that the state refers to</param>
         /// <returns>Is it valid?</returns>
-        public static bool IsValid(Entity e)
+        public static bool IsValid(EntityManager manager, Entity e)
         {
             if (e.Equals(Entity.Null)) return false;
-            if (!Manager.Exists(e)) return false;
-            if (!Manager.HasComponent<Game.Prefabs.PrefabRef>(e)) return false;
-            if (Manager.HasComponent<Temp>(e)) return false;
-            if (Manager.HasComponent<Terrain>(e)) return false;
-            if (Manager.HasComponent<Game.Objects.Attached>(e)) return false;
+            if (!manager.Exists(e)) return false;
+            if (!manager.HasComponent<Game.Prefabs.PrefabRef>(e)) return false;
+            if (manager.HasComponent<Temp>(e)) return false;
+            if (manager.HasComponent<Terrain>(e)) return false;
+            if (manager.HasComponent<Game.Objects.Attached>(e)) return false;
             if (!(
-                Manager.HasComponent<Game.Objects.Transform>(e) ||
-                Manager.HasComponent<Game.Net.Edge>(e) ||
-                Manager.HasComponent<Game.Net.Node>(e) ||
-                Manager.HasComponent<Components.MIT_ControlPoint>(e)
+                manager.HasComponent<Game.Objects.Transform>(e) ||
+                manager.HasComponent<Game.Net.Edge>(e) ||
+                manager.HasComponent<Game.Net.Node>(e) ||
+                manager.HasComponent<Components.MIT_ControlPoint>(e)
                 )) return false;
 
             return true;
         }
+        public readonly bool IsValid(EntityManager manager) => IsValid(manager, m_Entity);
 
         public void Dispose()
         {

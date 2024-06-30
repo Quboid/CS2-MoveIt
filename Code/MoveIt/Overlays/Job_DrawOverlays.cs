@@ -30,6 +30,7 @@ namespace MoveIt.Overlays
             [ReadOnly] public ComponentTypeHandle<MIO_Circle> cth_Circle;
             [ReadOnly] public ComponentTypeHandle<MIO_Line> cth_Line;
             [ReadOnly] public ComponentTypeHandle<MIO_Quad> cth_Quad;
+            [ReadOnly] public ComponentTypeHandle<MIO_Debug> cth_Debug;
             [ReadOnly] public BufferTypeHandle<MIO_Lines> bth_Lines;
             [ReadOnly] public BufferTypeHandle<MIO_DashedLines> bth_DashedLines;
             [ReadOnly] public BufferTypeHandle<MIO_Circles> bth_Circles;
@@ -38,16 +39,16 @@ namespace MoveIt.Overlays
 
             public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
             {
-                var data_Overlay = chunk.GetNativeArray(ref cth_Overlay);
-                var data_CommonData = chunk.GetNativeArray(ref cth_CommonData);
-                var data_Bezier = chunk.GetNativeArray(ref cth_Bezier);
-                var data_Bounds = chunk.GetNativeArray(ref cth_Bounds);
-                var data_Circle = chunk.GetNativeArray(ref cth_Circle);
-                var data_Line = chunk.GetNativeArray(ref cth_Line);
-                var data_Quad = chunk.GetNativeArray(ref cth_Quad);
-                var data_Lines = chunk.GetBufferAccessor(ref bth_Lines);
-                var data_DashedLines = chunk.GetBufferAccessor(ref bth_DashedLines);
-                var data_Circles = chunk.GetBufferAccessor(ref bth_Circles);
+                var data_Overlay        = chunk.GetNativeArray(ref cth_Overlay);
+                var data_CommonData     = chunk.GetNativeArray(ref cth_CommonData);
+                var data_Bezier         = chunk.GetNativeArray(ref cth_Bezier);
+                var data_Bounds         = chunk.GetNativeArray(ref cth_Bounds);
+                var data_Circle         = chunk.GetNativeArray(ref cth_Circle);
+                var data_Line           = chunk.GetNativeArray(ref cth_Line);
+                var data_Quad           = chunk.GetNativeArray(ref cth_Quad);
+                var data_Lines          = chunk.GetBufferAccessor(ref bth_Lines);
+                var data_DashedLines    = chunk.GetBufferAccessor(ref bth_DashedLines);
+                var data_Circles        = chunk.GetBufferAccessor(ref bth_Circles);
 
                 var enumerator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
 
@@ -59,6 +60,7 @@ namespace MoveIt.Overlays
                     //QLog.Debug($"  DRAW  {data_Overlay[idx].m_Type}  owner:{common.m_Owner.DX()}, {common.m_Flags}/{common.m_Manipulation} Tool:{m_ToolFlags}");
 
                     if (common.m_Flags == InteractionFlags.None) continue;
+                    if ((m_ToolFlags & ToolFlags.ShowDebug) == 0 && chunk.Has(ref cth_Debug)) continue;
 
                     switch (data_Overlay[idx].m_Type)
                     {
@@ -76,6 +78,7 @@ namespace MoveIt.Overlays
                             break;
 
                         case OverlayTypes.Marquee:
+                        case OverlayTypes.Quad:
                             DrawQuad(common, data_Quad[idx].Quad, Projection.Ground);
                             break;
 

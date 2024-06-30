@@ -10,19 +10,21 @@ namespace MoveIt.QAccessor
         private readonly EntityManager Manager => World.DefaultGameObjectInjectionWorld.EntityManager;
 
         internal Entity m_Entity;
+        internal Entity m_Parent;
         internal Identity m_Identity;
         internal ID m_ID;
         internal QLookup m_Lookup;
 
-        internal QEntity(SystemBase system, Entity e, Identity identity)
+        internal QEntity(ref QLookup lookup, Entity e, Identity identity, Entity parent = default)
         {
-            m_Lookup = QLookup.Get(system);
+            m_Lookup = lookup;
             m_Entity = e;
             m_Identity = identity;
+            m_Parent = parent;
 
             m_ID = identity switch
             {
-                Identity.Segment        => ID.Seg,
+                Identity.Segment        => parent == Entity.Null ? ID.Seg : ID.Lane,
                 Identity.NetLane        => ID.Lane,
                 Identity.Node           => ID.Node,
                 Identity.ControlPoint   => ID.CP,
@@ -58,7 +60,7 @@ namespace MoveIt.QAccessor
         };
 
 
-        internal readonly bool SetUpdated()
+        internal bool SetUpdated()
         {
             return m_ID switch
             {
@@ -71,7 +73,7 @@ namespace MoveIt.QAccessor
         }
 
 
-        internal readonly bool MoveBy(State state, float3 newPosition, float3 delta)
+        internal bool MoveBy(State state, float3 newPosition, float3 delta)
         {
             return m_ID switch
             {
@@ -83,7 +85,7 @@ namespace MoveIt.QAccessor
             };
         }
 
-        internal readonly bool MoveTo(State state, float3 newPosition, float3 delta)
+        internal bool MoveTo(State state, float3 newPosition, float3 delta)
         {
             return m_ID switch
             {
@@ -95,7 +97,7 @@ namespace MoveIt.QAccessor
             };
         }
 
-        internal readonly bool RotateBy(State state, float delta, ref Matrix4x4 matrix, float3 origin)
+        internal bool RotateBy(State state, float delta, ref Matrix4x4 matrix, float3 origin)
         {
             return m_ID switch
             {
@@ -107,7 +109,7 @@ namespace MoveIt.QAccessor
             };
         }
 
-        internal readonly bool RotateTo(State state, quaternion newRotation, ref Matrix4x4 matrix, float3 origin)
+        internal bool RotateTo(State state, quaternion newRotation, ref Matrix4x4 matrix, float3 origin)
         {
             return m_ID switch
             {

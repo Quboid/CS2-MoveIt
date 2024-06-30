@@ -67,7 +67,7 @@ namespace MoveIt.Overlays
                     switch (data_Overlay[idx].m_Type)
                     {
                         case OverlayTypes.Marquee:
-                            UpdateMarquee(
+                            UpdateQuad(
                                 data_CommonData,
                                 idx,
                                 data_Quad[idx]);
@@ -187,7 +187,7 @@ namespace MoveIt.Overlays
                 DrawTools.CalculateRectangleLines(common.m_Transform, common.m_OutlineWidthGround, lotHalfSize, ref lines);
             }
 
-            public readonly void UpdateMarquee(NativeArray<MIO_Common> data_Common, int idx, MIO_Quad quadComp)
+            public readonly void UpdateQuad(NativeArray<MIO_Common> data_Common, int idx, MIO_Quad quadComp)
             {
                 Quad3 quad = quadComp.Quad;
 

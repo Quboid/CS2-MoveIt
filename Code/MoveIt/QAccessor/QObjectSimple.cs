@@ -10,17 +10,19 @@ namespace MoveIt.QAccessor
     /// </summary>
     public struct QObjectSimple : IDisposable
     {
+        internal EntityManager m_Manager;
         public Entity m_Entity;
         internal QEntity m_Parent;
         internal Identity m_Identity;
 
-        internal QObjectSimple(Entity e, SystemBase system)
+        internal QObjectSimple(EntityManager manager, ref QLookup lookup, Entity e)
         {
             if (e == Entity.Null) throw new ArgumentNullException("Creating QObject with null entity");
 
-            m_Entity =              e;
-            m_Identity =            QTypes.GetEntityIdentity(e);
-            m_Parent =              new(system, e, m_Identity);
+            m_Manager   = manager;
+            m_Entity    = e;
+            m_Identity  = QTypes.GetEntityIdentity(manager, e);
+            m_Parent    = new(ref lookup, e, m_Identity);
 
             //DebugDumpFullObject();
         }
@@ -40,10 +42,16 @@ namespace MoveIt.QAccessor
 
         public readonly override string ToString()
         {
-            return $"{m_Identity}/{m_Entity.DX()}";
+            return $"{m_Identity}/{m_Entity.D()}";
         }
 
 
+#if USE_BURST
+        internal readonly void DebugDumpFullObject()
+        { } // Do nothing if in burst mode
+
+        internal readonly string DebugFullObject() => ""; // Do nothing if in burst mode
+#else
         internal readonly string DebugFullObject()
         {
             return ToString();
@@ -53,5 +61,6 @@ namespace MoveIt.QAccessor
         {
             QLog.Debug(prefix + DebugFullObject());
         }
+#endif
     }
 }

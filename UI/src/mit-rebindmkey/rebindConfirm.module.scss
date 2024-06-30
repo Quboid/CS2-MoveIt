@@ -1,0 +1,36 @@
+.panel {
+    width: 320rem;
+    background-color: #00000099;
+}
+
+.header {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    height: 20rem;
+    text-transform: none;
+}
+
+.section {
+    padding: 8rem 10rem 10rem 10rem;
+}
+
+.buttonRow {
+    margin: 15rem 10rem 15rem;
+    align-items: stretch;
+    display: flex;
+    flex-flow: row nowrap;
+    height: 50rem;
+}
+
+.buttonContainer {
+    border-radius: 3rem;
+    padding: 0rem 10rem;
+    flex: 999;
+}
+
+.button {
+    height: 100%;
+    width: 100%;
+}

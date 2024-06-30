@@ -41,6 +41,19 @@ namespace MoveIt.Selection
         /// </summary>
         public HashSet<MVDefinition> Definitions => new(_Buffer);
 
+        /// <summary>
+        /// Get a the entities of current selection definitions
+        /// </summary>
+        public HashSet<Entity> Entities
+        {
+            get
+            {
+                HashSet<Entity> result = new();
+                _Buffer.ForEach(mvd => result.Add(mvd.m_Entity));
+                return result;
+            }
+        }
+
         public static OverlaySelectionCenter m_Overlay = null;
 
         /// <summary>
@@ -72,7 +85,7 @@ namespace MoveIt.Selection
         {
             _Buffer = new();
             _BufferFull = new();
-            Add(state.CleanDefinitions().Definitions);
+            Add(state.CleanDefinitions().Definitions, false);
             PrepareSelectionCenterOverlay();
         }
 
@@ -90,7 +103,7 @@ namespace MoveIt.Selection
             }
         }
 
-        public bool Add(IEnumerable<MVDefinition> definitions)
+        public bool Add(IEnumerable<MVDefinition> definitions, bool fast)
         {
             bool result = true;
             int c = 0;
@@ -103,7 +116,7 @@ namespace MoveIt.Selection
                 }
                 c++;
             }
-            if (c > 0) UpdateFull();
+            if (!fast && c > 0) UpdateFull();
             return result;
         }
 
@@ -170,16 +183,16 @@ namespace MoveIt.Selection
                 else if (!_Tool.IsValid(mvd))
                 {
                     toRemove.Add(mvd);
-                    removing += $"  {mvd.m_Entity.DX()}";
+                    removing += $"  {mvd}";
                 }
                 else if (!_Tool.Moveables.Has(mvd))
                 {
                     _Tool.Moveables.GetOrCreate(mvd);
-                    readding += $"  {mvd.m_Entity.DX()}";
+                    readding += $"  {mvd}";
                 }
                 else
                 {
-                    noupdate += $"  {mvd.m_Entity.DX()}";
+                    noupdate += $"  {mvd}";
                 }
             }
 
@@ -215,7 +228,7 @@ namespace MoveIt.Selection
         /// <summary>
         /// Set the selection with required extras
         /// </summary>
-        protected virtual void UpdateFull()
+        internal virtual void UpdateFull()
         {
             //string start = $"{Name}.UpdateFull; Buffer:{_Buffer.Count}, Full:{_BufferFull.Count}";
             //string msg = "";
@@ -234,27 +247,19 @@ namespace MoveIt.Selection
                         //msg += $"\n    + {QTypes.GetIdentityCode(mvd.m_Identity)}  {mvdChild}";
                     }
                 }
+                mv.UpdateOverlay();
             }
 
             CalculateCenter();
 
-            foreach (MVDefinition mvd in _Buffer)
-            {
-                Moveable mv = _Tool.Moveables.GetOrCreate(mvd);
-                mv.UpdateOverlay();
-            }
-
             //MIT.Log.Info($"{start}, NewFull:{_BufferFull.Count}{msg}\n{QCommon.GetStackTrace(3)}");
         }
 
-        public void Remove(HashSet<MVDefinition> mvds)
+        public void Remove(HashSet<MVDefinition> mvds, bool fast)
         {
-            foreach (MVDefinition mvd in mvds)
-            {
-                _Buffer.Remove(mvd);
-                GetMV(mvd).OnDeselect();
-            }
-            UpdateFull();
+            _Buffer.ExceptWith(mvds);
+            mvds.ForEach(mvd => GetMV(mvd).OnDeselect());
+            if (!fast) UpdateFull();
         }
 
         public void RemoveIfExists(MVDefinition mvd)
@@ -285,14 +290,21 @@ namespace MoveIt.Selection
                 if (mvd.m_Identity == Identity.ControlPoint) continue;
                 GetMV(mvd).OnDeselect();
             }
-            //UpdateFull(); // Why?
+
             mvds.Clear();
         }
 
 
         public bool Has(MVDefinition mvd)
         {
-            return _Buffer.Count(lhs => mvd.Equals(lhs)) > 0;
+            foreach (var lhs in _Buffer)
+            {
+                if (lhs.Equals(mvd))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public bool HasFull(MVDefinition mvd)
@@ -364,35 +376,26 @@ namespace MoveIt.Selection
 
         public Quad2 GetTotalRectangle(out Bounds3 bounds, float expand = 0)
         {
-            bounds = GetTotalBounds();
+            bounds = GetTotalBounds(expand);
             Quad2 rect = new(
-                new(bounds.min.x - expand, bounds.min.z - expand),
-                new(bounds.max.x + expand, bounds.min.z - expand),
-                new(bounds.min.x - expand, bounds.max.z + expand),
-                new(bounds.max.x + expand, bounds.max.z + expand));
+                new(bounds.min.x, bounds.min.z),
+                new(bounds.max.x, bounds.min.z),
+                new(bounds.max.x, bounds.max.z),
+                new(bounds.min.x, bounds.max.z));
             return rect;
         }
 
-        public Bounds3 GetTotalBounds()
+        public Bounds3 GetTotalBounds(float expand = 0)
         {
-            Bounds3 totalBounds = default;
-            bool first = true;
-
             HashSet<MVDefinition> source = GetObjectsToTransformFull();
+            Bounds3 totalBounds = new(_Center, _Center);
 
             foreach (MVDefinition mvd in source)
             {
-                Moveable mv = GetMV(mvd);
-                if (first)
-                {
-                    totalBounds = mv.GetBounds();
-                    first = false;
-                }
-                else
-                {
-                    totalBounds = totalBounds.Encapsulate(mv.GetBounds());
-                }
+                totalBounds = totalBounds.Encapsulate(GetMV(mvd).GetBounds());
             }
+
+            if (expand != 0) totalBounds = totalBounds.Expand(expand);
 
             return totalBounds;
         }

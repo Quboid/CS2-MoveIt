@@ -8,6 +8,7 @@ namespace MoveIt.Managers
     {
         protected const int QUEUE_LENGTH = 100;
         protected static readonly MIT _Tool = MIT.m_Instance;
+        protected Action _CreationAction;
 
         internal QueueManager()
         {
@@ -16,6 +17,7 @@ namespace MoveIt.Managers
 
             _Tool.Selection ??= new SelectionNormal();
             _Actions[Index] = new SelectAction();
+            _CreationAction = null;
             Do();
         }
 
@@ -66,6 +68,16 @@ namespace MoveIt.Managers
 
         public Action PrevAction => IndexPrev == _Tail ? new NullAction() : _Actions[IndexPrev];
         public Action NextAction => IndexNext == _Head ? new NullAction() : _Actions[IndexNext];
+
+        /// <summary>
+        /// Get the action for Creation engine, or Current if there isn't one set
+        /// </summary>
+        public Action CreationAction
+        {
+            get => _CreationAction ?? Current;
+            set => _CreationAction = value;
+        }
+        public bool HasCreationAction => _CreationAction != null;
 
         //public void UpdateNodeIdInStateHistory(ushort oldId, ushort newId)
         //{

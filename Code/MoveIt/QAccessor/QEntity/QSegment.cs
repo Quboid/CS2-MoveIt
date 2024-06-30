@@ -1,5 +1,4 @@
-﻿using Colossal.Mathematics;
-using MoveIt.Moveables;
+﻿using MoveIt.Moveables;
 using MoveIt.Tool;
 using QCommonLib;
 using Unity.Entities;
@@ -24,14 +23,14 @@ namespace MoveIt.QAccessor
         private readonly quaternion Segment_Rotation => quaternion.EulerXYZ(0f, Angle, 0f);
 
 
-        private readonly bool Segment_SetUpdated()
+        private bool Segment_SetUpdated()
         {
             TryAddUpdate(m_Entity);
 
             Game.Net.Edge edge = m_Lookup.gnEdge.GetRefRO(m_Entity).ValueRO;
-            QEntity node = new(MIT.m_Instance, edge.m_Start, Identity.Node);
+            QEntity node = new(ref m_Lookup, edge.m_Start, Identity.Node);
             node.SetUpdated();
-            node = new(MIT.m_Instance, edge.m_End, Identity.Node);
+            node = new(ref m_Lookup, edge.m_End, Identity.Node);
             node.SetUpdated();
 
             if (TryGetComponent<Game.Net.Aggregated>(out var component))
@@ -44,7 +43,7 @@ namespace MoveIt.QAccessor
         }
 
 
-        private readonly bool Segment_MoveBy(State state, float3 newPosition, float3 delta)
+        private bool Segment_MoveBy(State state, float3 newPosition, float3 delta)
         {
             Segment_SetUpdated();
             return true;

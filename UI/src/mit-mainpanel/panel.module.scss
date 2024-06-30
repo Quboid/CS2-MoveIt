@@ -1,0 +1,91 @@
+.panel {
+    width: 180rem;
+}
+
+.header {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    height: 20rem;
+    text-transform: none;
+}
+
+.headerIcon {
+    width: 20rem;
+    height: 20rem;
+    position: absolute;
+    top: 8rem;
+    left: 10rem;
+    opacity: 0.95;
+}
+
+.headerText
+{
+    margin-left: -5rem;
+}
+
+.section {
+    padding: 1rem 3rem 3rem 3rem;
+    background-color: #00000011;
+}
+
+.row {
+    padding: 0;
+    margin: 2rem 0 0 0;
+}
+
+.buttonRow {
+    align-items: stretch;
+    display: flex;
+    flex-flow: row nowrap;
+    height: 38rem;
+}
+
+.buttonContainer {
+    background-color: #00000033;
+    border-radius: 3rem;
+    flex: 999;
+}
+
+.buttonContainer:hover {
+    background-color: #00000088;
+}
+
+.button {
+    height: 100%;
+    width: 100%;
+}
+
+.button img
+{
+    width: 25rem;
+    height: 25rem;
+}
+
+.separator {
+    flex: 1;
+    width: 2rem;
+}
+
+.checkboxRow
+{
+    height: 35rem;
+    border-left: 3rem #00000066 solid;
+    padding: 5rem 0 0 6rem;
+}
+.checkboxRow:hover
+{
+    background-color: #00000022;
+}
+
+.dropdownRow
+{
+    height: 35rem;
+    border-left: 3rem #0000ff66 solid;
+    padding: 5rem 0 0 6rem;
+}
+.dropdownRow:hover
+{
+    background-color: #0000ff22;
+}

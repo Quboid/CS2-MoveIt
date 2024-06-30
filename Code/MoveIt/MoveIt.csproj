@@ -5,22 +5,16 @@
 		<TargetFramework>net481</TargetFramework>
 		<LangVersion>10</LangVersion>
 		<Configurations>Debug;Release</Configurations>
+    <Deterministic>False</Deterministic>
 		
 		<!--The folder where Game.dll is located. Set it only if the game is not installed in the default location, otherwise keep it empty-->
 		<CustomManagedPath>C:\Games\Steam\steamapps\common\Cities Skylines II\Cities2_Data\Managed</CustomManagedPath>
 		
-		<!--Path to the text file where PDX account data is stored which is required to publish the mod-->
-		<!--Keep it outside of project in order to not commit it or share accidentally-->
-		<!--The file should contain 2 lines:-->
-		<!--Your.PDX@Account.login-->
-		<!--Your-PDX-Account-Pa$$word-->
-		<PDXAccountDataPath></PDXAccountDataPath>
-		
 		<!--The file where mod information which is required for publishing mod on PDX mods are stored-->
 		<PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
-		<Version>0.3.1</Version>
-		<AssemblyVersion>$(Version)</AssemblyVersion>
-		<FileVersion>$(Version)</FileVersion>
+    <Version>0.4.0</Version>
+    <AssemblyVersion>0.4.0.*</AssemblyVersion>
+    <FileVersion>0.4.0</FileVersion>
 	</PropertyGroup>
 	
 	<!--Imports must be after PropertyGroup block-->
@@ -29,7 +23,7 @@
 	<Import Project="$([System.Environment]::GetEnvironmentVariable('CSII_TOOLPATH', 'EnvironmentVariableTarget.User'))\Mod.targets" />
 	
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-	  <DefineConstants>$(DefineConstants);USE_BURST;IS_DEBUG</DefineConstants>
+	  <DefineConstants>$(DefineConstants);USE_BURST</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -48,10 +42,10 @@
 	</Target>
 
 	<Target Name="SetupAttributes" BeforeTargets="BeforeBuild">
-        <XmlPoke XmlInputPath="$(PublishConfigurationPath)" Value="$([System.IO.File]::ReadAllText($(ProjectDir)/LongDescription.md))" Query="//LongDescription" />
-        <XmlPoke XmlInputPath="$(PublishConfigurationPath)" Value="$([System.IO.File]::ReadAllText($(ProjectDir)/ChangeLog.md))" Query="//ChangeLog" />
+    <XmlPoke XmlInputPath="$(PublishConfigurationPath)" Value="$([System.IO.File]::ReadAllText($(ProjectDir)/LongDescription.md))" Query="//LongDescription" />
+    <XmlPoke XmlInputPath="$(PublishConfigurationPath)" Value="$([System.IO.File]::ReadAllText($(ProjectDir)/ChangeLog.md))" Query="//ChangeLog" />
 		<XmlPoke XmlInputPath="$(PublishConfigurationPath)" Value="$(Version)" Query="//ModVersion/@Value" />
-    </Target>
+  </Target>
 
 	<ItemGroup>
 		<Reference Include="Colossal.Collections">

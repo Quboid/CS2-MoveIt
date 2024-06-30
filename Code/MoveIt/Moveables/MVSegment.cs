@@ -1,6 +1,7 @@
 ﻿using Colossal.Mathematics;
 using MoveIt.Actions;
 using MoveIt.Overlays;
+using MoveIt.QAccessor;
 using MoveIt.Tool;
 using QCommonLib;
 using System.Collections.Generic;
@@ -94,8 +95,8 @@ namespace MoveIt.Moveables
 
             MVControlPoint cpB = _Tool.ControlPointManager.Get(m_CPDefinitions[1]);
             MVControlPoint cpC = _Tool.ControlPointManager.Get(m_CPDefinitions[2]);
-            State newB = new(cpB, _Tool);
-            State newC = new(cpC, _Tool);
+            State newB = new(_Tool.EntityManager, ref QLookupFactory.Get(), cpB);
+            State newC = new(_Tool.EntityManager, ref QLookupFactory.Get(), cpC);
             //State newB = action.GetState(m_CPDefinitions[1]);
             //State newC = action.GetState(m_CPDefinitions[2]);
 

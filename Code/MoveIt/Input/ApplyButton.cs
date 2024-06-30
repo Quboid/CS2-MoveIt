@@ -83,6 +83,21 @@ namespace MoveIt.Input
             }
         }
 
+        internal override void OnDragEnd()
+        {
+            if (_Tool.ToolState == ToolStates.DrawingSelection)
+            {
+                if (_Tool.Queue.Current is SelectMarqueeAction sma)
+                {
+                    sma.AddMarqueeSelection(_Tool.m_Marquee, false);
+                }
+                else
+                {
+                    MIT.Log.Debug($"Update DrawingSelection but current action is {_Tool.Queue.Current.Name}");
+                }
+            }
+        }
+
         internal override void OnHold()
         {
             if (m_Status == ButtonStatus.Down && _Tool.ToolState == ToolStates.Default && !_Tool.Hover.OnPress.IsNull)

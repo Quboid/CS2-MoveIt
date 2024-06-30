@@ -74,7 +74,7 @@ namespace MoveIt.Actions
         {
             _Tool.m_IsManipulateMode = willBeManipulating;
 
-            ProcessSelectionChange(fromSelection, toSelection);
+            ProcessModeSelectionChange(fromSelection, toSelection);
 
             _Tool.Moveables.UpdateAllControlPoints();
             _Tool.Moveables.UpdateAllOverlays();
@@ -83,7 +83,7 @@ namespace MoveIt.Actions
             _Tool.SetModesTooltip();
         }
 
-        private void ProcessSelectionChange(List<MVDefinition> fromSelection, List<MVDefinition> toSelection)
+        private void ProcessModeSelectionChange(List<MVDefinition> fromSelection, List<MVDefinition> toSelection)
         {
             SelectionState newSelectionStates = new(_Tool.m_IsManipulateMode, toSelection);
 

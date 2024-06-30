@@ -18,6 +18,7 @@ namespace MoveIt.Overlays
         public const float SELECT_SCALE_MULTIPLYER  = 0.5f;
         public const float SELECT_BASE_RADIUS       = 0.5f;
         public const float CP_RADIUS                = 1.5f;
+        public const int   DEBUG_TTL                = 100;
 
         /// <summary>
         /// How to process this overlay

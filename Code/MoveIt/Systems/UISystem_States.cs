@@ -87,11 +87,11 @@ namespace MoveIt.Systems
 
             public void Update()
             {
-                m_Buttons[0].Update(_Tool.Queue.CanUndo(), false);
+                m_Buttons[0].Update(_Tool.Queue is not null && _Tool.Queue.CanUndo(), false);
                 m_Buttons[1].Update(true, !_Tool.m_IsManipulateMode && !_Tool.m_MarqueeSelect);
                 m_Buttons[2].Update(true, !_Tool.m_IsManipulateMode && _Tool.m_MarqueeSelect);
                 m_Buttons[3].Update(true, _Tool.m_IsManipulateMode);
-                m_Buttons[4].Update(_Tool.Queue.CanRedo(), false);
+                m_Buttons[4].Update(_Tool.Queue is not null && _Tool.Queue.CanRedo(), false);
             }
 
             public void Write(IJsonWriter writer)

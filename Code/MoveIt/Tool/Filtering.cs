@@ -3,7 +3,6 @@ using Game.Common;
 using Game.Tools;
 using MoveIt.Moveables;
 using System.Collections.Generic;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
@@ -12,50 +11,55 @@ namespace MoveIt.Tool
     public partial class MIT : ObjectToolBaseSystem
     {
         #region General validity checks
-        internal bool IsValid(MVDefinition mvd)
+        internal bool IsValid(MVDefinition mvd) => IsValid(EntityManager, mvd);
+        internal static bool IsValid(EntityManager Manager, MVDefinition mvd)
         {
-            return IsValid(mvd.m_Entity);
+            return IsValid(Manager, mvd.m_Entity);
         }
 
-        internal bool IsValid(Entity e)
+        internal bool IsValid(Entity e) => IsValid(EntityManager, e);
+        internal static bool IsValid(EntityManager Manager, Entity e)
         {
-            if (!IsValidBase(e)) return false;
+            if (!IsValidBase(Manager, e)) return false;
             if (!(
-                EntityManager.HasComponent<Game.Objects.Transform>(e) ||
-                EntityManager.HasComponent<Game.Net.Edge>(e) ||
-                EntityManager.HasComponent<Game.Net.Node>(e) ||
-                EntityManager.HasComponent<Components.MIT_ControlPoint>(e)
+                Manager.HasComponent<Game.Objects.Transform>(e) ||
+                Manager.HasComponent<Game.Net.Edge>(e) ||
+                Manager.HasComponent<Game.Net.Node>(e) ||
+                Manager.HasComponent<Components.MIT_ControlPoint>(e)
                 )) return false;
             return true;
         }
 
-        internal bool IsValidNetwork(Entity e)
+        internal bool IsValidNetwork(Entity e) => IsValidNetwork(EntityManager, e);
+        internal static bool IsValidNetwork(EntityManager Manager, Entity e)
         {
-            if (!IsValidBase(e)) return false;
+            if (!IsValidBase(Manager, e)) return false;
             if (!(
-                EntityManager.HasComponent<Game.Net.Edge>(e) ||
-                EntityManager.HasComponent<Game.Net.Node>(e) ||
-                EntityManager.HasComponent<Components.MIT_ControlPoint>(e)
+                Manager.HasComponent<Game.Net.Edge>(e) ||
+                Manager.HasComponent<Game.Net.Node>(e) ||
+                Manager.HasComponent<Components.MIT_ControlPoint>(e)
                 )) return false;
             return true;
         }
 
-        internal bool IsValidObject(Entity e)
+        internal bool IsValidObject(Entity e) => IsValidObject(EntityManager, e);
+        internal static bool IsValidObject(EntityManager Manager, Entity e)
         {
-            if (!IsValidBase(e)) return false;
-            if (!EntityManager.HasComponent<Game.Objects.Transform>(e)) return false;
+            if (!IsValidBase(Manager, e)) return false;
+            if (!Manager.HasComponent<Game.Objects.Transform>(e)) return false;
             return true;
         }
 
-        internal bool IsValidBase(Entity e)
+        internal bool IsValidBase(Entity e) => IsValidBase(EntityManager, e);
+        internal static bool IsValidBase(EntityManager Manager, Entity e)
         {
             if (e.Equals(Entity.Null)) return false;
-            if (!EntityManager.Exists(e)) return false;
-            if (!EntityManager.HasComponent<Game.Prefabs.PrefabRef>(e)) return false;
-            if (EntityManager.HasComponent<Temp>(e)) return false;
-            if (EntityManager.HasComponent<Terrain>(e)) return false;
-            if (EntityManager.HasComponent<Owner>(e)) return false;
-            if (EntityManager.HasComponent<Game.Objects.Attached>(e)) return false;
+            if (!Manager.Exists(e)) return false;
+            if (!Manager.HasComponent<Game.Prefabs.PrefabRef>(e)) return false;
+            if (Manager.HasComponent<Temp>(e)) return false;
+            if (Manager.HasComponent<Terrain>(e)) return false;
+            if (Manager.HasComponent<Owner>(e)) return false;
+            if (Manager.HasComponent<Game.Objects.Attached>(e)) return false;
             return true;
         }
 
@@ -95,7 +99,8 @@ namespace MoveIt.Tool
             //GenerateUpdateGrid(bounds, out NativeArray<Bounds3> grid, out NativeArray<SelectionGridModes> mode);
 
             using Searcher.Marquee searcher = new(Searcher.Filters.All & ~Searcher.Filters.Segments, m_IsManipulateMode);
-            searcher.Search(marquee.m_SelectArea.xz, bounds.xz);
+
+            searcher.Search(bounds.xz, marquee.m_SelectArea.xz);
 
             if (!marquee.m_LastBounds.Equals(bounds)) marquee.m_LastBounds = bounds;
             HashSet<Entity> result = new();
@@ -106,7 +111,24 @@ namespace MoveIt.Tool
                     result.Add(searcher.m_Results[i]);
                 }
             }
+            marquee.m_EntitiesPrev = marquee.m_Entities;
             marquee.m_Entities = result;
+        }
+
+
+        internal bool PointInRectangle(Quad3 rectangle, float x, float z)
+        {
+            return PointInRectangle(rectangle, new(x, 0f, z));
+        }
+
+        internal bool PointInRectangle(Quad3 rectangle, float3 p)
+        {
+            return IsLeft(rectangle.a, rectangle.b, p) && IsLeft(rectangle.b, rectangle.c, p) && IsLeft(rectangle.c, rectangle.d, p) && IsLeft(rectangle.d, rectangle.a, p);
+        }
+
+        private bool IsLeft(float3 p0, float3 p1, float3 p2)
+        {
+            return ((p1.x - p0.x) * (p2.z - p0.z) - (p2.x - p0.x) * (p1.z - p0.z)) > 0;
         }
 
         /// <summary>
@@ -202,21 +224,5 @@ namespace MoveIt.Tool
         //    //if (mode[6] != SelectionGridModes.Ignore) AddDebugBounds(grid[6], selectionGridColours[mode[6]]);
         //    //if (mode[7] != SelectionGridModes.Ignore) AddDebugBounds(grid[7], selectionGridColours[mode[7]]);
         //}
-
-
-        internal bool PointInRectangle(Quad3 rectangle, float x, float z)
-        {
-            return PointInRectangle(rectangle, new(x, 0f, z));
-        }
-
-        internal bool PointInRectangle(Quad3 rectangle, float3 p)
-        {
-            return IsLeft(rectangle.a, rectangle.b, p) && IsLeft(rectangle.b, rectangle.c, p) && IsLeft(rectangle.c, rectangle.d, p) && IsLeft(rectangle.d, rectangle.a, p);
-        }
-
-        private bool IsLeft(float3 p0, float3 p1, float3 p2)
-        {
-            return ((p1.x - p0.x) * (p2.z - p0.z) - (p2.x - p0.x) * (p1.z - p0.z)) > 0;
-        }
     }
 }

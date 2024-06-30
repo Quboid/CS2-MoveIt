@@ -1,0 +1,13 @@
+:root {
+    --size: 46rem;
+}
+
+.MoveItIcon {
+    pointer-events: auto;
+    order: 5;
+}
+
+.MoveItIcon img {
+    width: var(--size);
+    height: var(--size);
+}

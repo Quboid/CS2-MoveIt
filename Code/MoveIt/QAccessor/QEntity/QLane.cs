@@ -24,14 +24,14 @@ namespace MoveIt.QAccessor
         private readonly quaternion Lane_Rotation => quaternion.EulerXYZ(0f, Angle, 0f);
 
 
-        private readonly bool Lane_SetUpdated()
+        private bool Lane_SetUpdated()
         {
             TryAddUpdate(m_Entity);
 
             Game.Net.Edge edge = m_Lookup.gnEdge.GetRefRO(m_Entity).ValueRO;
-            QEntity node = new(MIT.m_Instance, edge.m_Start, Identity.Node);
+            QEntity node = new(ref m_Lookup, edge.m_Start, Identity.Node);
             node.Node_SetUpdated();
-            node = new(MIT.m_Instance, edge.m_End, Identity.Node);
+            node = new(ref m_Lookup, edge.m_End, Identity.Node);
             node.Node_SetUpdated();
 
             if (TryGetComponent<Game.Net.Aggregated>(out var component))
@@ -44,7 +44,7 @@ namespace MoveIt.QAccessor
         }
 
 
-        private readonly bool Lane_MoveBy(State state, float3 newPosition, float3 delta)
+        private bool Lane_MoveBy(State state, float3 newPosition, float3 delta)
         {
             Bezier4x3 curve = Curve;
             curve.a += delta;
@@ -55,17 +55,17 @@ namespace MoveIt.QAccessor
             return Lane_SetUpdated();
         }
 
-        private readonly bool Lane_MoveTo(State state, float3 newPosition, float3 delta)
+        private bool Lane_MoveTo(State state, float3 newPosition, float3 delta)
         {
             return Lane_MoveBy(state, newPosition, delta);
         }
 
-        private readonly bool Lane_RotateBy(State state, float delta, ref Matrix4x4 matrix, float3 origin)
+        private bool Lane_RotateBy(State state, float delta, ref Matrix4x4 matrix, float3 origin)
         {
             return Lane_RotateTo(state, quaternion.identity, ref matrix, origin);
         }
 
-        private readonly bool Lane_RotateTo(State state, quaternion newRotation, ref Matrix4x4 matrix, float3 origin)
+        private bool Lane_RotateTo(State state, quaternion newRotation, ref Matrix4x4 matrix, float3 origin)
         {
             Bezier4x3 curve = Curve;
 

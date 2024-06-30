@@ -14,7 +14,7 @@ using Unity.Mathematics;
 
 namespace MoveIt.Searcher
 {
-    internal class Ray : Base
+    internal class Ray : SearcherBase
     {
         internal NativeArray<Game.Common.RaycastResult> m_VanillaResults;
 
@@ -42,8 +42,8 @@ namespace MoveIt.Searcher
 
             NativeList<Entity> results = new(Allocator.Temp);
 
-            // Non-network objects
-            if ((m_Flags & Filters.AllObjects) != Filters.None)
+            // Static objects - TODO Doesn't filter yet!
+            if ((m_Flags & Filters.AllStatics) != Filters.None)
             {
                 if (m_VanillaResults.Length != 0)
                 {

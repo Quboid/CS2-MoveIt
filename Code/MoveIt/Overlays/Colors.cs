@@ -77,7 +77,7 @@ namespace MoveIt.Overlays
         {
             if ((common.m_Flags & Tool.InteractionFlags.Static) != 0) return ColorData.Contexts.Other;
 
-            if (((toolFlags & ToolFlags.HasShift) != 0) && ((common.m_Flags & Tool.InteractionFlags.Hovering) != 0) && ((common.m_Flags & Tool.InteractionFlags.Selected) != 0))
+            if (((toolFlags & ToolFlags.HasShift) != 0) && ((toolFlags & ToolFlags.IsMarquee) == 0) && ((common.m_Flags & Tool.InteractionFlags.Hovering) != 0) && ((common.m_Flags & Tool.InteractionFlags.Selected) != 0))
             {
                 return ColorData.Contexts.Deselect;
             }

@@ -1,4 +1,4 @@
-﻿# Move It Beta for Cities Skylines 2.
+﻿# Move It for Cities Skylines 2.
 
 You can move trees, props, decals, buildings, nodes, and segment curves.
 
@@ -30,7 +30,7 @@ To enter manipulation mode, click on the icon, press Alt+M, or Alt+click on a ma
 Manipulating segments - you can move the control points in all three axis; the 2 node connections and the 2 curve points. This is very powerful, and extreme alterations will cause visual glitching and may break traffic routing. Control Points snap along their visible line. Also, for node connections drag to the node and hold Alt to snap to the node's position, and for curve points, drag to a third of the way between the segment's two nodes and hold Alt to snap it to a straight line.
 
 
-## Keys:
+## Default Keys:
 * M - open or close tool (you must unbind the vanilla binding for M)
 * Control+M - Toggle Marquee selection
 * Alt+M - Toggle Manipulation mode
@@ -44,20 +44,14 @@ Manipulating segments - you can move the control points in all three axis; the 2
 ## Options:
 * Invert Rotation - Move It uses the same rotation direction that Cities 1 and Move It for Cities 1 used. If you prefer Cities 2's direction, you can invert it.
 * Show Debug Panel - Show some technical information about Move It's current status. You probably don't want this.
-* Hide Move It Icon - If the icon is causing crashing issues and nothing else helps, enable this to hide the icon.
 * Extended Debug Logging - Saves more information to the log file to help me hunt down errors.
 * Save Logs To Desktop - Saves your current log files to your desktop so you can easily submit them with bug reports. You can also do this with Skyve.
-
-
-## Known Issues:
-* Using TAA antialiasing can cause the overlays to disappear, as well as affecting other parts of the game.
-* The M key is set to a fairly unimportant infoview by default, you should remove this.
-
-This is an beta version of Move It. Save often, save different.
+* Advanced: Hide Move It Icon - If the icon is causing crashing issues and nothing else helps, enable this to hide the icon.
+* Advanced: Show Debug Lines - Displays some debugging data.
 
 
 ## Credits:
 
-Big thanks to SamSamTS, Krzychu124, Yenyang, T.D.W., Klyte45, REV0, BadPeanut, Sully, Algernon, CanadianMoosePlays!
+Big thanks to SamSamTS, Krzychu124, Yenyang, T.D.W., Klyte45, REV0, BadPeanut, Sully, Algernon, MooseHXC!
 
 Icons from SVG Repo, and from WishForge.Games under CC Attribution License.

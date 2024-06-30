@@ -62,10 +62,14 @@ namespace MoveIt
                 _ => throw new System.NotImplementedException(),
             };
 
+
         public static Identity GetEntityIdentity(Entity e)
         {
-            EntityManager manager = World.DefaultGameObjectInjectionWorld.EntityManager;
+            return GetEntityIdentity(World.DefaultGameObjectInjectionWorld.EntityManager, e);
+        }
 
+        public static Identity GetEntityIdentity(EntityManager manager, Entity e)
+        {
             if (e.Equals(Entity.Null) ||
                 manager.HasComponent<Game.Common.Deleted>(e) ||
                 manager.HasComponent<Game.Common.Terrain>(e))

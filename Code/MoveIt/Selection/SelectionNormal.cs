@@ -25,22 +25,31 @@ namespace MoveIt.Selection
                 MIT.Log.Error($"Attempted to add manipulatable Moveable of type {mv.m_Identity} to Normal selection");
             }
 
-            if (append)
+            if (append && Has(mvd))
             {
-                if (Has(mvd))
-                {
-                    Remove(mvd);
-                }
-                else
-                {
-                    Add(mvd);
-                }
+                Remove(mvd);
             }
-            else if (!_Tool.Selection.Has(mvd))
+            else
             {
-                Clear();
                 Add(mvd);
             }
+
+            //if (append)
+            //{
+            //    if (Has(mvd))
+            //    {
+            //        Remove(mvd);
+            //    }
+            //    else
+            //    {
+            //        Add(mvd);
+            //    }
+            //}
+            //else if (!_Tool.Selection.Has(mvd))
+            //{
+            //    //Clear();
+            //    Add(mvd);
+            //}
         }
 
         internal override HashSet<MVDefinition> GetObjectsToTransform()

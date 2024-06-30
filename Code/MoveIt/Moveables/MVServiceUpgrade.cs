@@ -1,4 +1,5 @@
-﻿using Unity.Entities;
+﻿using MoveIt.Overlays;
+using Unity.Entities;
 
 namespace MoveIt.Moveables
 {
@@ -8,7 +9,14 @@ namespace MoveIt.Moveables
 
         public MVServiceUpgrade(Entity e) : base(e, Identity.ServiceUpgrade, ObjectType.Normal)
         {
-            m_Overlay = null;// Factory.Create<OverlayBuilding>(this, OverlayTypes.MVBuilding);
+            if (_Tool.EntityManager.HasComponent<Game.Common.Owner>(e))
+            {
+                m_Overlay = Factory.Create<OverlayNone>(this, OverlayTypes.None);
+            }
+            else
+            {
+                m_Overlay = Factory.Create<OverlayBuilding>(this, OverlayTypes.MVBuilding);
+            }
             Refresh();
         }
 

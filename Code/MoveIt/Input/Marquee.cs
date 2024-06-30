@@ -17,6 +17,7 @@ namespace MoveIt.Input
         internal Quad3 m_SelectArea;
         internal Quad3 m_LastSelectArea;
         internal HashSet<Entity> m_Entities;
+        internal HashSet<Entity> m_EntitiesPrev;
         internal Bounds3 m_LastBounds;
         internal bool m_HasMoved;
 
@@ -28,6 +29,7 @@ namespace MoveIt.Input
             m_SelectArea = default;
             m_LastSelectArea = default;
             m_Entities = null;
+            m_EntitiesPrev = null;
             m_LastBounds = new(float.MaxValue, float.MaxValue);
             m_HasMoved = false;
 
@@ -39,7 +41,7 @@ namespace MoveIt.Input
             if (m_HasMoved) return true;
             if (position.Equals(m_StartPosition)) return false;
 
-            _Tool.Queue.Push(new SelectAction(false, QKeyboard.Shift));
+            _Tool.Queue.Push(new SelectMarqueeAction(QKeyboard.Shift));
             _Tool.Queue.Do();
             m_HasMoved = true;
             return true;
