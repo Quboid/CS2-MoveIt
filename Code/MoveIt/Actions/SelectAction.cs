@@ -48,7 +48,7 @@ namespace MoveIt.Actions
                 {
                     // New Manip selection, selecting child object so keep existing parents
                     HashSet<MVDefinition> toRemove = new();
-                    toRemove = _Tool.Selection.Definitions.Where(mvd => _Tool.Moveables.GetOrCreate(mvd).IsChild).ToHashSet();
+                    toRemove = _Tool.Selection.Definitions.Where(mvd => _Tool.Moveables.GetOrCreate(mvd).IsManipChild).ToHashSet();
                     _Tool.Selection.Remove(toRemove, false);
                     Deselect(toRemove);
                 }

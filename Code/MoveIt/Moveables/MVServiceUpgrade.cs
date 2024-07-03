@@ -5,7 +5,7 @@ namespace MoveIt.Moveables
 {
     internal class MVServiceUpgrade : Moveable
     {
-        public override bool IsChild => true;
+        public override bool IsManipChild => true;
 
         public MVServiceUpgrade(Entity e) : base(e, Identity.ServiceUpgrade, ObjectType.Normal)
         {

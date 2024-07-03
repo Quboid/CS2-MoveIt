@@ -166,6 +166,7 @@ namespace MoveIt.Selection
                     if (!_Tool.IsValid(mvd.m_Parent))
                     {
                         toRemove.Add(mvd);
+                        removing += $"  CP {mvd}";
                     }
                     else
                     {
@@ -177,6 +178,10 @@ namespace MoveIt.Selection
                             toAdd.Add(newCP);
                             newCP.m_Overlay.AddFlag(InteractionFlags.ParentSelected);
                             swapping += $" [{oldCP.m_Entity.D()}=>{newCP.m_Entity.D()}-{newCP.m_Overlay.m_Entity.D()}]";
+                        }
+                        else
+                        {
+                            noupdate += $"  CP {mvd}";
                         }
                     }
                 }
@@ -238,6 +243,7 @@ namespace MoveIt.Selection
             {
                 _BufferFull.Add(mvd);
                 Moveable mv = _Tool.Moveables.GetOrCreate(mvd);
+                mv.Refresh();
 
                 foreach (MVDefinition mvdChild in mv.GetAllChildren())
                 {

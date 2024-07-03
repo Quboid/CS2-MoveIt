@@ -84,9 +84,9 @@ namespace MoveIt.Moveables
 
         public override string ToString()
         {
-            string msg = $"{m_Identity}-{m_Entity.DX()}{(m_IsManipulatable ? "-Manip" : "")}{(m_IsManaged ? "-Managed" : "")}{(IsChild ? "-Child" : "")}";
+            string msg = $"{m_Entity.DX()}{(m_IsManipulatable ? "-Manip" : "")}{(m_IsManaged ? "-Managed" : "")}";
             if (m_Parent.Equals(Entity.Null) && !m_Entity.Equals(Entity.Null)) return msg;
-            return $"{msg}-{m_Parent.DX()}-{m_ParentKey}";
+            return $"{msg}-Parent:{m_Parent.DX()}-{m_ParentKey}";
         }
     }
 }

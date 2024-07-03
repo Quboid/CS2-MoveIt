@@ -18,11 +18,11 @@ namespace MoveIt.Managers
 
         public InputManager()
         {
-            _Key_MoveDown = _Tool.m_HotkeySystem.GetBinding(Systems.MIT_HotkeySystem.KEY_MOVEDOWN);
-            _Key_MoveUp = _Tool.m_HotkeySystem.GetBinding(Systems.MIT_HotkeySystem.KEY_MOVEUP);
+            _Key_MoveDown = _Tool.m_InputSystem.GetBinding(Inputs.KEY_MOVEDOWN);
+            _Key_MoveUp = _Tool.m_InputSystem.GetBinding(Inputs.KEY_MOVEUP);
 
-            _ApplyAction = new ApplyButton("Tool", "Apply");
-            _SecondaryAction = new SecondaryButton("Tool", "Secondary Apply");
+            _ApplyAction = new ApplyButton(_Tool.m_InputSystem.MouseApply);
+            _SecondaryAction = new SecondaryButton(_Tool.m_InputSystem.MouseCancel);
         }
 
         internal void OnToolEnable()

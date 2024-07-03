@@ -93,20 +93,6 @@ namespace MoveIt.Moveables
 
         internal override List<MVDefinition> GetChildrenToTransform() => m_CPDefinitions;
 
-        //internal override List<T> GetChildMoveablesToTransform<T>()
-        //{
-        //    List<T> result = new();
-        //    try
-        //    {
-        //        m_CPDefinitions.ForEach(mvd => result.Add(_Tool.ControlPointManager.GetOrCreate(mvd) as T));
-        //    }
-        //    catch (System.Exception e)
-        //    {
-        //        MIT.Log.Error($"Failed to get children <{typeof(T)}>: {e}");
-        //    }
-        //    return result;
-        //}
-
         internal override void MoveIt(TransformAction action, State nodeState, bool move, bool rotate)
         {
             if (!move && !rotate) return;
@@ -117,16 +103,17 @@ namespace MoveIt.Moveables
             for (int i = 0; i < m_CPDefinitions.Count; i++)
             {
                 MVControlPoint cp = _Tool.ControlPointManager.GetOrCreate(m_CPDefinitions[i]);
-                State cpState = new(_Tool.EntityManager, ref QLookupFactory.Get(), cp);// action.GetState(m_CPDefinitions[i]);
+                State cpState = action.GetState(m_CPDefinitions[i]);// new(_Tool.EntityManager, ref QLookupFactory.Get(), cp);
 
                 cpState.m_Position = (float3)matrix.MultiplyPoint(cpState.m_InitialPosition - action.m_Center);
                 float3 oldAngles = cpState.m_InitialRotation.ToEulerDegrees();
                 cpState.m_Rotation = Quaternion.Euler(oldAngles.x, oldAngles.y + action.AngleDelta, oldAngles.z);
 
                 //action.SetState(m_CPDefinitions[i], cpState);
-                //QLog.Debug($"{Time.frameCount} N.MoveIt {i}/{m_CPDefinitions.Count}/{_Tool.ControlPointManager.m_ControlPoints.Count} {m_Entity.DX()} ({m_CPDefinitions[i]}) cp:{cp.m_Entity.DX()}:{cp.m_CurveKey} newCPS:{cpState.m_Entity.D()}");
+                //QLog.Debug($"ND.MoveIt {i}/{m_CPDefinitions.Count}/{_Tool.ControlPointManager.Count} {m_Entity.DX()} ({m_CPDefinitions[i]}) CP:{cp.m_Entity.DX()}:{cp.m_ParentKey} stateCP:{cpState.m_Entity.D()}");
                 cp.MoveIt(action, cpState, move, rotate);
             }
+            //_Tool.ControlPointManager.DebugDumpControlPoints("ND.MoveIt");
 
             nodeState.Transform(move, rotate);
         }

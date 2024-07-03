@@ -3,7 +3,7 @@ using Game.Input;
 using Game.Modding;
 using Game.Settings;
 using MoveIt.Tool;
-using UnityEngine.InputSystem;
+using QCommonLib;
 
 namespace MoveIt.Settings
 {
@@ -11,8 +11,10 @@ namespace MoveIt.Settings
     [SettingsUITabOrder(tabMain, tabKeys)]
     [SettingsUIGroupOrder(groupGeneral, groupHotkeys)]
     [SettingsUIShowGroupName(groupGeneral, groupHotkeys)]
-    [SettingsUIKeyboardActionAttribute(Systems.MIT_HotkeySystem.KEY_MOVEDOWN,   ActionType.Button, false, false, Mode.DigitalNormalized, new string[] { "MoveIt_Keybind" })]
-    [SettingsUIKeyboardActionAttribute(Systems.MIT_HotkeySystem.KEY_MOVEUP,     ActionType.Button, false, false, Mode.DigitalNormalized, new string[] { "MoveIt_Keybind" } )]
+    [SettingsUIMouseAction(QInputSystem.MOUSE_APPLY,        ActionType.Button, false, false, new string[] { "MoveIt_Input" })]
+    [SettingsUIMouseAction(QInputSystem.MOUSE_CANCEL,       ActionType.Button, false, false, new string[] { "MoveIt_Input" })]
+    [SettingsUIKeyboardActionAttribute(Inputs.KEY_MOVEDOWN, ActionType.Button, false, false, Mode.DigitalNormalized, new string[] { "MoveIt_Input" })]
+    [SettingsUIKeyboardActionAttribute(Inputs.KEY_MOVEUP,   ActionType.Button, false, false, Mode.DigitalNormalized, new string[] { "MoveIt_Input" } )]
     public class Settings : ModSetting
     {
         public const string tabMain = "tabMain";
@@ -76,53 +78,64 @@ namespace MoveIt.Settings
         public bool HasShownMConflictPanel { get; set; } = false;
 
         // Hotkeys
-        [SettingsUIKeyboardBinding(Key.M, Systems.MIT_HotkeySystem.KEY_TOGGLETOOL)]
+        [SettingsUIKeyboardBinding(BindingKeyboard.M, Inputs.KEY_TOGGLETOOL)]
         [SettingsUISection(tabKeys, groupHotkeys)]
         public ProxyBinding Key_ToggleTool { get; set; }
 
-        [SettingsUIKeyboardBinding(Key.M, Systems.MIT_HotkeySystem.KEY_TOGGLEMARQUEE, ctrl:true)]
+        [SettingsUIKeyboardBinding(BindingKeyboard.M, Inputs.KEY_TOGGLEMARQUEE, ctrl:true)]
         [SettingsUISection(tabKeys, groupHotkeys)]
         public ProxyBinding Key_ToggleMarquee { get; set; }
 
-        [SettingsUIKeyboardBinding(Key.M, Systems.MIT_HotkeySystem.KEY_TOGGLEMANIP, alt: true)]
+        [SettingsUIKeyboardBinding(BindingKeyboard.M, Inputs.KEY_TOGGLEMANIP, alt: true)]
         [SettingsUISection(tabKeys, groupHotkeys)]
         public ProxyBinding Key_ToggleManip { get; set; }
 
-        [SettingsUIKeyboardBinding(Key.Z, Systems.MIT_HotkeySystem.KEY_UNDO, ctrl: true)]
+        [SettingsUIKeyboardBinding(BindingKeyboard.Z, Inputs.KEY_UNDO, ctrl: true)]
         [SettingsUISection(tabKeys, groupHotkeys)]
         public ProxyBinding Key_Undo { get; set; }
 
-        [SettingsUIKeyboardBinding(Key.Z, Systems.MIT_HotkeySystem.KEY_REDO, ctrl: true, shift: true)]
+        [SettingsUIKeyboardBinding(BindingKeyboard.Z, Inputs.KEY_REDO, ctrl: true, shift: true)]
         [SettingsUISection(tabKeys, groupHotkeys)]
         public ProxyBinding Key_Redo { get; set; }
 
-        [SettingsUIKeyboardBinding(Key.D, Systems.MIT_HotkeySystem.KEY_DESELECTALL, alt: true)]
+        [SettingsUIKeyboardBinding(BindingKeyboard.D, Inputs.KEY_DESELECTALL, alt: true)]
         [SettingsUISection(tabKeys, groupHotkeys)]
         public ProxyBinding Key_DeselectAll { get; set; }
 
-        [SettingsUIKeyboardBinding(Key.PageDown, Systems.MIT_HotkeySystem.KEY_MOVEDOWN)]
+        [SettingsUIKeyboardBinding(BindingKeyboard.PageDown, Inputs.KEY_MOVEDOWN)]
         [SettingsUISection(tabKeys, groupHotkeys)]
         public ProxyBinding Key_MoveDown { get; set; }
 
-        [SettingsUIKeyboardBinding(Key.PageUp, Systems.MIT_HotkeySystem.KEY_MOVEUP)]
+        [SettingsUIKeyboardBinding(BindingKeyboard.PageUp, Inputs.KEY_MOVEUP)]
         [SettingsUISection(tabKeys, groupHotkeys)]
         public ProxyBinding Key_MoveUp { get; set; }
 
         // Hidden test hotkeys
-        //[SettingsUIKeyboardBinding(Key.L, Systems.MIT_HotkeySystem.KEY_DEJANK, ctrl: true)]
+        //[SettingsUIKeyboardBinding(BindingKeyboard.L, Systems.MIT_HotkeySystem.KEY_DEJANK, ctrl: true)]
         //[SettingsUISection(tabKeys, groupHotkeys)]
         //[SettingsUIAdvanced]
         //public ProxyBinding Key_Dejank { get; set; }
 
-        //[SettingsUIKeyboardBinding(Key.D, Systems.MIT_HotkeySystem.KEY_DEBUGFREEZE, ctrl: true)]
+        //[SettingsUIKeyboardBinding(BindingKeyboard.D, Systems.MIT_HotkeySystem.KEY_DEBUGFREEZE, ctrl: true)]
         //[SettingsUISection(tabKeys, groupHotkeys)]
         //[SettingsUIAdvanced]
         //public ProxyBinding Key_DebugFreeze { get; set; }
 
-        //[SettingsUIKeyboardBinding(Key.D, Systems.MIT_HotkeySystem.KEY_DEBUGCLEAR, ctrl: true, shift: true)]
+        //[SettingsUIKeyboardBinding(BindingKeyboard.D, Systems.MIT_HotkeySystem.KEY_DEBUGCLEAR, ctrl: true, shift: true)]
         //[SettingsUISection(tabKeys, groupHotkeys)]
         //[SettingsUIAdvanced]
         //public ProxyBinding Key_DebugClear { get; set; }
+
+        // Mouse buttons
+        [SettingsUIMouseBinding(QInputSystem.MOUSE_APPLY)]
+        [SettingsUISection(tabKeys, groupHotkeys)]
+        [SettingsUIHidden]
+        public ProxyBinding ApplyMimic { get; set; }
+
+        [SettingsUIMouseBinding(QInputSystem.MOUSE_CANCEL)]
+        [SettingsUISection(tabKeys, groupHotkeys)]
+        [SettingsUIHidden]
+        public ProxyBinding CancelMimic { get; set; }
 
 
         public override void SetDefaults()

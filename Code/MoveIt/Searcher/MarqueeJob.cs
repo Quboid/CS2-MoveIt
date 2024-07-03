@@ -9,7 +9,9 @@ using Unity.Jobs;
 
 namespace MoveIt.Searcher
 {
+#if USE_BURST
     [BurstCompile]
+#endif
     internal struct MarqueeJob : IJob
     {
         internal NativeQuadTree<Entity, Game.Common.QuadTreeBoundsXZ> m_StaticTree;

@@ -45,31 +45,6 @@ namespace MoveIt.Actions
         }
     }
 
-    internal class TransformKeyAction : TransformAction
-    {
-        private readonly float3 _FACTOR = new(0.25f, 0.015625f, 0.25f); // y = 1/64
-        public override string Name => "TransformKeyAction";
-
-        internal void Process(float3 direction)
-        {
-            if (!direction.Equals(float3.zero))
-            {
-                direction.x *= _FACTOR.x;
-                direction.y *= _FACTOR.y;
-                direction.z *= _FACTOR.z;
-
-                Matrix4x4 matrix = default;
-                matrix.SetTRS(Vector3.zero, Quaternion.AngleAxis(Camera.main.transform.localEulerAngles.y, Vector3.up), Vector3.one);
-                direction = matrix.MultiplyVector(direction);
-            }
-
-            m_HotkeyPressed = true;
-            MoveDelta += direction;
-            _Tool.ToolAction = ToolActions.Do;
-            _Tool.CreationPhase = CreationPhases.Create;
-        }
-    }
-
     internal class TransformAction : Action
     {
         public override string Name => "Transform";
@@ -144,6 +119,19 @@ namespace MoveIt.Actions
         }
 
         public override ActionState GetActionState() => m_Active;
+
+        public State GetState(MVDefinition mvd)
+        {
+            foreach (State state in m_Active.m_States)
+            {
+                if (state.Definition.Equals(mvd))
+                {
+                    return state;
+                }
+            }
+
+            throw new System.Exception($"Failed to find state for {mvd} in TransformAction {ToString()}");
+        }
 
         public override void Do()
         {
@@ -272,8 +260,6 @@ namespace MoveIt.Actions
             UpdateStates();
             _Tool.CreationPhase = CreationPhases.Create;
             _Tool.Queue.CreationAction = this;
-            //_Tool.Create(this);
-            //_Tool.Moveables.UpdateAllOverlays();
             //DebugDumpStates($"Undo");
 
             base.Undo();
@@ -288,8 +274,6 @@ namespace MoveIt.Actions
             UpdateStates();
             _Tool.CreationPhase = CreationPhases.Create;
             _Tool.Queue.CreationAction = this;
-            //_Tool.Create(this);
-            //_Tool.Moveables.UpdateAllOverlays();
             //DebugDumpStates($"Redo");
 
             base.Redo();
@@ -355,16 +339,21 @@ namespace MoveIt.Actions
         /// </summary>
         internal void Transform()
         {
-            //string msg = $"{Time.frameCount} TA.Trans {m_Active} {m_Active.Count} |TAct:{_Tool.ToolAction}| Manip:{_Tool.m_IsManipulateMode}";
+            //string msg = $"TA.Trans {m_Active} {m_Active.Count} |TAct:{_Tool.ToolAction}| Manip:{_Tool.m_IsManipulateMode}";
 
             for (int i = 0; i < m_Active.m_States.Length; i++)
             {
                 Moveable mv = _Tool.Moveables.GetOrCreate(m_Active.m_States[i].Definition);
                 //msg += $"\n    {mv.D()} {m_Active.m_States[i].Definition} ";
+                if (mv.IsNormalChild && !mv.IsManipulatable)
+                {
+                    //msg += $" Skipped";
+                    continue;
+                }
 
                 if (!_Tool.IsManipulating && mv.IsManipulatable) continue;
                 if (_Tool.IsManipulating && !mv.IsManipulatable) continue;
-                //msg += $" Now:{mv.Transform.m_Position.DX()} State:{m_Active.m_States[i].m_Position.DX()}";
+                //msg += $" Now:{mv.Transform.m_Position.DX()}/{mv.m_YOffset} State:{m_Active.m_States[i].m_Position.DX()}/{m_Active.m_States[i].m_YOffset}";
 
                 mv.MoveIt(this, m_Active.m_States[i], m_UpdateMove, m_UpdateRotate);
 

@@ -151,7 +151,7 @@ namespace MoveIt.Managers
             }
             else
             {
-                sb.AppendFormat("{0}-{1}", Definition.m_Entity.DX(true), (MV.IsManipulatable ? (MV.IsChild ? "C" : "P") : "N"));
+                sb.AppendFormat("{0}-{1}", Definition.m_Entity.DX(true), (MV.IsManipulatable ? (MV.IsManipChild ? "C" : "P") : "N"));
             }
 
             if (!LastValid.Equals(Entity.Null))

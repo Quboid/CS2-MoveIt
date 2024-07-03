@@ -24,7 +24,7 @@ namespace MoveIt.Overlays
             {
                 m_Owner             = mseg.m_Entity,
                 m_IsManipulatable   = mseg.IsManipulatable,
-                m_IsManipChild      = mseg.IsChild,
+                m_IsManipChild      = mseg.IsManipChild,
             };
 
             MIO_Bezier Bezier = new()

@@ -5,8 +5,9 @@ namespace MoveIt.Moveables
 {
     public class MVManipControlPoint : MVControlPoint
     {
-        public override bool IsManipulatable => true;
-        public override bool IsChild => true;
+        public override bool IsManipulatable    => true;
+        public override bool IsManipChild       => true;
+        public override bool IsNormalChild      => false;
 
         public MVManipControlPoint(Entity e) : base(e, Identity.ControlPoint, ObjectType.Managed)
         {

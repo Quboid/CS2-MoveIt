@@ -66,7 +66,7 @@ namespace MoveIt.Tool
         internal MIT_RenderSystem m_RenderSystem;
         internal MIT_UISystem m_UISystem;
         internal MIT_PostToolSystem m_PostToolSystem;
-        internal MIT_HotkeySystem m_HotkeySystem;
+        internal MIT_InputSystem m_InputSystem;
         //internal MIT_HoverSystem m_HoverSystem;
         internal Overlays.MIT_OverlaySystem m_OverlaySystem;
 

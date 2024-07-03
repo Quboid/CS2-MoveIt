@@ -52,7 +52,7 @@ namespace MoveIt.Input
                 _Tool.SetManipulationMode(true);
                 if (!_Tool.Hover.IsSelected)
                 {
-                    _Tool.Queue.Push(new SelectAction(true, QKeyboard.Shift, _Tool.Hover.MV.IsChild));
+                    _Tool.Queue.Push(new SelectAction(true, QKeyboard.Shift, _Tool.Hover.MV.IsManipChild));
                     _Tool.Queue.Do();
                 }
             }

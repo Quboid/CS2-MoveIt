@@ -61,10 +61,10 @@ namespace MoveIt.Tool
             {
                 int oldC = UpdateNearbyBuildingConnections(EntityManager, ta, ta.m_InitialBounds);
                 int newC = UpdateNearbyBuildingConnections(EntityManager, ta, ta.m_FinalBounds);
-                Log.Debug($"UpdateNearbyBldgConns {ta.Name} old:{oldC}, new:{newC}" +
+                //Log.Debug($"UpdateNearbyBldgConns {ta.Name} old:{oldC}, new:{newC}" +
                     //$"\n  old:{oldC} : {m_CleanUpAction.m_InitialBounds.min.DX()} : {m_CleanUpAction.m_InitialBounds.max.DX()}" +
                     //$"\n  new:{newC} : {m_CleanUpAction.m_FinalBounds.min.DX()} : {m_CleanUpAction.m_FinalBounds.max.DX()}" +
-                    "");
+                    //"");
                 //m_CleanUpAction = null;
             }
 

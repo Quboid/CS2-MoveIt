@@ -6,7 +6,13 @@
   <!--Short description of the mod-->
   <ShortDescription Value="Move Things" />
   <!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
-  <LongDescription># Move It for Cities Skylines 2.
+  <LongDescription># Move It Beta for Cities Skylines 2.
+
+This is the unstable beta version and may have unexpected issues. Please report any in the forum or on Discord.
+
+Stable version:
+https://mods.paradoxplaza.com/mods/74324/Windows
+
 
 You can move trees, props, decals, buildings, nodes, and segment curves.
 
@@ -57,6 +63,8 @@ Manipulating segments - you can move the control points in all three axis; the 2
 * Advanced: Hide Move It Icon - If the icon is causing crashing issues and nothing else helps, enable this to hide the icon.
 * Advanced: Show Debug Lines - Displays some debugging data.
 
+This is an beta version of Move It. Save often, save different.
+
 
 ## Credits:
 
@@ -76,13 +84,17 @@ Icons from SVG Repo, and from WishForge.Games under CC Attribution License.</Lon
   <!--Link to the forum post where the mod can be discussed-->
   <ForumLink Value="https://forum.paradoxplaza.com/forum/threads/move-it.1684140/" />
   <!--Version of the mod-->
-  <ModVersion Value="0.4.0" />
+  <ModVersion Value="0.4.1.2" />
   <!--Recommended version of the base game to use the mod-->
   <GameVersion Value="1.*" />
   <!--Dependency for the mod, can be set multiple-->
   <Dependency Id="" DisplayName="" Version="" />
   <!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-  <ChangeLog>- Added ability to rebind keys
+  <ChangeLog>- Fixed error on opening tool after bulldozing selected segment
+- Fixed occasional error on deselecting segments
+- Extended Gooee to check for ModsData folder
+Previous:
+- Added ability to rebind keys
 - Added message to rebind M
 - Fixed marquee select not selecting things
 - Marquee select now much faster

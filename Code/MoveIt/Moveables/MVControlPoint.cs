@@ -12,8 +12,9 @@ namespace MoveIt.Moveables
 {
     public class MVControlPoint : Moveable
     {
-        public override bool IsManipulatable => false;
-        public override bool IsManaged => true;
+        public override bool IsManipulatable    => false;
+        public override bool IsManaged          => true;
+        public override bool IsNormalChild      => true;
 
         internal float m_Diameter;
         internal Entity m_Node;

@@ -65,7 +65,7 @@ namespace MoveIt.Systems
             _HideMoveItIcon.Update(_Tool.HideMoveItIcon);
 
             bool hasShownMConflictPanel = Mod.Settings.HasShownMConflictPanel;
-            List<ProxyBinding> conflicts = GetActionKeyConflicts(MIT_HotkeySystem.KEY_TOGGLETOOL);
+            List<ProxyBinding> conflicts = GetActionKeyConflicts(Inputs.KEY_TOGGLETOOL);
             bool showMConflictPanel = !hasShownMConflictPanel && conflicts.Count > 0;
             _ShowMConflict.Update(showMConflictPanel);
             StringBuilder msg = new();
@@ -74,7 +74,7 @@ namespace MoveIt.Systems
                 msg.AppendFormat("Do you want the '**M**' key to open Move It?\nIt will be removed from:");
                 foreach (ProxyBinding binding in conflicts)
                 {
-                    msg.AppendFormat("\n - {0}: **{1}**", binding.m_MapName, binding.m_ActionName);
+                    msg.AppendFormat("\n - {0}: **{1}**", binding.mapName, binding.actionName);
                 }
             }
             _RebindExistingMsg.Update(msg.ToString());
@@ -164,7 +164,7 @@ namespace MoveIt.Systems
         {
             if (doRebind)
             {
-                var conflicts = GetActionKeyConflicts(MIT_HotkeySystem.KEY_TOGGLETOOL);
+                var conflicts = GetActionKeyConflicts(Inputs.KEY_TOGGLETOOL);
                 for (int i = 0; i < conflicts.Count; i++)
                 {
                     ProxyBinding binding = conflicts[i];
@@ -176,15 +176,24 @@ namespace MoveIt.Systems
             }
             else
             {
-                ProxyAction toggleTool = Mod.Settings.GetAction(MIT_HotkeySystem.KEY_TOGGLETOOL);
+                ProxyAction toggleTool = Mod.Settings.GetAction(Inputs.KEY_TOGGLETOOL);
                 ProxyBinding binding = toggleTool.bindings.First();
-                binding.AddModifier(new()
+                binding.WithModifiers(new List<ProxyModifier>()
                 {
-                    m_Name              = "modifier",
-                    m_IsProhibition     = false,
-                    m_Component         = ActionComponent.Press,
-                    m_Path              = "<Keyboard>/shift",
+                    new()
+                    {
+                        m_Name              = "modifier",
+                        m_Component         = ActionComponent.Press,
+                        m_Path              = "<Keyboard>/shift",
+                    },
                 });
+                //binding.AddModifier(new()
+                //{
+                //    m_Name              = "modifier",
+                //    m_IsProhibition     = false,
+                //    m_Component         = ActionComponent.Press,
+                //    m_Path              = "<Keyboard>/shift",
+                //});
                 InputManager.instance.SetBinding(binding, out _);
                 Mod.Settings.Key_ToggleTool = binding;
 

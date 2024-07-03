@@ -101,7 +101,7 @@ namespace MoveIt.Actions
         {
             int old = _Tool.Selection.Count;
             int oldFull = _Tool.Selection.CountFull;
-            _Tool.Selection.DebugDumpSelection("Archiving...");
+            //_Tool.Selection.DebugDumpSelection("Archiving...");
             _SelectionState = SelectionState.SelectionToState(_Tool.m_IsManipulateMode, _Tool.Selection.Definitions);
             MIT.Log.Debug($"Archive {idx}:{_Tool.Queue.Current.Name} ToolAction:{toolAction} Definitions:{old}/{oldFull}->{_SelectionState.Count}");
         }

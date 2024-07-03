@@ -1,4 +1,10 @@
-﻿# Move It for Cities Skylines 2.
+﻿# Move It Beta for Cities Skylines 2.
+
+This is the unstable beta version and may have unexpected issues. Please report any in the forum or on Discord.
+
+Stable version:
+https://mods.paradoxplaza.com/mods/74324/Windows
+
 
 You can move trees, props, decals, buildings, nodes, and segment curves.
 
@@ -48,6 +54,8 @@ Manipulating segments - you can move the control points in all three axis; the 2
 * Save Logs To Desktop - Saves your current log files to your desktop so you can easily submit them with bug reports. You can also do this with Skyve.
 * Advanced: Hide Move It Icon - If the icon is causing crashing issues and nothing else helps, enable this to hide the icon.
 * Advanced: Show Debug Lines - Displays some debugging data.
+
+This is an beta version of Move It. Save often, save different.
 
 
 ## Credits:

@@ -182,6 +182,13 @@ namespace MoveIt.Managers
             //QLog.Debug(msg);
         }
 
+        public void DestroyAll()
+        {
+            int oldCount = _Tool.m_ControlPointQuery.CalculateEntityCount();
+            _Tool.EntityManager.DestroyEntity(_Tool.m_ControlPointQuery);
+            MIT.Log.Info($"Removing {oldCount} entities (new count:{_Tool.m_ControlPointQuery.CalculateEntityCount()})");
+        }
+
 
         internal string DebugControlPoints()
         {
@@ -189,7 +196,7 @@ namespace MoveIt.Managers
             sb.AppendFormat("CPs:{0}", Count);
             foreach (MVControlPoint cp in _Tool.Moveables.GetAllOf<MVControlPoint>())
             {
-                sb.AppendFormat(" {0}", cp.m_Entity.D());
+                sb.AppendFormat("\n    {0}", cp.Definition);
             }
             return sb.ToString();
         }

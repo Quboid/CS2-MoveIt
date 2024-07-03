@@ -71,7 +71,7 @@ namespace MoveIt.QAccessor
 
         public void MoveTo(State state, float3 newPosition)
         {
-            //QLog.Debug($"QObj.MoveTo {m_Entity.D()} {newPosition.DX()}  CPs:{m_ChildCPs.Length}, nodes:{m_ChildNodes.Length}, other:{m_Children.Length}");
+            //QLog.Debug($"QObj.MoveTo ({state.m_Entity.D()})  {m_Entity.D()} parent:{m_Parent.m_Entity.DX()} children:{m_Children.Length} {newPosition.DX()}");
             MoveBy(state, newPosition, newPosition - m_Parent.Position);
         }
 

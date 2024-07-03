@@ -23,7 +23,7 @@ namespace MoveIt.Overlays
             {
                 m_Owner             = mcp.m_Entity,
                 m_IsManipulatable   = mcp.IsManipulatable,
-                m_IsManipChild      = mcp.IsChild,
+                m_IsManipChild      = mcp.IsManipChild,
             };
 
             _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVManipControlPoint));

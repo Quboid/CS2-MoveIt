@@ -24,7 +24,7 @@ namespace MoveIt.Tool
             m_RenderSystem = World.GetOrCreateSystemManaged<Systems.MIT_RenderSystem>();
             m_UISystem = World.GetOrCreateSystemManaged<Systems.MIT_UISystem>();
             m_PostToolSystem = World.GetOrCreateSystemManaged<Systems.MIT_PostToolSystem>();
-            m_HotkeySystem = World.GetOrCreateSystemManaged<Systems.MIT_HotkeySystem>();
+            m_InputSystem = World.GetOrCreateSystemManaged<Systems.MIT_InputSystem>();
             //m_HoverSystem = World.GetOrCreateSystemManaged<MIT_HoverSystem>();
 
             m_RaycastSystem = World.GetOrCreateSystemManaged<Game.Common.RaycastSystem>();
@@ -51,6 +51,7 @@ namespace MoveIt.Tool
             Enabled = false;
             //m_HotkeySystem.Initialise();
 
+            m_InputSystem.Initialise(Mod.Settings);
             ControlPointManager = new();
             InputManager = new();
             Hover = new();
@@ -65,7 +66,6 @@ namespace MoveIt.Tool
             m_IsManipulateMode = false;
             Selection ??= new SelectionNormal();
 
-            m_HotkeySystem.Initialise();
             m_RenderSystem.m_Widgets.Clear();
 
             m_OverlaySystem.DestroyAllEntities();
@@ -79,7 +79,7 @@ namespace MoveIt.Tool
 
             MIT_ToolTipSystem.instance.EnableIfPopulated();
             //m_HoverSystem.Start();
-            m_HotkeySystem.OnToolEnable();
+            m_InputSystem.OnToolEnable();
             m_RemoveOverriddenSystem.Start();
             m_PostToolSystem.Start();
             m_VanillaOverlaySystem.Start();
@@ -104,7 +104,7 @@ namespace MoveIt.Tool
             m_VanillaOverlaySystem.End();
             m_PostToolSystem.End();
             m_RemoveOverriddenSystem.End();
-            m_HotkeySystem.OnToolDisable();
+            m_InputSystem.OnToolDisable();
             //m_HoverSystem.End();
             MIT_ToolTipSystem.instance.Enabled = false;
 
@@ -114,6 +114,7 @@ namespace MoveIt.Tool
         protected override void OnDestroy()
         {
             Log.Info("Tool.OnDestroy()");
+            ControlPointManager.DestroyAll();
             base.OnDestroy();
         }
 

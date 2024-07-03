@@ -8,7 +8,7 @@ namespace MoveIt.Selection
     public class SelectionManip : SelectionBase
     {
         public override bool IsActive => _Tool.IsManipulating;
-        public override bool Any => _Buffer.Count(mvd => GetMV(mvd).IsChild) > 0;
+        public override bool Any => _Buffer.Count(mvd => GetMV(mvd).IsManipChild) > 0;
 
         internal override string Name => "SelManip";
 
@@ -38,14 +38,14 @@ namespace MoveIt.Selection
             }
             else if (!_Tool.Selection.Has(mvd))
             {
-                if (mv.IsChild)
+                if (mv.IsManipChild)
                 {
                     // If the to-be-added object is a child, only clear other children
                     HashSet<MVDefinition> toRemove = new();
                     foreach (MVDefinition mvd1 in _Buffer)
                     {
                         Moveable mv1 = GetMV(mvd1);
-                        if (mv1.IsChild)
+                        if (mv1.IsManipChild)
                         {
                             toRemove.Add(mvd1);
                         }
@@ -71,7 +71,7 @@ namespace MoveIt.Selection
             foreach (MVDefinition mvd in candidates)
             {
                 Moveable mv = GetMV(mvd);
-                if (mv.IsChild)
+                if (mv.IsManipChild)
                 {
                     result.Add(mvd);
                 }
@@ -87,7 +87,7 @@ namespace MoveIt.Selection
             foreach (MVDefinition mvd in candidates)
             {
                 Moveable mv = GetMV(mvd);
-                if (mv.IsChild)
+                if (mv.IsManipChild)
                 {
                     result.Add(mvd);
                 }

@@ -37,8 +37,22 @@ namespace MoveIt.Moveables
         public ObjectType m_ObjectType;
         public Overlay m_Overlay;
         public string Name => GetType().Name;
+
+        /// <summary>
+        /// Is this Moveable used in Manipulation Mode?
+        /// </summary>
         public virtual bool IsManipulatable => false;
-        public virtual bool IsChild => false;
+        /// <summary>
+        /// Is this Moveable a child object in Manipulation Mode?
+        /// </summary>
+        public virtual bool IsManipChild => false;
+        /// <summary>
+        /// Is this Moveable a child object in Normal Mode?
+        /// </summary>
+        public virtual bool IsNormalChild => false;
+        /// <summary>
+        /// Is this Moveable's entity managed by Move It?
+        /// </summary>
         public virtual bool IsManaged => false;
 
         public float m_YOffset = 0f;

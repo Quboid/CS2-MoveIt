@@ -90,38 +90,43 @@ namespace MoveIt.Settings
                 //{ m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_DebugClear)), "\"Clear Lines\"" },
             };
 
-            // Gooee Warning
-            strings[m_Settings.GetOptionLabelLocaleID(nameof(Settings.GooeeWarning))] =
+            #region Gooee Warning
+            string gooeeLabel = m_Settings.GetOptionLabelLocaleID(nameof(Settings.GooeeWarning));
+            string gooeeBtn = m_Settings.GetOptionLabelLocaleID(nameof(Settings.OpenLocalModsFolderBtn));
+            string gooeeDesc = m_Settings.GetOptionDescLocaleID(nameof(Settings.OpenLocalModsFolderBtn));
+
+            strings[gooeeLabel] =
                 "\n**Warning: Gooee Detected**\n\n" +
                 "Gooee is an abandoned mod dependency that **will** cause problems with Move It and other mods, and should be removed. However after removal parts of it may remain in your local ";
 
             if (FileUtils.GooeeBothFoldersExist)
             {
-                strings[m_Settings.GetOptionLabelLocaleID(nameof(Settings.GooeeWarning))] += 
+                strings[gooeeLabel] += 
                     "Mods and ModsData folders which must be cleaned up.\n\n" +
                     "1. Close the game.\n 2. Remove Gooee if it exists.\n 3. Delete the Gooee folder in your local Mods folder.\n 4. Delete the Gooee folder in your local ModsData folder.";
-                strings[m_Settings.GetOptionLabelLocaleID(nameof(Settings.OpenLocalModsFolderBtn))] = "Open Local Mods and ModsData Folders";
-                strings[m_Settings.GetOptionDescLocaleID(nameof(Settings.OpenLocalModsFolderBtn))] = "Open the local Mods and ModsData folders - you should close the game before deleting the Gooee folders.";
+                strings[gooeeBtn] = "Open Local Mods and ModsData Folders";
+                strings[gooeeDesc] = "Open the local Mods and ModsData folders - you should close the game before deleting the Gooee folders.";
             }
             else
             {
                 if (FileUtils.GooeeModsFolderExists)
                 {
-                    strings[m_Settings.GetOptionLabelLocaleID(nameof(Settings.GooeeWarning))] +=
+                    strings[gooeeLabel] +=
                         "Mods folder which must be cleaned up.\n\n" +
                         "1. Close the game.\n 2. Remove Gooee if it exists.\n 3. Delete the Gooee folder in your local Mods folder.";
-                    strings[m_Settings.GetOptionLabelLocaleID(nameof(Settings.OpenLocalModsFolderBtn))] = "Open Local Mods Folder";
-                    strings[m_Settings.GetOptionDescLocaleID(nameof(Settings.OpenLocalModsFolderBtn))] = "Open the local Mods folder - you should close the game before deleting the Gooee folder.";
+                    strings[gooeeBtn] = "Open Local Mods Folder";
+                    strings[gooeeDesc] = "Open the local Mods folder - you should close the game before deleting the Gooee folder.";
                 }
                 else
                 {
-                    strings[m_Settings.GetOptionLabelLocaleID(nameof(Settings.GooeeWarning))] +=
+                    strings[gooeeLabel] +=
                         "ModsData folder which must be cleaned up.\n\n" +
                         "1. Close the game.\n 2. Remove Gooee if it exists.\n 3. Delete the Gooee folder in your local ModsData folder.";
-                    strings[m_Settings.GetOptionLabelLocaleID(nameof(Settings.OpenLocalModsFolderBtn))] = "Open Local ModsData Folders";
-                    strings[m_Settings.GetOptionDescLocaleID(nameof(Settings.OpenLocalModsFolderBtn))] = "Open the local ModsData folder - you should close the game before deleting the Gooee folder.";
+                    strings[gooeeBtn] = "Open Local ModsData Folders";
+                    strings[gooeeDesc] = "Open the local ModsData folder - you should close the game before deleting the Gooee folder.";
                 }
             }
+            #endregion
 
             return strings;
         }

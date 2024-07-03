@@ -24,14 +24,14 @@ namespace MoveIt
             if (ISDEBUG) QCommonLib.QLog.Init(true);
 
             Settings = new Settings.Settings(this);
-            Settings.RegisterInOptionsUI();
             Settings.RegisterKeyBindings();
+            Settings.RegisterInOptionsUI();
             Game.SceneFlow.GameManager.instance.localizationManager.AddSource("en-US", new Settings.LocaleEN(Settings));
             Colossal.IO.AssetDatabase.AssetDatabase.global.LoadSettings(nameof(MoveIt), Settings, new Settings.Settings(this));
 
             //updateSystem.UpdateAt<MIT_HoverSystem>(SystemUpdatePhase.ToolUpdate);
             updateSystem.UpdateAt<Tool.MIT>(SystemUpdatePhase.ToolUpdate);
-            updateSystem.UpdateAt<MIT_HotkeySystem>(SystemUpdatePhase.PreTool);
+            updateSystem.UpdateAt<MIT_InputSystem>(SystemUpdatePhase.PreTool);
             updateSystem.UpdateAt<MIT_PostToolSystem>(SystemUpdatePhase.PostTool);
             updateSystem.UpdateBefore<MIT_RemoveOverriddenSystem>(SystemUpdatePhase.ModificationEnd);
             updateSystem.UpdateBefore<MIT_VanillaOverlaySystem>(SystemUpdatePhase.Rendering);

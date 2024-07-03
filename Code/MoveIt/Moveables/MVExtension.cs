@@ -5,7 +5,7 @@ namespace MoveIt.Moveables
 {
     internal class MVExtension : Moveable
     {
-        public override bool IsChild => true;
+        public override bool IsManipChild => true;
 
         public MVExtension(Entity e) : base(e, Identity.Extension, ObjectType.Normal)
         {
