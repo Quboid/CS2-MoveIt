@@ -1,5 +1,6 @@
 ﻿using Colossal.Mathematics;
 using MoveIt.Moveables;
+using QCommonLib;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -13,8 +14,9 @@ namespace MoveIt.Overlays
                     typeof(MIO_Type),
                     typeof(MIO_Common),
                     typeof(MIO_Bezier),
+                    typeof(MIO_Beziers),
                     typeof(MIO_Circles),
-                    typeof(MIO_Lines),
+                    typeof(MIO_DashedLines),
             });
 
         public static Entity Factory(Entity owner, Bezier4x3 curve, float width)
@@ -61,6 +63,7 @@ namespace MoveIt.Overlays
         public override void EnqueueUpdate()
         {
             base.EnqueueUpdate();
+            base.EnqueueUpdateDeferred();
             UpdateRelatedOverlays();
         }
 
@@ -103,10 +106,13 @@ namespace MoveIt.Overlays
             _Tool.EntityManager.SetComponentData(m_Entity, curve);
 
             DynamicBuffer<MIO_Circles> cpPosBuffer = _Tool.EntityManager.GetBuffer<MIO_Circles>(m_Entity);
-            DynamicBuffer<MIO_Lines> linesBuffer = _Tool.EntityManager.GetBuffer<MIO_Lines>(m_Entity);
+            DynamicBuffer<MIO_Beziers> curvesBuffer = _Tool.EntityManager.GetBuffer<MIO_Beziers>(m_Entity);
+            DynamicBuffer<MIO_DashedLines> dashedBuffer = _Tool.EntityManager.GetBuffer<MIO_DashedLines>(m_Entity);
             cpPosBuffer.Clear();
-            linesBuffer.Clear();
+            curvesBuffer.Clear();
+            dashedBuffer.Clear();
 
+            // Control points and guidelines
             NativeArray<Circle3> cpPos = new(4, Allocator.Temp);
             cpPos[0] = new(CP_RADIUS, curve.Curve.a, quaternion.identity);
             cpPos[1] = new(CP_RADIUS, curve.Curve.b, quaternion.identity);
@@ -118,8 +124,21 @@ namespace MoveIt.Overlays
                 cpPosBuffer.Add(new(cpPos[i]));
             }
 
-            linesBuffer.Add(new(DrawTools.CalculateProtrudedLine(cpPos[0], cpPos[1])));
-            linesBuffer.Add(new(DrawTools.CalculateProtrudedLine(cpPos[3], cpPos[2])));
+            dashedBuffer.Add(new(DrawTools.CalculateProtrudedLine(cpPos[0], cpPos[1])));
+            dashedBuffer.Add(new(DrawTools.CalculateProtrudedLine(cpPos[3], cpPos[2])));
+
+            // Outline
+            var edgeGeo = _Tool.EntityManager.GetComponentData<Game.Net.EdgeGeometry>(m_Owner);
+            float3 offset = new(0f);
+            if (_Tool.EntityManager.HasComponent<Game.Net.Elevation>(m_Owner))
+            {
+                offset.y = 0.5f;
+            }
+            curvesBuffer.Add(new(edgeGeo.m_Start.m_Left + offset));
+            curvesBuffer.Add(new(edgeGeo.m_Start.m_Right + offset));
+            curvesBuffer.Add(new(edgeGeo.m_End.m_Left + offset));
+            curvesBuffer.Add(new(edgeGeo.m_End.m_Right + offset));
+
             return true;
         }
     }

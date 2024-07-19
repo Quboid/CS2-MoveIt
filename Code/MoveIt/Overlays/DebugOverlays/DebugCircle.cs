@@ -29,6 +29,8 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(float3 position, float radius, int ttl = 0, UnityEngine.Color color = default, int index = 5, int version = 1)
         {
+            if (_Tool.m_OverlaySystem.DebugFreeze) return Entity.Null;
+
             Entity owner = new() { Index = index, Version = version };
             Entity e = _Tool.EntityManager.CreateEntity(ttl == 0 ? _Archetype : _ArchetypeTTL);
 

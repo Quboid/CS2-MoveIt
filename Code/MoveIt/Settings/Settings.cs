@@ -11,10 +11,12 @@ namespace MoveIt.Settings
     [SettingsUITabOrder(tabMain, tabKeys)]
     [SettingsUIGroupOrder(groupGeneral, groupHotkeys)]
     [SettingsUIShowGroupName(groupGeneral, groupHotkeys)]
-    [SettingsUIMouseAction(QInputSystem.MOUSE_APPLY,        ActionType.Button, false, false, new string[] { "MoveIt_Input" })]
-    [SettingsUIMouseAction(QInputSystem.MOUSE_CANCEL,       ActionType.Button, false, false, new string[] { "MoveIt_Input" })]
-    [SettingsUIKeyboardActionAttribute(Inputs.KEY_MOVEDOWN, ActionType.Button, false, false, Mode.DigitalNormalized, new string[] { "MoveIt_Input" })]
-    [SettingsUIKeyboardActionAttribute(Inputs.KEY_MOVEUP,   ActionType.Button, false, false, Mode.DigitalNormalized, new string[] { "MoveIt_Input" } )]
+    [SettingsUIMouseAction(QInputSystem.MOUSE_APPLY,            ActionType.Button, false, false, new string[] { "MoveIt_Input" })]
+    [SettingsUIMouseAction(QInputSystem.MOUSE_CANCEL,           ActionType.Button, false, false, new string[] { "MoveIt_Input" })]
+    [SettingsUIKeyboardActionAttribute(Inputs.KEY_MOVEDOWN,     ActionType.Button, false, false, Mode.DigitalNormalized, new string[] { "MoveIt_Input" })]
+    [SettingsUIKeyboardActionAttribute(Inputs.KEY_MOVEUP,       ActionType.Button, false, false, Mode.DigitalNormalized, new string[] { "MoveIt_Input" } )]
+    [SettingsUIKeyboardActionAttribute(Inputs.KEY_MOVEDOWN2,    ActionType.Button, false, false, Mode.DigitalNormalized, new string[] { "MoveIt_Input" })]
+    [SettingsUIKeyboardActionAttribute(Inputs.KEY_MOVEUP2,      ActionType.Button, false, false, Mode.DigitalNormalized, new string[] { "MoveIt_Input" })]
     public class Settings : ModSetting
     {
         public const string tabMain = "tabMain";
@@ -106,22 +108,30 @@ namespace MoveIt.Settings
         [SettingsUISection(tabKeys, groupHotkeys)]
         public ProxyBinding Key_MoveDown { get; set; }
 
+        [SettingsUIKeyboardBinding(BindingKeyboard.Numpad3, Inputs.KEY_MOVEDOWN2)]
+        [SettingsUISection(tabKeys, groupHotkeys)]
+        public ProxyBinding Key_MoveDown2 { get; set; }
+
         [SettingsUIKeyboardBinding(BindingKeyboard.PageUp, Inputs.KEY_MOVEUP)]
         [SettingsUISection(tabKeys, groupHotkeys)]
         public ProxyBinding Key_MoveUp { get; set; }
 
+        [SettingsUIKeyboardBinding(BindingKeyboard.Numpad9, Inputs.KEY_MOVEUP2)]
+        [SettingsUISection(tabKeys, groupHotkeys)]
+        public ProxyBinding Key_MoveUp2 { get; set; }
+
         // Hidden test hotkeys
-        //[SettingsUIKeyboardBinding(BindingKeyboard.L, Systems.MIT_HotkeySystem.KEY_DEJANK, ctrl: true)]
+        //[SettingsUIKeyboardBinding(BindingKeyboard.L, Inputs.KEY_DEJANK, ctrl: true)]
         //[SettingsUISection(tabKeys, groupHotkeys)]
         //[SettingsUIAdvanced]
         //public ProxyBinding Key_Dejank { get; set; }
 
-        //[SettingsUIKeyboardBinding(BindingKeyboard.D, Systems.MIT_HotkeySystem.KEY_DEBUGFREEZE, ctrl: true)]
-        //[SettingsUISection(tabKeys, groupHotkeys)]
-        //[SettingsUIAdvanced]
-        //public ProxyBinding Key_DebugFreeze { get; set; }
+        [SettingsUIKeyboardBinding(BindingKeyboard.D, Inputs.KEY_DEBUGFREEZE, ctrl: true)]
+        [SettingsUISection(tabKeys, groupHotkeys)]
+        [SettingsUIAdvanced]
+        public ProxyBinding Key_DebugFreeze { get; set; }
 
-        //[SettingsUIKeyboardBinding(BindingKeyboard.D, Systems.MIT_HotkeySystem.KEY_DEBUGCLEAR, ctrl: true, shift: true)]
+        //[SettingsUIKeyboardBinding(BindingKeyboard.D, Inputs.KEY_DEBUGCLEAR, ctrl: true, shift: true)]
         //[SettingsUISection(tabKeys, groupHotkeys)]
         //[SettingsUIAdvanced]
         //public ProxyBinding Key_DebugClear { get; set; }

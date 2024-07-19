@@ -27,7 +27,8 @@ namespace MoveIt.Overlays
             public BufferTypeHandle<MIO_Circles>                                    bth_Circles;
             public BufferTypeHandle<MIO_Lines>                                      bth_Lines;
             public BufferTypeHandle<MIO_DashedLines>                                bth_DashedLines;
-
+            
+            [ReadOnly] public BufferLookup<Game.Areas.Node>                         blu_AreasNode;
             [ReadOnly] public ComponentLookup<Game.Prefabs.BuildingData>            clu_BuildingData;
             [ReadOnly] public ComponentLookup<Game.Prefabs.BuildingExtensionData>   clu_BuildingExtensionData;
             [ReadOnly] public ComponentLookup<Game.Prefabs.ObjectGeometryData>      clu_ObjectGeometryData;
@@ -78,6 +79,12 @@ namespace MoveIt.Overlays
                                 common,
                                 data_Lines[idx],
                                 data_DashedLines[idx]);
+                            break;
+
+                        case OverlayTypes.MVSurface:
+                            UpdateMVSurface(
+                                common,
+                                data_Lines[idx]);
                             break;
 
                         case OverlayTypes.MVControlPoint:
@@ -142,6 +149,19 @@ namespace MoveIt.Overlays
                 }
 
                 DrawTools.CalculateBuildingRectangleLines(common.m_Transform, common.m_OutlineWidthGround, lotHalfSize, ref lines, ref dashedLines);
+            }
+
+            public readonly void UpdateMVSurface(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
+            {
+                lines.Clear();
+                var nodes = blu_AreasNode[common.m_Owner];
+                int c = nodes.Length;
+
+                lines.Add(new(new(nodes[c - 1].m_Position, nodes[0].m_Position)));
+                for (int i = 0; i < c - 1; i++)
+                {
+                    lines.Add(new(new(nodes[i].m_Position, nodes[i + 1].m_Position)));
+                }
             }
 
             public readonly void UpdateMVControlPoint(NativeArray<MIO_Common> data_Common, int idx)

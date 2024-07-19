@@ -1,4 +1,6 @@
-﻿using Colossal.Mathematics;
+﻿using Colossal.Entities;
+using Colossal.Mathematics;
+using Colossal.UI;
 using Game.Common;
 using Game.Tools;
 using MoveIt.QAccessor;
@@ -79,6 +81,11 @@ namespace MoveIt.Moveables
             m_Accessor.Transform(this, m_Position, m_Rotation, move, rotate);
         }
 
+        public void TransformEnd(NativeArray<Entity> all)
+        {
+            m_Accessor.TransformEnd(all);
+        }
+
         /// <summary>
         /// States can have owners, if they are extensions or service upgrades
         /// </summary>
@@ -92,11 +99,16 @@ namespace MoveIt.Moveables
             if (!manager.HasComponent<Game.Prefabs.PrefabRef>(e)) return false;
             if (manager.HasComponent<Temp>(e)) return false;
             if (manager.HasComponent<Terrain>(e)) return false;
-            if (manager.HasComponent<Game.Objects.Attached>(e)) return false;
+            if (manager.TryGetComponent<Game.Objects.Attached>(e, out var comp))
+            {
+                if (!comp.m_Parent.Equals(Entity.Null)) return false;
+            }
             if (!(
                 manager.HasComponent<Game.Objects.Transform>(e) ||
                 manager.HasComponent<Game.Net.Edge>(e) ||
                 manager.HasComponent<Game.Net.Node>(e) ||
+                manager.HasComponent<Game.Areas.Surface>(e) ||
+                manager.HasComponent<Game.Areas.HangaroundLocation>(e) ||
                 manager.HasComponent<Components.MIT_ControlPoint>(e)
                 )) return false;
 

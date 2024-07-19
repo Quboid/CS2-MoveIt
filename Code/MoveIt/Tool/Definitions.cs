@@ -63,7 +63,7 @@ namespace MoveIt.Tool
 
         internal MIT_VanillaOverlaySystem m_VanillaOverlaySystem;
         internal MIT_RemoveOverriddenSystem m_RemoveOverriddenSystem;
-        internal MIT_RenderSystem m_RenderSystem;
+        //internal MIT_RenderSystem m_RenderSystem;
         internal MIT_UISystem m_UISystem;
         internal MIT_PostToolSystem m_PostToolSystem;
         internal MIT_InputSystem m_InputSystem;
@@ -88,6 +88,7 @@ namespace MoveIt.Tool
 
         internal EntityQuery m_TempQuery;
         internal EntityQuery m_ControlPointQuery;
+        internal EntityQuery m_SurfacesQuery;
 
         // Options
         internal bool ShowDebugPanel        => Mod.Settings.ShowDebugPanel;
@@ -111,6 +112,11 @@ namespace MoveIt.Tool
         /// Raycaster which only hits terrain
         /// </summary>
         internal RaycastTerrain m_RaycastTerrain;
+
+        /// <summary>
+        /// Raycaster which only hits surfaces
+        /// </summary>
+        internal RaycastSurface m_RaycastSurface;
 
         internal struct PrefabInfo
         {

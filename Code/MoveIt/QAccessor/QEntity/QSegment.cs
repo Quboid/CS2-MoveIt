@@ -28,19 +28,22 @@ namespace MoveIt.QAccessor
             TryAddUpdate(m_Entity);
 
             Game.Net.Edge edge = m_Lookup.gnEdge.GetRefRO(m_Entity).ValueRO;
-            QEntity node = new(ref m_Lookup, edge.m_Start, Identity.Node);
+            QEntity node = new(m_Manager, ref m_Lookup, edge.m_Start, Identity.Node);
             node.SetUpdated();
-            node = new(ref m_Lookup, edge.m_End, Identity.Node);
+            node = new(m_Manager, ref m_Lookup, edge.m_End, Identity.Node);
             node.SetUpdated();
 
-            if (TryGetComponent<Game.Net.Aggregated>(out var component))
+            if (TryGetComponent<Game.Net.Aggregated>(out var aggregateComp))
             {
-                Entity aggregate = component.m_Aggregate;
+                Entity aggregate = aggregateComp.m_Aggregate;
                 TryAddUpdate(aggregate);
             }
 
             return true;
         }
+
+        private readonly void Segment_TransformEnd()
+        { }
 
 
         private bool Segment_MoveBy(State state, float3 newPosition, float3 delta)

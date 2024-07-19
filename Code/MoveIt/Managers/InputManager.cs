@@ -11,6 +11,8 @@ namespace MoveIt.Managers
     {
         private readonly QKey_Binding _Key_MoveDown;
         private readonly QKey_Binding _Key_MoveUp;
+        private readonly QKey_Binding _Key_MoveDown2;
+        private readonly QKey_Binding _Key_MoveUp2;
         private readonly InputButton _ApplyAction;
         private readonly InputButton _SecondaryAction;
 
@@ -20,6 +22,8 @@ namespace MoveIt.Managers
         {
             _Key_MoveDown = _Tool.m_InputSystem.GetBinding(Inputs.KEY_MOVEDOWN);
             _Key_MoveUp = _Tool.m_InputSystem.GetBinding(Inputs.KEY_MOVEUP);
+            _Key_MoveDown2 = _Tool.m_InputSystem.GetBinding(Inputs.KEY_MOVEDOWN2);
+            _Key_MoveUp2 = _Tool.m_InputSystem.GetBinding(Inputs.KEY_MOVEUP2);
 
             _ApplyAction = new ApplyButton(_Tool.m_InputSystem.MouseApply);
             _SecondaryAction = new SecondaryButton(_Tool.m_InputSystem.MouseCancel);
@@ -74,11 +78,11 @@ namespace MoveIt.Managers
             if (QKeyboard.Shift) magnitude *= QKeyboard.Alt ? 64f : 8f;
             if (QKeyboard.Control) magnitude /= QKeyboard.Alt ? 64f : 8f;
 
-            if (_Key_MoveUp.IsPressed)
+            if (_Key_MoveUp.IsPressed || _Key_MoveUp2.IsPressed)
             {
                 direction.y += magnitude;
             }
-            else if (_Key_MoveDown.IsPressed)
+            else if (_Key_MoveDown.IsPressed || _Key_MoveDown2.IsPressed)
             {
                 direction.y -= magnitude;
             }

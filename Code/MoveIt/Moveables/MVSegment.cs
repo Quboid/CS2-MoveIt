@@ -68,16 +68,6 @@ namespace MoveIt.Moveables
 
         internal override List<MVDefinition> GetChildrenToTransform() => new() { m_CPDefinitions[1], m_CPDefinitions[2] };
 
-        //internal override List<T> GetChildMoveablesToTransform<T>()
-        //{
-        //    List<T> result = new()
-        //    {
-        //        _Tool.ControlPointManager.GetOrCreate(m_CPDefinitions[1]) as T,
-        //        _Tool.ControlPointManager.GetOrCreate(m_CPDefinitions[2]) as T
-        //    };
-        //    return result;
-        //}
-
         internal override List<T> GetChildMoveablesForOverlays<T>() 
         {
             List<T> result = new();

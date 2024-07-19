@@ -25,7 +25,7 @@ namespace MoveIt.Actions
 
             m_HotkeyPressed = true;
             MoveDelta += direction;
-            QLog.Debug($"TKA.Process dir:{direction.DX()}, mD:{MoveDelta.DX()}");
+
             _Tool.ToolAction = ToolActions.Do;
             _Tool.CreationPhase = CreationPhases.Create;
         }

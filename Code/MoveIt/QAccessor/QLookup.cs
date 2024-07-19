@@ -16,6 +16,7 @@ namespace MoveIt.QAccessor
         internal ComponentLookup<Game.Net.Node> gnNode;
         internal ComponentLookup<Game.Net.NodeGeometry> gnNodeGeometry;
         //internal ComponentLookup<Game.Net.StartNodeGeometry> gnStartNodeGeometry;
+        internal ComponentLookup<Game.Objects.Attached> goAttached;
         internal ComponentLookup<Game.Objects.Elevation> goElevation;
         internal ComponentLookup<Game.Objects.Transform> goTransform;
         //internal ComponentLookup<Game.Prefabs.ObjectGeometryData> gpObjectGeometryData;
@@ -41,6 +42,7 @@ namespace MoveIt.QAccessor
                 gnElevation         = _System.GetComponentLookup<Game.Net.Elevation>(),
                 gnNode              = _System.GetComponentLookup<Game.Net.Node>(),
                 gnNodeGeometry      = _System.GetComponentLookup<Game.Net.NodeGeometry>(),
+                goAttached          = _System.GetComponentLookup<Game.Objects.Attached>(),
                 goElevation         = _System.GetComponentLookup<Game.Objects.Elevation>(),
                 goTransform         = _System.GetComponentLookup<Game.Objects.Transform>(),
                 grCullingInfo       = _System.GetComponentLookup<Game.Rendering.CullingInfo>(),
@@ -58,6 +60,7 @@ namespace MoveIt.QAccessor
             _Lookup.gnElevation.Update(_System);
             _Lookup.gnNode.Update(_System);
             _Lookup.gnNodeGeometry.Update(_System);
+            _Lookup.goAttached.Update(_System);
             _Lookup.goElevation.Update(_System);
             _Lookup.goTransform.Update(_System);
             _Lookup.grCullingInfo.Update(_System);

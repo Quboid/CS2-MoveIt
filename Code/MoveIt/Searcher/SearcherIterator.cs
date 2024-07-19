@@ -1,8 +1,10 @@
 ﻿using Colossal.Collections;
 using Colossal.Entities;
 using Colossal.Mathematics;
+using Game.Areas;
 using MoveIt.QAccessor;
 using MoveIt.Tool;
+using QCommonLib;
 using System;
 using Unity.Collections;
 using Unity.Entities;
@@ -10,57 +12,71 @@ using Unity.Mathematics;
 
 namespace MoveIt.Searcher
 {
-    /// <summary>
-    /// Derived from Game.Common.RaycastSystem.FindEntitiesFromTreeJob.FindEdgesIterator
-    /// </summary>
-    internal struct SearcherIterator : INativeQuadTreeIterator<Entity, Game.Common.QuadTreeBoundsXZ>, IUnsafeQuadTreeIterator<Entity, Game.Common.QuadTreeBoundsXZ>, IDisposable
+    internal struct SearcherIterator : IDisposable,
+        INativeQuadTreeIterator<Entity, Game.Common.QuadTreeBoundsXZ>, IUnsafeQuadTreeIterator<Entity, Game.Common.QuadTreeBoundsXZ>,
+        INativeQuadTreeIterator<AreaSearchItem, Game.Common.QuadTreeBoundsXZ>, IUnsafeQuadTreeIterator<AreaSearchItem, Game.Common.QuadTreeBoundsXZ>
     {
-        public SearchTypes m_Type;
-        public Quad2 m_SearchRect;
-        public Bounds2 m_SearchOuterBounds;
-        public float2 m_SearchPoint;
         public NativeList<Entity> m_EntityList;
         public QLookup m_Lookup;
         public EntityManager m_Manager;
+        public bool m_IsManipulating;
 
+        public SearchTypes m_Type;
+        public Quad2 m_SearchQuad;              // For SearchTypes.Marquee
+        public Bounds2 m_SearchOuterBounds;     // For SearchTypes.Marquee, .Bounds
+        public float2 m_SearchPoint;            // For SearchTypes.Point
+        public Line3.Segment m_SearchRay;       // For SearchTypes.Ray
+
+        /// <summary>
+        /// Does the given <see cref="bounds">bounds</see> intersect the search area?
+        /// </summary>
+        /// <param name="bounds">The QuadTree bounds</param>
+        /// <returns>Does bounds intersect search area?</returns>
+        /// <exception cref="NotImplementedException"></exception>
         public readonly bool Intersect(Game.Common.QuadTreeBoundsXZ bounds)
         {
+            Bounds2 b = bounds.m_Bounds.xz;
             bool result = m_Type switch
             {
-                SearchTypes.Point    => MathUtils.Intersect(bounds.m_Bounds.xz, m_SearchPoint),
-                SearchTypes.Marquee  => MathUtils.Intersect(bounds.m_Bounds.xz, m_SearchRect),
-                SearchTypes.Bounds   => MathUtils.Intersect(bounds.m_Bounds.xz, m_SearchOuterBounds),
+                SearchTypes.Marquee => MathUtils.Intersect(b, m_SearchQuad),
+                SearchTypes.Bounds  => MathUtils.Intersect(b, m_SearchOuterBounds),
+                SearchTypes.Point   => MathUtils.Intersect(b, m_SearchPoint),
+                SearchTypes.Ray     => QIntersect.DoesLineIntersectBounds3(m_SearchRay, bounds.m_Bounds, out _),
                 _ => throw new NotImplementedException(),
             };
+
+            //QIntersect.DoesLineIntersectBounds3(m_SearchRay, bounds.m_Bounds, out float2 xsect);
+            //QLog.Debug($"Xsect {b.min.D(),18}::{b.max.D(),-18} {bounds.m_Bounds.y.min,8}::{bounds.m_Bounds.y.max,-8} = {result,-5}  {xsect.D()}");
 
             return result;
         }
 
+        /// <summary>
+        /// Check if the <see cref="e">entity's</see> <see cref="bounds">bounding box</see> intersects the search area
+        /// </summary>
+        /// <param name="bounds">The entity's bounds</param>
+        /// <param name="e">The entity to check and, if valid, add to result</param>
         public void Iterate(Game.Common.QuadTreeBoundsXZ bounds, Entity e)
         {
             if (!MIT.IsValid(m_Manager, e)) return;
-            if (!MathUtils.Intersect(m_SearchOuterBounds, bounds.m_Bounds.xz)) return;
             if (m_EntityList.Length >= (Selection.SelectionBase.MAX_SELECTION_SIZE * 2)) return;
+            if (m_Type == SearchTypes.Marquee || m_Type == SearchTypes.Bounds)
+            {
+                if (!MathUtils.Intersect(m_SearchOuterBounds, bounds.m_Bounds.xz)) return;
+            }
 
             QObjectSimple obj = new(m_Manager, ref m_Lookup, e);
             var prefab = m_Manager.GetComponentData<Game.Prefabs.PrefabRef>(e).m_Prefab;
 
-            if (obj.m_Identity == Identity.Building)
+            // Building
+            if (!m_IsManipulating && (obj.m_Identity == Identity.Building || obj.m_Identity == Identity.Extension))
             {
-                Quad2 objRect = SearcherBase.CalculateBuildingCorners(m_Manager, ref obj, prefab);
+                Quad2 objRect = Utils.CalculateBuildingCorners(m_Manager, ref obj, prefab);
 
                 switch (m_Type)
                 {
-                    case SearchTypes.Point:
-                        if (MathUtils.Intersect(objRect, m_SearchPoint))
-                        {
-                            m_EntityList.Add(e);
-                            return;
-                        }
-                        break;
-
                     case SearchTypes.Marquee:
-                        if (MathUtils.Intersect(objRect, m_SearchRect))
+                        if (MathUtils.Intersect(objRect, m_SearchQuad))
                         {
                             m_EntityList.Add(e);
                             return;
@@ -75,6 +91,29 @@ namespace MoveIt.Searcher
                         }
                         break;
 
+                    case SearchTypes.Point:
+                        if (MathUtils.Intersect(objRect, m_SearchPoint))
+                        {
+                            m_EntityList.Add(e);
+                            return;
+                        }
+                        break;
+
+                    case SearchTypes.Ray:
+                        float y = obj.m_Parent.Position.y;
+                        Quad3 quad3 = new(
+                            new float3(objRect.a.x, y, objRect.a.y),
+                            new float3(objRect.b.x, y, objRect.b.y),
+                            new float3(objRect.c.x, y, objRect.c.y),
+                            new float3(objRect.d.x, y, objRect.d.y));
+
+                        if (QIntersect.DoesLineIntersectQuad3(m_SearchRay, quad3, out _))
+                        {
+                            m_EntityList.Add(e);
+                            return;
+                        }
+                        break;
+
                     default:
                         break;
                 }
@@ -82,24 +121,18 @@ namespace MoveIt.Searcher
                 return;
             }
 
-            if (obj.m_Identity == Identity.Node)
+
+            // Node
+            if (!m_IsManipulating && obj.m_Identity == Identity.Node)
             {
                 if (!m_Manager.TryGetComponent(e, out Game.Net.Node node)) return;
 
-                Circle2 circle = GetCircle(m_Manager, e, node);
+                Circle2 circle = Utils.GetCircle(m_Manager, e, node);
 
                 switch (m_Type)
                 {
-                    case SearchTypes.Point:
-                        if (MathUtils.Intersect(circle, m_SearchPoint))
-                        {
-                            m_EntityList.Add(e);
-                            return;
-                        }
-                        break;
-
                     case SearchTypes.Marquee:
-                        if (MathUtils.Intersect(m_SearchRect, circle))
+                        if (MathUtils.Intersect(m_SearchQuad, circle))
                         {
                             m_EntityList.Add(e);
                             return;
@@ -108,6 +141,24 @@ namespace MoveIt.Searcher
 
                     case SearchTypes.Bounds:
                         if (MathUtils.Intersect(m_SearchOuterBounds, circle))
+                        {
+                            m_EntityList.Add(e);
+                            return;
+                        }
+                        break;
+
+                    case SearchTypes.Point:
+                        if (MathUtils.Intersect(circle, m_SearchPoint))
+                        {
+                            m_EntityList.Add(e);
+                            return;
+                        }
+                        break;
+
+                    case SearchTypes.Ray:
+                        Bounds1 cylinderHeight = new(node.m_Position.y - 0.1f, node.m_Position.y + 0.2f);
+
+                        if (QIntersect.DoesLineIntersectCylinder(m_SearchRay, circle, cylinderHeight))
                         {
                             m_EntityList.Add(e);
                             return;
@@ -123,7 +174,81 @@ namespace MoveIt.Searcher
 
             Bounds2 objBounds = bounds.m_Bounds.xz;
 
-            if (m_Manager.TryGetComponent<Game.Prefabs.ObjectGeometryData>(prefab, out var objGeoData))
+
+            // Segments
+            if (obj.m_Identity == Identity.Segment || obj.m_Identity == Identity.NetLane)
+            {
+                switch (m_Type)
+                {
+                    case SearchTypes.Marquee:
+                        if (MathUtils.Intersect(objBounds, m_SearchQuad))
+                        {
+                            m_EntityList.Add(e);
+                            return;
+                        }
+                        break;
+
+                    case SearchTypes.Bounds:
+                        if (MathUtils.Intersect(m_SearchOuterBounds, objBounds))
+                        {
+                            m_EntityList.Add(e);
+                            return;
+                        }
+                        break;
+
+                    case SearchTypes.Point:
+                        // TODO Remember to implement if ever needed
+                        return;
+
+                    case SearchTypes.Ray:
+                        // Handled by vanilla raycast results
+                        return;
+
+                    default:
+                        break;
+                }
+                return;
+            }
+
+
+            //// Surfaces
+            //if (!m_IsManipulating && obj.m_Identity == Identity.Surface)
+            //{
+            //    switch (m_Type)
+            //    {
+            //        case SearchTypes.Marquee:
+            //            if (MathUtils.Intersect(objBounds, m_SearchQuad))
+            //            {
+            //                m_EntityList.Add(e);
+            //                return;
+            //            }
+            //            break;
+
+            //        case SearchTypes.Bounds:
+            //            if (MathUtils.Intersect(m_SearchOuterBounds, objBounds))
+            //            {
+            //                m_EntityList.Add(e);
+            //                return;
+            //            }
+            //            break;
+
+            //        case SearchTypes.Point:
+            //            // TODO Remember to implement if ever needed
+            //            return;
+
+            //        case SearchTypes.Ray:
+            //            // Handled by vanilla raycast results
+            //            return;
+
+            //        default:
+            //            break;
+            //    }
+            //    return;
+            //}
+
+
+            // A circular object
+            if (!m_IsManipulating && m_Manager.TryGetComponent<Game.Prefabs.ObjectGeometryData>(prefab, out var objGeoData))
             {
                 if ((objGeoData.m_Flags & Game.Objects.GeometryFlags.Circular) > 0)
                 {
@@ -133,16 +258,8 @@ namespace MoveIt.Searcher
 
                     switch (m_Type)
                     {
-                        case SearchTypes.Point:
-                            if (MathUtils.Intersect(circle, m_SearchPoint))
-                            {
-                                m_EntityList.Add(e);
-                                return;
-                            }
-                            break;
-
                         case SearchTypes.Marquee:
-                            if (MathUtils.Intersect(m_SearchRect, circle))
+                            if (MathUtils.Intersect(m_SearchQuad, circle))
                             {
                                 m_EntityList.Add(e);
                                 return;
@@ -157,6 +274,24 @@ namespace MoveIt.Searcher
                             }
                             break;
 
+                        case SearchTypes.Point:
+                            if (MathUtils.Intersect(circle, m_SearchPoint))
+                            {
+                                m_EntityList.Add(e);
+                                return;
+                            }
+                            break;
+
+                        case SearchTypes.Ray:
+                            Bounds1 cylinderHeight = new(obj.m_Parent.Position.y, obj.m_Parent.Position.y + 1f);
+
+                            if (QIntersect.DoesLineIntersectCylinder(m_SearchRay, circle, cylinderHeight))
+                            {
+                                m_EntityList.Add(e);
+                                return;
+                            }
+                            break;
+
                         default:
                             break;
                     }
@@ -165,44 +300,81 @@ namespace MoveIt.Searcher
                 }
             }
 
-            switch (m_Type)
+
+            // Any other object
+            if (!m_IsManipulating)
             {
-                case SearchTypes.Point:
-                    if (MathUtils.Intersect(objBounds, m_SearchPoint))
-                    {
-                        m_EntityList.Add(e);
-                        return;
-                    }
-                    break;
+                switch (m_Type)
+                {
+                    case SearchTypes.Marquee:
+                        if (MathUtils.Intersect(objBounds, m_SearchQuad))
+                        {
+                            m_EntityList.Add(e);
+                            return;
+                        }
+                        break;
 
-                case SearchTypes.Marquee:
-                    if (MathUtils.Intersect(objBounds, m_SearchRect))
-                    {
-                        m_EntityList.Add(e);
-                        return;
-                    }
-                    break;
+                    case SearchTypes.Bounds:
+                        if (MathUtils.Intersect(m_SearchOuterBounds, objBounds))
+                        {
+                            m_EntityList.Add(e);
+                            return;
+                        }
+                        break;
 
-                case SearchTypes.Bounds:
-                    if (MathUtils.Intersect(m_SearchOuterBounds, objBounds))
-                    {
-                        m_EntityList.Add(e);
-                        return;
-                    }
-                    break;
+                    case SearchTypes.Point:
+                        if (MathUtils.Intersect(objBounds, m_SearchPoint))
+                        {
+                            m_EntityList.Add(e);
+                            return;
+                        }
+                        break;
 
-                default:
-                    break;
+                    case SearchTypes.Ray:
+                        if (QIntersect.DoesLineIntersectBounds3(m_SearchRay, bounds.m_Bounds, out _))
+                        {
+                            m_EntityList.Add(e);
+                            return;
+                        }
+                        break;
+
+                    default:
+                        break;
+                }
             }
         }
 
-        internal static Circle2 GetCircle(EntityManager manager, Entity e, Game.Net.Node node)
+        /// <summary>
+        /// Check if the <see cref="areaSearchItem">area search item's</see> <see cref="bounds">bounding box</see> intersects the search area
+        /// </summary>
+        /// <param name="bounds">The entity's bounds</param>
+        /// <param name="areaSearchItem">The entity to check and, if valid, add to result</param>
+        public void Iterate(Game.Common.QuadTreeBoundsXZ bounds, AreaSearchItem areaSearchItem)
         {
-            if (manager.TryGetComponent(e, out Game.Net.NodeGeometry geoData))
+            Entity e = areaSearchItem.m_Area;
+
+            if (!MIT.IsValid(m_Manager, e)) return;
+            if (m_EntityList.Length >= (Selection.SelectionBase.MAX_SELECTION_SIZE * 2)) return;
+            if (m_Type == SearchTypes.Marquee || m_Type == SearchTypes.Bounds)
             {
-                return Moveables.MVNode.GetCircle(geoData);
+                if (!MathUtils.Intersect(m_SearchOuterBounds, bounds.m_Bounds.xz)) return;
             }
-            return Moveables.MVNode.GetCircle(node);
+            else
+            {
+                return;
+            }
+
+            if (m_Manager.HasComponent<Game.Common.Owner>(e)) return;
+            if (!m_Manager.HasComponent<Surface>(e)) return;
+
+            if (m_Manager.TryGetBuffer<Node>(e, true, out var nodes) && m_Manager.TryGetBuffer<Triangle>(e, true, out var triangles))
+            {
+                Triangle2 tri = AreaUtils.GetTriangle2(nodes, triangles[areaSearchItem.m_Triangle]);
+                if (!MathUtils.Intersect(m_SearchOuterBounds, tri)) return;
+                if (m_Type == SearchTypes.Marquee && !MathUtils.Intersect(m_SearchQuad, tri)) return;
+
+                m_EntityList.Add(e);
+            }
         }
 
         public void Dispose()

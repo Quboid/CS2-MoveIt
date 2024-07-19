@@ -73,17 +73,25 @@ namespace MoveIt.Settings
                 { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_MoveDown)), "Move selected objects down. Each press is 1/8 of a metre. Shift+Press for 1m increments, or Control+Press for 1/64m increments." },
                 { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_MoveDown)), "\"Move Down\"" },
 
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_MoveDown2)), "Move Objects Down Alternative" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_MoveDown2)), "Move selected objects down. Each press is 1/8 of a metre. Shift+Press for 1m increments, or Control+Press for 1/64m increments." },
+                { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_MoveDown2)), "\"Move Down Alternative\"" },
+
                 { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_MoveUp)), "Move Objects Up" },
                 { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_MoveUp)), "Move selected objects up. Each press is 1/8 of a metre. Shift+Press for 1m increments, or Control+Press for 1/64m increments." },
                 { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_MoveUp)), "\"Move Up\"" },
+
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_MoveUp2)), "Move Objects Up Alternative" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_MoveUp2)), "Move selected objects up. Each press is 1/8 of a metre. Shift+Press for 1m increments, or Control+Press for 1/64m increments." },
+                { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_MoveUp2)), "\"Move Up Alternative\"" },
 
                 //{ m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_Dejank)), "Debug: Dejank Test" },
                 //{ m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_Dejank)), "Ignore this, it's just here in case you need to rebind it." },
                 //{ m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_Dejank)), "\"Dejank Test\"" },
 
-                //{ m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_DebugFreeze)), "Debug: Freeze Lines" },
-                //{ m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_DebugFreeze)), "Ignore this, it's just here in case you need to rebind it." },
-                //{ m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_DebugFreeze)), "\"Freeze Lines\"" },
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_DebugFreeze)), "Debug: Freeze Lines" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_DebugFreeze)), "Ignore this, it's just here in case you need to rebind it." },
+                { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_DebugFreeze)), "\"Freeze Lines\"" },
 
                 //{ m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_DebugClear)), "Debug: Clear Lines" },
                 //{ m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_DebugClear)), "Ignore this, it's just here in case you need to rebind it." },

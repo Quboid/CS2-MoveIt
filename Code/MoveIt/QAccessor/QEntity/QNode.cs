@@ -39,7 +39,7 @@ namespace MoveIt.QAccessor
                 for (int i = 0; i < buffer.Length; i++)
                 {
                     Entity seg = buffer[i].m_Edge;
-                    Game.Net.Edge edge = Manager.GetComponentData<Game.Net.Edge>(seg);
+                    Game.Net.Edge edge = m_Manager.GetComponentData<Game.Net.Edge>(seg);
                     if (!m_Entity.Equals(edge.m_Start) && !m_Entity.Equals(edge.m_End)) continue;
 
                     TryAddUpdate(seg);
@@ -55,6 +55,9 @@ namespace MoveIt.QAccessor
             }
             return true;
         }
+
+        private readonly void Node_TransformEnd()
+        { }
 
 
         private readonly bool Node_MoveBy(State state, float3 newPosition, float3 delta)

@@ -144,12 +144,15 @@ namespace MoveIt.Managers
             return new();
         }
 
-        public HashSet<MIT_ControlPoint> GetAllData()
+        public HashSet<MIT_ControlPoint> GetAllData(bool isManipulating)
         {
             HashSet<MIT_ControlPoint> result = new();
             foreach (var cp in _Tool.Moveables.GetAllOf<MVControlPoint>())
             {
-                result.Add(GetData(cp));
+                if (cp.IsManipulatable == isManipulating)
+                {
+                    result.Add(GetData(cp));
+                }
             }
             return result;
         }

@@ -63,7 +63,7 @@ namespace MoveIt.Overlays
             if (m_Moveable is not MVManipControlPoint cp) throw new System.Exception($"CP ManipOverlay is not for ControlPoint! (mv:{m_Moveable.m_Entity.DX(true)}-{m_Moveable.Name})");
 
             _Tool.QueueOverlayUpdate(this);
-            if (_Tool.Moveables.TryGet(cp.SegmentDefinition, out MVManipSegment seg)) seg.UpdateOverlay();
+            if (_Tool.Moveables.TryGet(cp.SegmentDefinition, out MVManipSegment seg)) seg.UpdateOverlayDeferred();
         }
     }
 }

@@ -27,13 +27,13 @@ namespace MoveIt.QAccessor
         {
             if (e == Entity.Null) throw new ArgumentNullException("Creating QObject with null entity");
 
-            m_Manager   = manager;
-            m_Entity    = e;
-            m_Identity  = identity == Identity.None ? QTypes.GetEntityIdentity(manager, e) : identity;
-            m_Parent    = new(ref lookup, e, m_Identity);
-            m_Children  = new(0, Allocator.Persistent);
+            m_Manager       = manager;
+            m_Entity        = e;
+            m_Identity      = identity == Identity.None ? QTypes.GetEntityIdentity(manager, e) : identity;
+            m_Parent        = new(m_Manager, ref lookup, e, m_Identity);
+            m_Children      = new(0, Allocator.Persistent);
 
-            NativeArray<Entity> subEntities = GetSubEntities(e, m_Identity);
+            using NativeArray<Entity> subEntities = GetSubEntities(e, m_Identity);
 
             if (subEntities.Length > 0)
             {
@@ -41,14 +41,26 @@ namespace MoveIt.QAccessor
                 {
                     if (subEntities[i] == Entity.Null) throw new NullReferenceException($"Creating child for {e.D()} with null entity");
 
-                    if (m_Manager.HasComponent<Game.Net.ConnectionLane>(subEntities[i])) continue;
+                    if (m_Manager.HasComponent<Game.Net.ConnectionLane>(subEntities[i])) continue;// && !m_Manager.HasComponent<Game.Net.AreaLane>(subEntities[i])) continue;
 
                     Identity subType = QTypes.GetEntityIdentity(manager, subEntities[i]);
-                    m_Children.Add(new(ref lookup, subEntities[i], subType, m_Entity));
+                    m_Children.Add(new(m_Manager, ref lookup, subEntities[i], subType, m_Entity));
                 }
             }
 
             //DebugDumpFullObject(new(Allocator.Temp) { (int)Identity.Node, (int)Identity.Segment, (int)Identity.NetLane }, true, $"QObject.Ctor {m_Entity.D()}: ");
+            //DebugDumpFullObject(new(0, Allocator.Temp), true, $"QObject.Ctor {m_Entity.D()} (subEntities:{subEntities.Length}) - ");
+        }
+
+        public NativeArray<Entity> GetAllEntities()
+        {
+            NativeArray<Entity> all = new(m_Children.Length + 1, Allocator.Temp);
+            all[0] = m_Entity;
+            for (int i = 0; i < m_Children.Length; i++)
+            {
+                all[i + 1] = m_Children[i].m_Entity;
+            }
+            return all;
         }
 
         public void Dispose()
@@ -60,6 +72,15 @@ namespace MoveIt.QAccessor
         {
             handle = m_Children.Dispose(handle);
             return handle;
+        }
+
+        public void TransformEnd(NativeArray<Entity> all)
+        {
+            m_Parent.TransformEnd(all);
+            for (int i = 0; i < m_Children.Length; i++)
+            {
+                m_Children[i].TransformEnd(all);
+            }
         }
 
         #region Transforming
@@ -109,6 +130,16 @@ namespace MoveIt.QAccessor
             {
                 m_Manager.AddComponent<Game.Common.Updated>(child.m_Entity);
                 m_Manager.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
+
+                //if (m_Manager.TryGetBuffer<Game.Net.ConnectedEdge>(child.m_Entity, true, out var edgeBuffer))
+                //{
+                //    QLog.Debug($"Child of {m_Parent.m_Entity.DX()} :: {child.m_Entity.DX()} :: {edgeBuffer.Length}");
+                //    for (int i = 0; i < edgeBuffer.Length; i++)
+                //    {
+                //        m_Manager.AddComponent<Game.Common.Updated>(edgeBuffer[i].m_Edge);
+                //        m_Manager.AddComponent<Game.Common.BatchesUpdated>(edgeBuffer[i].m_Edge);
+                //    }
+                //}
             }
 
             m_Parent.SetUpdated();
@@ -147,11 +178,11 @@ namespace MoveIt.QAccessor
             // Handle Nodes
             else if (identity == Identity.Node)
             {
-                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Objects.SubObject> buffer))
+                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Objects.SubObject> subObjects))
                 {
-                    for (int i = 0; i < buffer.Length; i++)
+                    for (int i = 0; i < subObjects.Length; i++)
                     {
-                        Entity sub = buffer[i].m_SubObject;
+                        Entity sub = subObjects[i].m_SubObject;
                         if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub))
                         {
                             entities.Add(sub);
@@ -164,11 +195,25 @@ namespace MoveIt.QAccessor
             // Handle everything else
             else
             {
-                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Areas.SubArea> buffer1))
+                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Objects.SubObject> subObjects))
                 {
-                    for (int i = 0; i < buffer1.Length; i++)
+                    // Add pillars so elevated metro stations can be moved
+                    for (int i = 0; i < subObjects.Length; i++)
                     {
-                        Entity sub = buffer1[i].m_Area;
+                        Entity sub = subObjects[i].m_SubObject;
+                        if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub) && m_Manager.HasComponent<Game.Objects.Pillar>(sub))
+                        {
+                            entities.Add(sub);
+                            entities.AddRange(IterateSubEntities(top, sub, depth, Identity.None, parentIdentity));
+                        }
+                    }
+                }
+
+                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Areas.SubArea> subAreas))
+                {
+                    for (int i = 0; i < subAreas.Length; i++)
+                    {
+                        Entity sub = subAreas[i].m_Area;
                         if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub))
                         {
                             entities.Add(sub);
@@ -177,11 +222,11 @@ namespace MoveIt.QAccessor
                     }
                 }
 
-                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Net.SubNet> buffer2))
+                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Net.SubNet> subNets))
                 {
-                    for (int i = 0; i < buffer2.Length; i++)
+                    for (int i = 0; i < subNets.Length; i++)
                     {
-                        Entity sub = buffer2[i].m_SubNet;
+                        Entity sub = subNets[i].m_SubNet;
                         if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub))
                         {
                             entities.Add(sub);
@@ -190,11 +235,11 @@ namespace MoveIt.QAccessor
                     }
                 }
 
-                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Net.SubLane> buffer3))
+                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Net.SubLane> subLanes))
                 {
-                    for (int i = 0; i < buffer3.Length; i++)
+                    for (int i = 0; i < subLanes.Length; i++)
                     {
-                        Entity sub = buffer3[i].m_SubLane;
+                        Entity sub = subLanes[i].m_SubLane;
                         if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub))
                         {
                             entities.Add(sub);
@@ -248,7 +293,7 @@ namespace MoveIt.QAccessor
                 int idMismatch = 0;
                 for (int i = 0; i < m_Children.Length; i++)
                 {
-                    if (ids.Contains((int)m_Children[i].m_Identity))
+                    if (ids.Length == 0 || ids.Contains((int)m_Children[i].m_Identity))
                     {
                         sb.AppendFormat("\n    {0}: {1} ({2})", i, m_Children[i].m_Entity.DX(true), m_Children[i].m_Parent.D());
 

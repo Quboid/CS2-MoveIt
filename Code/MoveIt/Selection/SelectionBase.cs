@@ -7,6 +7,7 @@ using QCommonLib;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
@@ -340,7 +341,7 @@ namespace MoveIt.Selection
                 return;
             }
 
-            List<float2> mvPosList = new();
+            using NativeList<float2> mvPosList = new(Allocator.Temp);
             float y = 0;
             foreach (MVDefinition mvd in mvds)
             {

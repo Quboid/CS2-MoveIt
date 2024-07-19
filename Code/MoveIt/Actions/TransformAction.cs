@@ -4,6 +4,7 @@ using MoveIt.QAccessor;
 using MoveIt.Tool;
 using QCommonLib;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Unity.Collections;
 using Unity.Entities;
@@ -56,6 +57,7 @@ namespace MoveIt.Actions
         internal TransformState m_Old;
         internal TransformState m_New;
         internal TransformState m_Active;
+        internal NativeArray<Entity> m_AllEntities;
 
         public float AngleDelta
         {
@@ -90,6 +92,7 @@ namespace MoveIt.Actions
             m_Old = new(fullSelection.Count, false);
             m_New = new(fullSelection.Count, true);
             m_Active = m_New;
+            HashSet<Entity> allEntities = new();
 
             m_InitialBounds = _Tool.Selection.GetTotalBounds(MIT.TERRAIN_UPDATE_MARGIN);
             m_TerrainUpdateBounds = m_InitialBounds;
@@ -102,8 +105,18 @@ namespace MoveIt.Actions
 
                 m_Old.m_States[c] = new(_Tool.EntityManager, ref QLookupFactory.Get(), mv);
                 m_New.m_States[c] = new(_Tool.EntityManager, ref QLookupFactory.Get(), mv);
+
+                NativeArray<Entity> all = m_New.m_States[c].m_Accessor.GetAllEntities();
+                foreach (Entity e in all)
+                {
+                    if (!allEntities.Contains(e))
+                    {
+                        allEntities.Add(e);
+                    }
+                }
                 c++;
             }
+            m_AllEntities = new(allEntities.ToArray(), Allocator.Persistent);
 
             m_Snapper = new(this);
 
@@ -113,6 +126,7 @@ namespace MoveIt.Actions
 
         ~TransformAction()
         {
+            m_AllEntities.Dispose();
             m_New.Dispose();
             m_Old.Dispose();
             // Do not dispose m_Active, its m_States data is a pointer to m_Old.m_States or m_New.m_States
@@ -378,6 +392,14 @@ namespace MoveIt.Actions
         {
             if (!m_HasMovedAction) return;
 
+            for (int i = 0; i < m_Active.m_States.Length; i++)
+            {
+                m_Active.m_States[i].TransformEnd(m_AllEntities);
+            }
+
+            //QLog.Debug(msg);
+            _Tool.m_SelectionDirty = true;
+
             _Tool.CreationPhase = CreationPhases.Create;
             _Tool.ToolAction = ToolActions.Do;
         }
@@ -421,6 +443,11 @@ namespace MoveIt.Actions
                         sb.AppendFormat("\n  {0}", state);
                     }
                 }
+            }
+            sb.AppendFormat("\nAll Entities:{0}\n", m_AllEntities.Length);
+            for (int i = 0; i < m_AllEntities.Length; i++)
+            {
+                sb.AppendFormat("{0}, ", m_AllEntities[i].DX());
             }
             
             QLog.Debug(sb.ToString());

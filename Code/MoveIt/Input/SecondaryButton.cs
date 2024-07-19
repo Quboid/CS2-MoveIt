@@ -45,7 +45,7 @@ namespace MoveIt.Input
             {
                 if (_Tool.Hover.LastValid.IsNull) return;
 
-                _Tool.StartRotation();
+                _Tool.RotationStart();
             }
         }
 
@@ -54,7 +54,7 @@ namespace MoveIt.Input
             //MIT.Log.Debug($"SecondaryButton.OnHoldEnd ts:{ToolState}");
             if (m_Status == ButtonStatus.Down && _Tool.Queue.Current is TransformAction ta && _Tool.ToolState == ToolStates.SecondaryButtonHeld)
             {
-                _Tool.EndRotation();
+                _Tool.RotationEnd();
             }
         }
 

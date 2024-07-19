@@ -21,7 +21,7 @@ namespace MoveIt.Tool
             m_OverlaySystem = World.GetOrCreateSystemManaged<Overlays.MIT_OverlaySystem>();
             m_VanillaOverlaySystem = World.GetOrCreateSystemManaged<Systems.MIT_VanillaOverlaySystem>();
             m_RemoveOverriddenSystem = World.GetOrCreateSystemManaged<Systems.MIT_RemoveOverriddenSystem>();
-            m_RenderSystem = World.GetOrCreateSystemManaged<Systems.MIT_RenderSystem>();
+            //m_RenderSystem = World.GetOrCreateSystemManaged<Systems.MIT_RenderSystem>();
             m_UISystem = World.GetOrCreateSystemManaged<Systems.MIT_UISystem>();
             m_PostToolSystem = World.GetOrCreateSystemManaged<Systems.MIT_PostToolSystem>();
             m_InputSystem = World.GetOrCreateSystemManaged<Systems.MIT_InputSystem>();
@@ -38,6 +38,11 @@ namespace MoveIt.Tool
 
             m_ControlPointQuery = SystemAPI.QueryBuilder()
                 .WithAll<MIT_ControlPoint>()
+                .Build();
+
+            m_SurfacesQuery = SystemAPI.QueryBuilder()
+                .WithAll<Game.Areas.Area, Game.Areas.Surface>()
+                .WithNone<Game.Common.Owner>()
                 .Build();
         }
 
@@ -66,7 +71,7 @@ namespace MoveIt.Tool
             m_IsManipulateMode = false;
             Selection ??= new SelectionNormal();
 
-            m_RenderSystem.m_Widgets.Clear();
+            //m_RenderSystem.m_Widgets.Clear();
 
             m_OverlaySystem.DestroyAllEntities();
         }
@@ -84,7 +89,7 @@ namespace MoveIt.Tool
             m_PostToolSystem.Start();
             m_VanillaOverlaySystem.Start();
             m_OverlaySystem.Start();
-            m_RenderSystem.Start();
+            //m_RenderSystem.Start();
             InputManager.OnToolEnable();
 
             Moveables.Refresh();
@@ -99,7 +104,7 @@ namespace MoveIt.Tool
 
             Hover.Clear();
             InputManager.OnToolDisable();
-            m_RenderSystem.End();
+            //m_RenderSystem.End();
             m_OverlaySystem.End();
             m_VanillaOverlaySystem.End();
             m_PostToolSystem.End();
@@ -113,8 +118,8 @@ namespace MoveIt.Tool
 
         protected override void OnDestroy()
         {
-            Log.Info("Tool.OnDestroy()");
-            ControlPointManager.DestroyAll();
+            Log.Info("Tool.OnDestroy()" + ControlPointManager is null ? " (CPM destroyed)" : "");
+            //ControlPointManager?.DestroyAll();
             base.OnDestroy();
         }
 

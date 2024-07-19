@@ -25,16 +25,14 @@ namespace MoveIt.Overlays
             buffer.DrawLine(common.m_OutlineColor, common.m_OutlineColor, common.GetWidth(proj), GetProjection(proj), line, common.GetWidth(proj));
         }
 
-        public static void CurveSimple(OverlayRenderSystem.Buffer buffer, MIO_Common common, Bezier4x3 curve, Projection proj, float width = -1)
+        public static void Curve(OverlayRenderSystem.Buffer buffer, MIO_Common common, Bezier4x3 curve, Projection proj, float width = -1)
         {
             // Unreliable except if Style is Projected
             if (width == -1) width = common.GetWidth(proj) * 5;
             buffer.DrawCurve(common.m_OutlineColor, Color.clear, common.GetWidth(proj), GetProjection(proj), curve, width, 1f);
-
-            //buffer.DrawCurve(common.m_OutlineColor, Color.clear, 0.75f, 0f, curve, 8f, 1f);
         }
 
-        public static void CurveSimpleThin(OverlayRenderSystem.Buffer buffer, MIO_Common common, Bezier4x3 curve, Projection proj)
+        public static void CurveThin(OverlayRenderSystem.Buffer buffer, MIO_Common common, Bezier4x3 curve, Projection proj)
         {
             buffer.DrawCurve(common.m_OutlineColor, Color.clear, common.GetWidth(proj), GetProjection(proj), curve, common.GetWidth(proj), 1f);
         }

@@ -32,6 +32,8 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Quad2 quad, int ttl = 0, UnityEngine.Color color = default, int index = 7, int version = 2)
         {
+            if (_Tool.m_OverlaySystem.DebugFreeze) return Entity.Null;
+
             float2 center2d = (quad.a + quad.b + quad.c + quad.d) / 4;
             float3 center = new(center2d.x, 0f, center2d.y);
             float terrain = _Tool.GetTerrainHeight(center);
@@ -48,6 +50,8 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Quad3 quad, int ttl = 0, UnityEngine.Color color = default, int index = 7, int version = 3)
         {
+            if (_Tool.m_OverlaySystem.DebugFreeze) return Entity.Null;
+
             Entity owner = new() { Index = index, Version = version };
             Entity e = _Tool.EntityManager.CreateEntity(ttl == 0 ? _Archetype : _ArchetypeTTL);
 

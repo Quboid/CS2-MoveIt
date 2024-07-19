@@ -30,6 +30,8 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Bounds2 bounds, int ttl = 0, UnityEngine.Color color = default, int index = 4, int version = 1)
         {
+            if (_Tool.m_OverlaySystem.DebugFreeze) return Entity.Null;
+
             float terrainHeight = _Tool.GetTerrainHeight(new(bounds.min.x, 0f, bounds.min.y));
             Bounds3 b = new(new float3(bounds.min.x, terrainHeight, bounds.min.y), new float3(bounds.max.x, terrainHeight, bounds.max.y));
             return Factory(b, ttl, color, index, version);
@@ -37,6 +39,8 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Bounds3 bounds, int ttl = 0, UnityEngine.Color color = default, int index = 4, int version = 1)
         {
+            if (_Tool.m_OverlaySystem.DebugFreeze) return Entity.Null;
+
             Entity owner = new() { Index = index, Version = version };
             Entity e = _Tool.EntityManager.CreateEntity(ttl == 0 ? _Archetype : _ArchetypeTTL);
 

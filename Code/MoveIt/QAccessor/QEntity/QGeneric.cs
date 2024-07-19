@@ -1,9 +1,9 @@
-﻿using MoveIt.Tool;
-using QCommonLib;
-using System.Text;
-using System;
-using Unity.Mathematics;
+﻿using Colossal.Entities;
 using MoveIt.Moveables;
+using QCommonLib;
+using Unity.Collections;
+using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace MoveIt.QAccessor
@@ -76,6 +76,36 @@ namespace MoveIt.QAccessor
             return true;
         }
 
+        private readonly void Generic_TransformEnd(NativeArray<Entity> allEntities)
+        {
+            // Some objects (e.g. elevated stations) are attached to the nearby road; break that connection
+            if (m_Lookup.goAttached.HasComponent(m_Entity))
+            {
+                Entity parent = m_Lookup.goAttached[m_Entity].m_Parent;
+                if (!parent.Equals(Entity.Null) && !allEntities.Contains(parent))
+                {
+                    m_Lookup.goAttached.GetRefRW(m_Entity).ValueRW.m_Parent = Entity.Null;
+
+                    if (m_Manager.TryGetBuffer(parent, true, out DynamicBuffer<Game.Objects.SubObject> buffer))
+                    {
+                        using NativeList<Game.Objects.SubObject> newSubs = new(0, Allocator.Temp);
+                        for (int i = 0; i < buffer.Length; i++)
+                        {
+                            if (!buffer[i].m_SubObject.Equals(m_Entity))
+                            {
+                                newSubs.Add(buffer[i]);
+                            }
+                        }
+                        buffer.Clear();
+                        for (int i = 0; i < newSubs.Length; i++)
+                        {
+                            buffer.Add(newSubs[i]);
+                        }
+                    }
+                }
+            }
+        }
+
 
         private readonly bool Generic_MoveBy(State state, float3 newPosition, float3 delta)
         {
@@ -84,49 +114,17 @@ namespace MoveIt.QAccessor
 
         private readonly bool Generic_MoveTo(State state, float3 newPosition, float3 delta)
         {
-            //if (!_Manager.Exists(m_Entity)) return false;
-
-            //StringBuilder sb = new();
-            //sb.AppendFormat("Pos.Set {0} ({1}, delta:{2}, old:{3}): ", m_Entity.D(), newPosition.DX(), delta.DX(), Position.DX());
-
-            if (m_Lookup.gaGeometry.HasComponent(m_Entity))
-            {
-                //sb.Append($"gaGeo, ");
-                m_Lookup.gaGeometry.GetRefRW(m_Entity).ValueRW.m_CenterPosition = newPosition;
-                m_Lookup.gaGeometry.GetRefRW(m_Entity).ValueRW.m_Bounds = MoveBounds3(m_Lookup.gaGeometry.GetRefRO(m_Entity).ValueRO.m_Bounds, delta);
-            }
-
             if (m_Lookup.goTransform.HasComponent(m_Entity))
             {
-                //sb.Append($"goTransform, ");
                 m_Lookup.goTransform.GetRefRW(m_Entity).ValueRW.m_Position = newPosition;
             }
 
             if (m_Lookup.grCullingInfo.HasComponent(m_Entity))
             {
-                //sb.Append($"goTransform, ");
                 m_Lookup.grCullingInfo.GetRefRW(m_Entity).ValueRW.m_Bounds = MoveBounds3(m_Lookup.grCullingInfo.GetRefRO(m_Entity).ValueRO.m_Bounds, delta);
             }
 
-            if (m_Lookup.gaNode.HasBuffer(m_Entity))
-            {
-                //sb.Append("gaNode");
-                if (m_Lookup.gaNode.TryGetBuffer(m_Entity, out var buffer))
-                {
-                    //sb.AppendFormat("({0})", buffer.Length);
-                    for (int i = 0; i < buffer.Length; i++)
-                    {
-                        var b = buffer[i];
-                        b.m_Position += delta;
-                        buffer[i] = b;
-                    }
-                }
-                //sb.Append(", ");
-            }
-
             Generic_SetUpdated();
-
-            //QLog.Debug(sb.ToString());
 
             return true;
         }
@@ -147,20 +145,6 @@ namespace MoveIt.QAccessor
                 //sb.Append($"goTransform, ");
                 m_Lookup.goTransform.GetRefRW(m_Entity).ValueRW.m_Rotation = newRotation;
                 m_Lookup.goTransform.GetRefRW(m_Entity).ValueRW.m_Position = matrix.MultiplyPoint(m_Lookup.goTransform.GetRefRO(m_Entity).ValueRO.m_Position - origin);
-            }
-
-            if (m_Lookup.gaNode.HasBuffer(m_Entity))
-            {
-                //sb.Append("gaNode, ");
-                if (m_Lookup.gaNode.TryGetBuffer(m_Entity, out var buffer))
-                {
-                    for (int i = 0; i < buffer.Length; i++)
-                    {
-                        Game.Areas.Node node = buffer[i];
-                        node.m_Position = (float3)matrix.MultiplyPoint(node.m_Position - origin);
-                        buffer[i] = node;
-                    }
-                }
             }
 
             Generic_SetUpdated();

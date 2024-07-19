@@ -1,9 +1,12 @@
-﻿using MoveIt.Moveables;
+﻿using Colossal.Mathematics;
+using Game.Tools;
+using MoveIt.Moveables;
 using MoveIt.Tool;
 using QCommonLib;
 using System.Text;
 using Unity.Collections;
 using Unity.Entities;
+using UnityEngine;
 
 namespace MoveIt.Managers
 {
@@ -85,17 +88,28 @@ namespace MoveIt.Managers
             OnPress     = new();
         }
 
-        internal void Process(Game.Tools.ToolRaycastSystem toolRaycastSystem)
+        internal void Process(ToolRaycastSystem toolRaycastSystem)
         {
-            NativeArray<Game.Common.RaycastResult> vanillaRaycastResults = _Tool.m_RaycastSystem.GetResult(toolRaycastSystem);
+            if (_Tool.ToolState == ToolStates.DrawingSelection)
+            {
+                Unset();
+                return;
+            }
 
-            Searcher.Ray searcher = new(Searcher.Filters.All, vanillaRaycastResults, _Tool.IsManipulating);
-            (Entity e, float d)[] RaycastResults = searcher.OnLine(_Tool.m_RaycastTerrain.Line, _Tool.m_PointerPos);
+            NativeArray<Game.Common.RaycastResult> vanillaNetworkResults = _Tool.m_RaycastSystem.GetResult(toolRaycastSystem);
+            NativeArray<Game.Common.RaycastResult> vanillaSurfaceResults = _Tool.m_RaycastSurface.GetResults();
+
+            using Searcher.Searcher searcher = new(Searcher.Utils.FilterAll, _Tool.IsManipulating, _Tool.m_PointerPos);
+
+            Ray ray = Camera.main.ScreenPointToRay(Game.Input.InputManager.instance.mousePosition);
+            searcher.SearchRay(ToolRaycastSystem.CalculateRaycastLine(Camera.main), vanillaNetworkResults, vanillaSurfaceResults);
+            vanillaNetworkResults.Dispose();
+            vanillaSurfaceResults.Dispose();
 
             MVDefinition to = new();
-            if (RaycastResults.Length > 0)
+            if (searcher.Count > 0)
             {
-                Entity e = RaycastResults[0].e;
+                Entity e = searcher.m_Results[0].m_Entity;
                 Identity id = QTypes.GetEntityIdentity(e);
                 Entity parent = Entity.Null;
                 short parentKey = -1;
@@ -107,7 +121,6 @@ namespace MoveIt.Managers
                 }
                 to = new(id, e, QTypes.IsManipulationPredict(id, _Tool.IsManipulating), false, parent, parentKey);
             }
-
 
             if (Definition.Equals(to)) return;
 
@@ -123,8 +136,6 @@ namespace MoveIt.Managers
             if (_Tool.IsValid(to))
             {
                 if (_Tool.IsManipulating != to.m_IsManipulatable) return;
-                //if (_Tool.IsManipulating && !_Tool.CanManipulate(to.m_Entity)) return;
-                //if (!_Tool.IsManipulating && _Tool.CanOnlyManipulate(to)) return;
 
                 MV          = _Tool.Moveables.GetOrCreate<Moveable>(to);
                 Definition  = to;
@@ -138,7 +149,7 @@ namespace MoveIt.Managers
             Moveable mv = MV;
             Definition = new();
             MV = null;
-            mv.OnUnhover();
+            mv?.OnUnhover();
         }
 
 
@@ -163,6 +174,39 @@ namespace MoveIt.Managers
                 sb.AppendFormat(", Press:{0}", OnPress.m_Entity.DX(true));
             }
             return sb.ToString();
+        }
+
+        public static void DebugRaycastLine()
+        {
+            Line3.Segment line = ToolRaycastSystem.CalculateRaycastLine(Camera.main);
+            Overlays.DebugLine.Factory(line, 0, new(0.2f, 0.8f, 0f, 0.5f), 7, 1);
+        }
+
+        public static string DebugVanillaResults(NativeArray<Game.Common.RaycastResult> networkResults, NativeArray<Game.Common.RaycastResult> surfaceResults)
+        {
+            string msg = $"networkResults:{networkResults.Length}, surfaceResults:{surfaceResults.Length}";
+            foreach (var result in networkResults)
+            {
+                msg += $"\n    NET: {result.m_Owner.DX()} - {result.m_Hit.m_HitEntity.DX()} - {result.m_Hit.m_HitPosition.D()} - {result.m_Hit.m_NormalizedDistance}";
+            }
+            foreach (var result in surfaceResults)
+            {
+                msg += $"\n    SUR: {result.m_Owner.DX()} - {result.m_Hit.m_HitEntity.DX()} - {result.m_Hit.m_HitPosition.D()} - {result.m_Hit.m_NormalizedDistance}";
+            }
+            return msg;
+        }
+
+        public static void DebugDumpVanillaResults(NativeArray<Game.Common.RaycastResult> networkResults, NativeArray<Game.Common.RaycastResult> surfaceResults, string bundle = "", string prefix = "")
+        {
+            string msg = prefix + DebugVanillaResults(networkResults, surfaceResults);
+            if (bundle.Equals(string.Empty))
+            {
+                QLog.Debug(msg);
+            }
+            else
+            {
+                QLog.Bundle(bundle, msg);
+            }
         }
     }
 }

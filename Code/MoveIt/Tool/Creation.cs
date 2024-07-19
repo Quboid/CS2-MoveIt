@@ -6,8 +6,6 @@ using MoveIt.Moveables;
 using QCommonLib;
 using System;
 using System.Reflection;
-using System.Text;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
@@ -152,8 +150,8 @@ namespace MoveIt.Tool
 
             //StringBuilder sb = new("UpdateNearbyBuildingConnections");
             Bounds2 outerBounds = new(bounds.min.XZ(), bounds.max.XZ());
-            using Searcher.Marquee searcher = new(Searcher.Filters.AllNets | Searcher.Filters.Buildings, false);
-            searcher.Search(outerBounds);
+            using Searcher.Searcher searcher = new(Searcher.Utils.FilterAllNetworks | Searcher.Filters.Buildings, false, m_PointerPos);
+            searcher.SearchBounds(outerBounds);
             //searcher.DebugDumpSearchResults();
 
             Overlays.DebugBounds.Factory(outerBounds, Overlays.Overlay.DEBUG_TTL, new UnityEngine.Color(0.9f, 0.2f, 0f, 0.6f));
@@ -172,8 +170,9 @@ namespace MoveIt.Tool
             }
 
             //sb.AppendFormat("\nResults: {0}", searcher.m_Results.Length);
-            foreach (Entity e in searcher.m_Results)
+            foreach (Searcher.Result result in searcher.m_Results)
             {
+                Entity e = result.m_Entity;
                 QAccessor.QObject accessor = new(manager, ref QAccessor.QLookupFactory.Get(), e);
                 accessor.UpdateAll();
 
@@ -188,11 +187,11 @@ namespace MoveIt.Tool
                     float3 posB = EntityManager.GetComponentData<Game.Net.Node>(edge.m_End).m_Position;
                     Overlays.DebugLine.Factory(new(posA, posB), Overlays.Overlay.DEBUG_TTL, new(1f, 0.5f, 0f, 0.8f));
 
-                    if (!searcher.m_Results.Contains(edge.m_Start))
+                    if (!searcher.Has(edge.m_Start))
                     {
                         Overlays.DebugCircle.Factory(posA, 8, Overlays.Overlay.DEBUG_TTL, new(1f, 0.4f, 0.3f, 0.4f));
                     }
-                    if (!searcher.m_Results.Contains(edge.m_End))
+                    if (!searcher.Has(edge.m_End))
                     {
                         Overlays.DebugCircle.Factory(posB, 8, Overlays.Overlay.DEBUG_TTL, new(1f, 0.4f, 0.3f, 0.4f));
                     }
@@ -210,7 +209,7 @@ namespace MoveIt.Tool
                     if (EntityManager.TryGetComponent(e, out Game.Buildings.Building _))
                     {
                         var prefab = EntityManager.GetComponentData<Game.Prefabs.PrefabRef>(e).m_Prefab;
-                        Quad2 corners = Searcher.SearcherBase.CalculateBuildingCorners(EntityManager, ref accessor, prefab, -0.5f);
+                        Quad2 corners = Searcher.Utils.CalculateBuildingCorners(EntityManager, ref accessor, prefab, -0.5f);
                         Overlays.DebugQuad.Factory(corners, (int)(Overlays.Overlay.DEBUG_TTL * 1.5), new(0.0f, 0.6f, 0.9f, 0.8f));
                     }
                     else
@@ -221,7 +220,7 @@ namespace MoveIt.Tool
             }
 
             //QLog.Debug(sb.ToString());
-            return searcher.m_Results.Length;
+            return searcher.Count;
         }
 
         private void UpdateTerrain(Bounds3 area = default)

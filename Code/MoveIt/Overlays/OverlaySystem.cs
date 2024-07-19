@@ -16,7 +16,25 @@ namespace MoveIt.Overlays
         private EntityQuery _DrawQuery;
         private EntityQuery _TTLTickQuery;
         private EntityQuery _CleanupQuery;
-        internal bool m_DebugFreeze = false;
+
+        /// <summary>
+        /// Freeze overlays for closer inspection
+        /// For the first frame after freezing, stay thawed until just before cleanup
+        /// </summary>
+        internal bool DebugFreeze
+        {
+            get => _DebugFreeze && !_DebugFirstFrozen;
+            set
+            {
+                _DebugFreeze = value;
+                if (value)
+                {
+                    _DebugFirstFrozen = true;
+                }
+            }
+        }
+        private bool _DebugFreeze = false;
+        private bool _DebugFirstFrozen = false;
 
         protected override void OnCreate()
         {
@@ -72,6 +90,7 @@ namespace MoveIt.Overlays
             //}
             //msg += $"\n{_Tool.Moveables.DebugFull()}";
             //QLog.Bundle("OVRL", msg);
+            //QLog.Debug($"Draw:{_DrawQuery.CalculateEntityCount()}, Cleanup:{_CleanupQuery.CalculateEntityCount()}, TTLTick:{_TTLTickQuery.CalculateEntityCount()}, Freeze:{DebugFreeze}({_DebugFreeze},{_DebugFirstFrozen})");
 
             ToolFlags toolFlags = ToolFlags.None;
             if (_Tool.IsManipulating)                           toolFlags |= ToolFlags.ManipulationMode;
@@ -101,6 +120,7 @@ namespace MoveIt.Overlays
                     bth_Lines                   = GetBufferTypeHandle<MIO_Lines>(),
                     bth_DashedLines             = GetBufferTypeHandle<MIO_DashedLines>(),
 
+                    blu_AreasNode               = GetBufferLookup<Game.Areas.Node>(true),
                     clu_BuildingData            = GetComponentLookup<Game.Prefabs.BuildingData>(true),
                     clu_BuildingExtensionData   = GetComponentLookup<Game.Prefabs.BuildingExtensionData>(true),
                     clu_ObjectGeometryData      = GetComponentLookup<Game.Prefabs.ObjectGeometryData>(true),
@@ -132,9 +152,10 @@ namespace MoveIt.Overlays
                     cth_Line                = GetComponentTypeHandle<MIO_Line>(true),
                     cth_Quad                = GetComponentTypeHandle<MIO_Quad>(true),
                     cth_Debug               = GetComponentTypeHandle<MIO_Debug>(true),
+                    bth_Beziers             = GetBufferTypeHandle<MIO_Beziers>(true),
                     bth_Circles             = GetBufferTypeHandle<MIO_Circles>(true),
-                    bth_Lines               = GetBufferTypeHandle<MIO_Lines>(true),
                     bth_DashedLines         = GetBufferTypeHandle<MIO_DashedLines>(true),
+                    bth_Lines               = GetBufferTypeHandle<MIO_Lines>(true),
                 };
                 JobHandle drawMoveableHandle = drawOverlays.ScheduleByRef(_DrawQuery, JobHandle.CombineDependencies(updateOverlaysHandle, overlayRenderBufferHandle));
 
@@ -145,6 +166,14 @@ namespace MoveIt.Overlays
             catch (Exception ex)
             {
                 MIT.Log.Error($"Failed on DrawOverlaysJob:\n{ex}");
+            }
+
+
+            // If DebugFreeze is on, end now so they aren't cleaned up
+            if (_DebugFreeze)
+            {
+                _DebugFirstFrozen = false;
+                return;
             }
 
             EntityManager.AddComponent<Game.Common.Deleted>(_CleanupQuery);

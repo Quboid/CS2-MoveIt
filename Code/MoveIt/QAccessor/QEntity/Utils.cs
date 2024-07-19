@@ -13,6 +13,7 @@ namespace MoveIt.QAccessor
             Lane,
             CP,
             Node,
+            Surface,
         }
 
 
@@ -20,13 +21,13 @@ namespace MoveIt.QAccessor
 
         private readonly void TryAddUpdate(Entity e)
         {
-            if (!Manager.HasComponent<Game.Common.Updated>(e))
+            if (!m_Manager.HasComponent<Game.Common.Updated>(e))
             {
-                Manager.AddComponent<Game.Common.Updated>(e);
+                m_Manager.AddComponent<Game.Common.Updated>(e);
             }
-            if (!Manager.HasComponent<Game.Common.BatchesUpdated>(e))
+            if (!m_Manager.HasComponent<Game.Common.BatchesUpdated>(e))
             {
-                Manager.AddComponent<Game.Common.BatchesUpdated>(e);
+                m_Manager.AddComponent<Game.Common.BatchesUpdated>(e);
             }
         }
 
@@ -49,25 +50,25 @@ namespace MoveIt.QAccessor
 
         public readonly bool TryGetComponent<T>(out T component) where T : unmanaged, IComponentData
         {
-            if (!Manager.HasComponent<T>(m_Entity))
+            if (!m_Manager.HasComponent<T>(m_Entity))
             {
                 component = default;
                 return false;
             }
 
-            component = Manager.GetComponentData<T>(m_Entity);
+            component = m_Manager.GetComponentData<T>(m_Entity);
             return true;
         }
 
         public readonly bool TryGetBuffer<T>(out DynamicBuffer<T> buffer, bool isReadOnly = false) where T : unmanaged, IBufferElementData
         {
-            if (!Manager.HasBuffer<T>(m_Entity))
+            if (!m_Manager.HasBuffer<T>(m_Entity))
             {
                 buffer = default;
                 return false;
             }
 
-            buffer = Manager.GetBuffer<T>(m_Entity, isReadOnly);
+            buffer = m_Manager.GetBuffer<T>(m_Entity, isReadOnly);
             return true;
         }
 

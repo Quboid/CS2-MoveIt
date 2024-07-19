@@ -1,46 +1,57 @@
 ﻿using Colossal.Collections;
 using Colossal.Mathematics;
 using MoveIt.QAccessor;
+using QCommonLib;
 using System.Linq;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Mathematics;
 
 namespace MoveIt.Searcher
 {
 #if USE_BURST
     [BurstCompile]
 #endif
-    internal struct MarqueeJob : IJob
+    internal struct SearcherJob : IJob
     {
         internal NativeQuadTree<Entity, Game.Common.QuadTreeBoundsXZ> m_StaticTree;
         internal NativeQuadTree<Entity, Game.Common.QuadTreeBoundsXZ> m_NetworkTree;
+        internal NativeQuadTree<Game.Areas.AreaSearchItem, Game.Common.QuadTreeBoundsXZ> m_AreaTree;
         internal NativeArray<Components.MIT_ControlPoint> m_ControlPoints;
         internal Filters m_Filters;
         internal bool m_IsManipulating;
         internal QLookup m_Lookup;
         internal EntityManager m_Manager;
         internal NativeList<Entity> m_Results;
-        internal Quad2 m_SearchArea;
-        internal Bounds2 m_SearchBounds;
+        internal float3 m_TerrainPosition;
+
         internal SearchTypes m_SearchType;
+        internal Quad2 m_SearchRect;            // For SearchTypes.Marquee
+        internal Bounds2 m_SearchOuterBounds;   // For SearchTypes.Marquee, .Bounds
+        internal float3 m_SearchPoint;          // For SearchTypes.Point
+        internal Line3.Segment m_SearchRay;     // For SearchTypes.Ray
 
         public void Execute()
         {
             // Static objects
-            if ((m_Filters & Filters.AllStatics) != Filters.None)
+            if ((m_Filters & Utils.FilterAllStatics) != Filters.None)
             {
-                SearcherIterator iterator = default;
+                SearcherIterator iterator       = default;
                 iterator.m_EntityList           = new(Allocator.Temp);
-                iterator.m_Type                 = m_SearchType;
-                iterator.m_SearchPoint          = default;
-                iterator.m_SearchRect           = m_SearchArea;
-                iterator.m_SearchOuterBounds    = m_SearchBounds;
                 iterator.m_Lookup               = m_Lookup;
                 iterator.m_Manager              = m_Manager;
+                iterator.m_IsManipulating       = m_IsManipulating;
+
+                iterator.m_Type                 = m_SearchType;
+                iterator.m_SearchQuad           = m_SearchRect;
+                iterator.m_SearchOuterBounds    = m_SearchOuterBounds;
+                iterator.m_SearchPoint          = default;
+                iterator.m_SearchRay            = m_SearchRay;
 
                 m_StaticTree.Iterate(ref iterator);
+
                 for (int i = 0; i < iterator.m_EntityList.Length; i++)
                 {
                     Entity e = iterator.m_EntityList[i];
@@ -53,22 +64,54 @@ namespace MoveIt.Searcher
             }
 
             // Networks
-            if ((m_Filters & Filters.AllNets) != Filters.None)
+            if ((m_Filters & Utils.FilterAllNetworks) != Filters.None)
             {
-                SearcherIterator iterator = default;
+                SearcherIterator iterator       = default;
                 iterator.m_EntityList           = new(Allocator.Temp);
-                iterator.m_Type                 = m_SearchType;
-                iterator.m_SearchPoint          = default;
-                iterator.m_SearchRect           = m_SearchArea;
-                iterator.m_SearchOuterBounds    = m_SearchBounds;
                 iterator.m_Lookup               = m_Lookup;
                 iterator.m_Manager              = m_Manager;
+                iterator.m_IsManipulating       = m_IsManipulating;
+
+                iterator.m_Type                 = m_SearchType;
+                iterator.m_SearchQuad           = m_SearchRect;
+                iterator.m_SearchOuterBounds    = m_SearchOuterBounds;
+                iterator.m_SearchPoint          = default;
+                iterator.m_SearchRay            = m_SearchRay;
+
                 m_NetworkTree.Iterate(ref iterator);
+
                 for (int i = 0; i < iterator.m_EntityList.Length; i++)
                 {
-                    if ((m_Filters & Filters.Segments) == 0 && m_Manager.HasComponent<Game.Net.Edge>(iterator.m_EntityList[i])) continue;
                     if ((m_Filters & Filters.Nodes) == 0 && m_Manager.HasComponent<Game.Net.Node>(iterator.m_EntityList[i])) continue;
+                    if ((m_Filters & Filters.Segments) == 0 && m_Manager.HasComponent<Game.Net.Edge>(iterator.m_EntityList[i])) continue;
 
+                    if (!m_Results.Contains(iterator.m_EntityList[i]))
+                    {
+                        m_Results.Add(iterator.m_EntityList[i]);
+                    }
+                }
+                iterator.Dispose();
+            }
+
+            // Surfaces
+            if ((m_Filters & Filters.Surfaces) != Filters.None)
+            {
+                SearcherIterator iterator = default;
+                iterator.m_EntityList = new(Allocator.Temp);
+                iterator.m_Lookup = m_Lookup;
+                iterator.m_Manager = m_Manager;
+                iterator.m_IsManipulating = m_IsManipulating;
+
+                iterator.m_Type = m_SearchType;
+                iterator.m_SearchQuad = m_SearchRect;
+                iterator.m_SearchOuterBounds = m_SearchOuterBounds;
+                iterator.m_SearchPoint = default;
+                iterator.m_SearchRay = m_SearchRay;
+
+                m_AreaTree.Iterate(ref iterator);
+
+                for (int i = 0; i < iterator.m_EntityList.Length; i++)
+                {
                     if (!m_Results.Contains(iterator.m_EntityList[i]))
                     {
                         m_Results.Add(iterator.m_EntityList[i]);
@@ -88,14 +131,22 @@ namespace MoveIt.Searcher
                     switch (m_SearchType)
                     {
                         case SearchTypes.Marquee:
-                            if (MathUtils.Intersect(m_SearchArea, circle))
+                            if (MathUtils.Intersect(m_SearchRect, circle))
                             {
                                 m_Results.Add(data.m_Entity);
                             }
                             break;
 
                         case SearchTypes.Bounds:
-                            if (MathUtils.Intersect(m_SearchBounds, circle))
+                            if (MathUtils.Intersect(m_SearchOuterBounds, circle))
+                            {
+                                m_Results.Add(data.m_Entity);
+                            }
+                            break;
+
+                        case SearchTypes.Ray:
+                            Bounds1 bounds = new(data.m_Position.y - 0.1f, data.m_Position.y + 0.4f);
+                            if (QIntersect.DoesLineIntersectCylinder(m_SearchRay, circle, bounds))
                             {
                                 m_Results.Add(data.m_Entity);
                             }
@@ -108,8 +159,8 @@ namespace MoveIt.Searcher
 
         private readonly bool FilterStatic(Entity e)
         {
-            if ((m_Filters & Filters.AllStatics) == 0) return false; // Not looking for a static
-            if ((m_Filters & Filters.AllStatics) == Filters.AllStatics) return true; // Looking for any static
+            if ((m_Filters & Utils.FilterAllStatics) == 0) return false; // Not looking for a static
+            if ((m_Filters & Utils.FilterAllStatics) == Utils.FilterAllStatics) return true; // Looking for any static
 
             if ((m_Filters & Filters.Buildings) != 0)
             {
@@ -143,8 +194,17 @@ namespace MoveIt.Searcher
                 }
             }
 
+            if ((m_Filters & Filters.Surfaces) != 0)
+            {
+                if (Has<Game.Areas.Area>(e) && Has<Game.Areas.Surface>(e))
+                {
+                    return true;
+                }
+            }
+
             return false;
         }
+
         private readonly bool Has<T>(Entity e) where T : IComponentData
             => m_Manager.HasComponent<T>(e);
         private readonly bool HasOr<T1, T2>(Entity e) where T1 : IComponentData where T2 : IComponentData

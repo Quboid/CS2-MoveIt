@@ -19,6 +19,7 @@ namespace MoveIt
         ServiceUpgrade,
         Prop,
         Decal,
+        Surface,
         Invalid
     }
 
@@ -46,19 +47,20 @@ namespace MoveIt
 
         public static string GetIdentityCode(Identity identity) => identity switch
             {
-                Identity.None           => "##",
-                Identity.Building       => "BL",
-                Identity.ControlPoint   => "CP",
-                Identity.Node           => "ND",
-                Identity.Other          => "**",
-                Identity.Plant          => "PL",
-                Identity.Segment        => "SG",
-                Identity.NetLane        => "LN",
-                Identity.Extension      => "XT",
-                Identity.ServiceUpgrade => "SU",
-                Identity.Prop           => "PR",
-                Identity.Decal          => "DE",
-                Identity.Invalid        => "??",
+                Identity.None           => "###",
+                Identity.Building       => "BLD",
+                Identity.ControlPoint   => "CPT",
+                Identity.Node           => "NOD",
+                Identity.Plant          => "PLT",
+                Identity.Segment        => "SEG",
+                Identity.NetLane        => "NLN",
+                Identity.Extension      => "XTN",
+                Identity.ServiceUpgrade => "SER",
+                Identity.Prop           => "PRP",
+                Identity.Decal          => "DEC",
+                Identity.Surface        => "SUR",
+                Identity.Other          => "***",
+                Identity.Invalid        => "???",
                 _ => throw new System.NotImplementedException(),
             };
 
@@ -104,15 +106,23 @@ namespace MoveIt
                     return Identity.NetLane;
                 }
             }
+            else if (manager.HasComponent<Game.Net.AreaLane>(e))
+            {
+                return Identity.NetLane;
+            }
             else if (manager.HasComponent<Game.Net.Node>(e))
             {
                 return Identity.Node;
+            }
+            else if (manager.HasComponent<Game.Areas.Surface>(e) || manager.HasComponent<Game.Areas.HangaroundLocation>(e))
+            {
+                return Identity.Surface;
             }
             else if (manager.HasComponent<Components.MIT_ControlPoint>(e))
             {
                 return Identity.ControlPoint;
             }
-            else if (manager.HasComponent<Game.Objects.ObjectGeometry>(e))
+            else if (manager.HasComponent<Game.Objects.ObjectGeometry>(e) && !manager.HasComponent<Game.Objects.Pillar>(e))
             {
                 if (manager.HasComponent<Game.Objects.Surface>(e))
                 {

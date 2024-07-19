@@ -48,21 +48,21 @@ namespace MoveIt.Systems
                 trigger: DoDeselectAll
             ));
 
-            //RegisterBinding(new(
-            //    action: Mod.Settings.GetAction(Inputs.KEY_DEBUGFREEZE),
-            //    context: QKey_Contexts.ToolEnabled,
-            //    trigger: DoDebugFreeze
-            //));
+            RegisterBinding(new(
+                action: Mod.Settings.GetAction(Inputs.KEY_DEBUGFREEZE),
+                context: QInput_Contexts.ToolEnabled,
+                trigger: DoDebugFreeze
+            ));
 
             //RegisterBinding(new(
             //    action: Mod.Settings.GetAction(Inputs.KEY_DEBUGCLEAR),
-            //    context: QKey_Contexts.ToolEnabled,
+            //    context: QInput_Contexts.ToolEnabled,
             //    trigger: DoDebugClear
             //));
 
             //RegisterBinding(new(
             //    action: Mod.Settings.GetAction(Inputs.KEY_DEJANK),
-            //    context: QKey_Contexts.ToolEnabled,
+            //    context: QInput_Contexts.ToolEnabled,
             //    trigger: _Tool.DejankNodes
             //));
 
@@ -80,18 +80,32 @@ namespace MoveIt.Systems
                 isPassive: true
             ));
 
+            RegisterBinding(new(
+                action: Mod.Settings.GetAction(Inputs.KEY_MOVEDOWN2),
+                context: QInput_Contexts.ToolEnabled,
+                trigger: null,
+                isPassive: true
+            ));
+
+            RegisterBinding(new(
+                action: Mod.Settings.GetAction(Inputs.KEY_MOVEUP2),
+                context: QInput_Contexts.ToolEnabled,
+                trigger: null,
+                isPassive: true
+            ));
+
             //DebugDumpAllBindings();
         }
 
         private void DoToolToggle()
         {
-            //QLog.Debug($"Key: {KEY_TOGGLETOOL}");
+            //QLog.Debug($"Key: {Inputs.KEY_TOGGLETOOL}");
             _Tool.RequestToggle();
         }
 
         private void DoUndo()
         {
-            //QLog.Debug($"Key: {KEY_UNDO}");
+            //QLog.Debug($"Key: {Inputs.KEY_UNDO}");
             if (_Tool.ToolState == ToolStates.Default)
             {
                 _Tool.ToolAction = ToolActions.Undo;
@@ -100,7 +114,7 @@ namespace MoveIt.Systems
 
         private void DoRedo()
         {
-            //QLog.Debug($"Key: {KEY_REDO}");
+            //QLog.Debug($"Key: {Inputs.KEY_REDO}");
             if (_Tool.ToolState == ToolStates.Default)
             {
                 _Tool.ToolAction = ToolActions.Redo;
@@ -109,21 +123,21 @@ namespace MoveIt.Systems
 
         private void DoDeselectAll()
         {
-            //QLog.Debug($"Key: {KEY_DESELECTALL}");
+            //QLog.Debug($"Key: {Inputs.KEY_DESELECTALL}");
             _Tool.Queue.Push(new DeselectAllAction());
             _Tool.ToolAction = ToolActions.Do;
             //_Tool.Queue.Do();
         }
 
-        //private void DoDebugFreeze()
-        //{
-        //    //QLog.Debug($"Key: {KEY_DEBUGFREEZE}");
-        //    _Tool.m_OverlaySystem.m_DebugFreeze = !_Tool.m_OverlaySystem.m_DebugFreeze;
-        //}
+        private void DoDebugFreeze()
+        {
+            _Tool.m_OverlaySystem.DebugFreeze = !_Tool.m_OverlaySystem.DebugFreeze;
+            QLog.Debug($"Key: {Inputs.KEY_DEBUGFREEZE} ({_Tool.m_OverlaySystem.DebugFreeze})");
+        }
 
         //private void DoDebugClear()
         //{
-        //    //QLog.Debug($"Key: {KEY_DEBUGCLEAR}");
+        //    //QLog.Debug($"Key: {Inputs.KEY_DEBUGCLEAR}");
         //    _Tool.m_RenderSystem.Clear();
         //}
     }

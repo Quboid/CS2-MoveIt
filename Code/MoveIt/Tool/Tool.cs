@@ -14,13 +14,16 @@ namespace MoveIt.Tool
         {
             base.InitializeRaycast();
 
-            m_ToolRaycastSystem.collisionMask = (CollisionMask.OnGround | CollisionMask.Overground | CollisionMask.ExclusiveGround);
-            m_ToolRaycastSystem.typeMask = (TypeMask.StaticObjects | TypeMask.Lanes | TypeMask.Net | TypeMask.Areas | TypeMask.Terrain);// | TypeMask.MovingObjects);
-            m_ToolRaycastSystem.raycastFlags = RaycastFlags.Decals | RaycastFlags.Markers;// (RaycastFlags.SubElements | RaycastFlags.Placeholders | RaycastFlags.UpgradeIsMain | RaycastFlags.Outside | RaycastFlags.Cargo | RaycastFlags.Passenger);
-            m_ToolRaycastSystem.netLayerMask = (Layer.Road | Layer.Fence | Layer.TrainTrack | Layer.TramTrack | Layer.SubwayTrack | Layer.Pathway | Layer.LaneEditor);
-            m_ToolRaycastSystem.iconLayerMask = Game.Notifications.IconLayerMask.None;
+            m_ToolRaycastSystem.collisionMask   = CollisionMask.OnGround | CollisionMask.Overground;
+            m_ToolRaycastSystem.areaTypeMask    = Game.Areas.AreaTypeMask.None;
+            m_ToolRaycastSystem.typeMask        = TypeMask.Net;
+            m_ToolRaycastSystem.raycastFlags    = 0f;
+            m_ToolRaycastSystem.netLayerMask    = Layer.Road | Layer.Fence | Layer.TrainTrack | Layer.TramTrack | Layer.SubwayTrack | Layer.Pathway | Layer.LaneEditor;
+            m_ToolRaycastSystem.iconLayerMask   = Game.Notifications.IconLayerMask.None;
+            m_ToolRaycastSystem.utilityTypeMask = UtilityTypes.None;
 
             m_RaycastTerrain = new RaycastTerrain(World);
+            m_RaycastSurface = new RaycastSurface(World);
         }
 
         /// <summary>
@@ -53,6 +56,11 @@ namespace MoveIt.Tool
         internal void QueueOverlayUpdate(Overlay overlay)
         {
             m_PostToolSystem.QueueOverlayUpdate(overlay);
+        }
+
+        internal void QueueOverlayUpdateDeferred(Overlay overlay)
+        {
+            m_PostToolSystem.QueueOverlayUpdateDeferred(overlay);
         }
 
         internal void ToggleSelectionMode() => SetSelectionMode(!m_MarqueeSelect);
@@ -98,7 +106,7 @@ namespace MoveIt.Tool
             MIT_ToolTipSystem.instance.Set($"Mode: {mode}", 1.25f);
         }
 
-        internal void StartMove()
+        internal void MoveStart()
         {
             if (ToolState == ToolStates.SecondaryButtonHeld) return;
             TransformAction action;
@@ -117,10 +125,10 @@ namespace MoveIt.Tool
                 Queue.Push(action);
             }
             ToolState = ToolStates.ApplyButtonHeld;
-            StartTransform();
+            TransformStart();
         }
 
-        internal void StartRotation()
+        internal void RotationStart()
         {
             if (ToolState == ToolStates.ApplyButtonHeld) return;
             TransformAction action;
@@ -128,10 +136,10 @@ namespace MoveIt.Tool
             Queue.Push(action);
             ToolState = ToolStates.SecondaryButtonHeld;
 
-            StartTransform();
+            TransformStart();
         }
 
-        private void StartTransform()
+        private void TransformStart()
         {
             m_DragPointerOffsetFromSelection = Selection.Center - m_PointerPos;
             CreationPhase = CreationPhases.Positioning;
@@ -139,15 +147,15 @@ namespace MoveIt.Tool
 
         internal void EndMove()
         {
-            EndTransform();
+            TransformEnd();
         }
 
-        internal void EndRotation()
+        internal void RotationEnd()
         {
-            EndTransform();
+            TransformEnd();
         }
 
-        internal void EndTransform()
+        internal void TransformEnd()
         {
             if (Queue.Current is TransformAction action)
             {

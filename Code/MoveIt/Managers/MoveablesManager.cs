@@ -59,6 +59,7 @@ namespace MoveIt.Managers
                         Identity.ControlPoint   => new MVControlPoint(e),
                         Identity.Prop           => new MVProp(e),
                         Identity.Decal          => new MVDecal(e),
+                        Identity.Surface        => new MVSurface(e),
                         Identity.Node           => _Tool.EntityManager.HasComponent<Game.Net.NodeGeometry>(e) ?
                                                     new MVNode(e) :
                                                     new MVLaneNode(e),

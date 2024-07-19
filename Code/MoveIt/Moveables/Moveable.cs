@@ -1,4 +1,5 @@
 ﻿using Colossal.Mathematics;
+using Game.Prefabs;
 using MoveIt.Actions;
 using MoveIt.Overlays;
 using MoveIt.Tool;
@@ -101,6 +102,11 @@ namespace MoveIt.Moveables
             m_Overlay?.EnqueueUpdate();
         }
 
+        internal void UpdateOverlayDeferred()
+        {
+            m_Overlay?.EnqueueUpdateDeferred();
+        }
+
         internal virtual Bounds3 GetBounds()
         {
             try
@@ -187,8 +193,8 @@ namespace MoveIt.Moveables
 
         internal virtual float GetRadius()
         {
-            Game.Prefabs.PrefabRef prefab = _Tool.EntityManager.GetComponentData<Game.Prefabs.PrefabRef>(m_Entity);
-            Game.Prefabs.ObjectGeometryData geoData = _Tool.EntityManager.GetComponentData<Game.Prefabs.ObjectGeometryData>(prefab);
+            PrefabRef prefab = _Tool.EntityManager.GetComponentData<PrefabRef>(m_Entity);
+            ObjectGeometryData geoData = _Tool.EntityManager.GetComponentData<ObjectGeometryData>(prefab);
             return math.max(math.cmax(new float2(geoData.m_Size.x, geoData.m_Size.z)), 2f) / 2;
         }
 

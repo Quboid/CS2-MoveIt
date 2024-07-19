@@ -30,12 +30,12 @@ namespace MoveIt.Overlays
             return overlay;
         }
 
-        public static bool RemoveOverlay(Overlay overlay)
-        {
-            if (!_Tool.EntityManager.Exists(overlay.m_Entity)) return false;
+        //public static bool RemoveOverlay(Overlay overlay)
+        //{
+        //    if (!_Tool.EntityManager.Exists(overlay.m_Entity)) return false;
 
-            return _Tool.EntityManager.AddComponent<Game.Common.Deleted>(overlay.m_Entity);
-        }
+        //    return _Tool.EntityManager.AddComponent<Game.Common.Deleted>(overlay.m_Entity);
+        //}
     }
 
 
@@ -57,6 +57,7 @@ namespace MoveIt.Overlays
         MVManipSegment,
         MVNode,
         MVSegment,
+        MVSurface,
     }
 
     public enum ToolFlags
@@ -108,6 +109,16 @@ namespace MoveIt.Overlays
         {
             Curve = curve;
             Width = width;
+        }
+    }
+
+    public struct MIO_Beziers : IBufferElementData
+    {
+        public Bezier4x3 Curve;
+
+        public MIO_Beziers(Bezier4x3 curve)
+        {
+            Curve = curve;
         }
     }
 

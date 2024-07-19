@@ -102,7 +102,7 @@ namespace MoveIt.Input
         {
             if (m_Status == ButtonStatus.Down && _Tool.ToolState == ToolStates.Default && !_Tool.Hover.OnPress.IsNull)
             {
-                _Tool.StartMove();
+                _Tool.MoveStart();
             }
         }
 

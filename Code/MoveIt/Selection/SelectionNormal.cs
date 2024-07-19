@@ -33,23 +33,6 @@ namespace MoveIt.Selection
             {
                 Add(mvd);
             }
-
-            //if (append)
-            //{
-            //    if (Has(mvd))
-            //    {
-            //        Remove(mvd);
-            //    }
-            //    else
-            //    {
-            //        Add(mvd);
-            //    }
-            //}
-            //else if (!_Tool.Selection.Has(mvd))
-            //{
-            //    //Clear();
-            //    Add(mvd);
-            //}
         }
 
         internal override HashSet<MVDefinition> GetObjectsToTransform()

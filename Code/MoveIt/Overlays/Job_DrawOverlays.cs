@@ -31,9 +31,10 @@ namespace MoveIt.Overlays
             [ReadOnly] public ComponentTypeHandle<MIO_Line> cth_Line;
             [ReadOnly] public ComponentTypeHandle<MIO_Quad> cth_Quad;
             [ReadOnly] public ComponentTypeHandle<MIO_Debug> cth_Debug;
-            [ReadOnly] public BufferTypeHandle<MIO_Lines> bth_Lines;
-            [ReadOnly] public BufferTypeHandle<MIO_DashedLines> bth_DashedLines;
+            [ReadOnly] public BufferTypeHandle<MIO_Beziers> bth_Beziers;
             [ReadOnly] public BufferTypeHandle<MIO_Circles> bth_Circles;
+            [ReadOnly] public BufferTypeHandle<MIO_DashedLines> bth_DashedLines;
+            [ReadOnly] public BufferTypeHandle<MIO_Lines> bth_Lines;
 
             public readonly bool IsManipulating => (m_ToolFlags & ToolFlags.ManipulationMode) > 0;
 
@@ -46,9 +47,10 @@ namespace MoveIt.Overlays
                 var data_Circle         = chunk.GetNativeArray(ref cth_Circle);
                 var data_Line           = chunk.GetNativeArray(ref cth_Line);
                 var data_Quad           = chunk.GetNativeArray(ref cth_Quad);
-                var data_Lines          = chunk.GetBufferAccessor(ref bth_Lines);
-                var data_DashedLines    = chunk.GetBufferAccessor(ref bth_DashedLines);
+                var data_Beziers        = chunk.GetBufferAccessor(ref bth_Beziers);
                 var data_Circles        = chunk.GetBufferAccessor(ref bth_Circles);
+                var data_DashedLines    = chunk.GetBufferAccessor(ref bth_DashedLines);
+                var data_Lines          = chunk.GetBufferAccessor(ref bth_Lines);
 
                 var enumerator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
 
@@ -74,7 +76,7 @@ namespace MoveIt.Overlays
                             break;
 
                         case OverlayTypes.Line:
-                            DrawLine(common, data_Line[idx].Line, Projection.Ground);
+                            DrawLine(common, data_Line[idx].Line, Projection.Fixed);
                             break;
 
                         case OverlayTypes.Marquee:
@@ -114,8 +116,15 @@ namespace MoveIt.Overlays
                             RenderMVSegment(
                                 common,
                                 data_Bezier[idx],
-                                data_Lines[idx],
+                                data_Beziers[idx],
+                                data_DashedLines[idx],
                                 data_Circles[idx]);
+                            break;
+
+                        case OverlayTypes.MVSurface:
+                            RenderMVSurface(
+                                common,
+                                data_Lines[idx]);
                             break;
 
                         case OverlayTypes.MVControlPoint:
@@ -133,7 +142,8 @@ namespace MoveIt.Overlays
                         case OverlayTypes.MVManipSegment:
                             RenderMVManipSegment(
                                 common,
-                                data_Lines[idx]);
+                                data_Beziers[idx],
+                                data_DashedLines[idx]);
                             break;
 
                         default:
@@ -198,25 +208,31 @@ namespace MoveIt.Overlays
                 DrawCircles(faded, cpPositions, Projection.Fixed);
             }
 
-            public readonly void RenderMVSegment(MIO_Common common, MIO_Bezier bezier, DynamicBuffer<MIO_Lines> lines, DynamicBuffer<MIO_Circles> cpPositions)
+            public readonly void RenderMVSegment(MIO_Common common, MIO_Bezier bezier, DynamicBuffer<MIO_Beziers> curves, DynamicBuffer<MIO_DashedLines> dashed, DynamicBuffer<MIO_Circles> cpPositions)
             {
                 if (IsManipulating) return;
 
                 if (common.ShowShadow) DrawCurve(common, bezier.Curve, Projection.Ground, Colors.Get(ColorData.Contexts.Shadow), bezier.Width, common.m_ShadowOpacity);
 
-                for (int i = 0; i < lines.Length; i++)
+                for (int i = 0; i < curves.Length; i++)
                 {
-                    DrawLineDashed(common, lines[i].Line, Projection.Fixed, Colors.Get(common, m_ToolFlags));
+                    DrawCurve(common, curves[i].Curve, Projection.Fixed, Colors.Get(common, m_ToolFlags), 0.2f);
                 }
 
-                //common.m_OutlineColor = new(1f, 0f, 0f, 0.6f);
-                //DrawTools.CircleSimple(m_OverlayRenderBuffer, common, cpPositions[0].Circle);
-                //common.m_OutlineColor = new(0.75f, 0.75f, 0f, 0.6f);
-                //DrawTools.CircleSimple(m_OverlayRenderBuffer, common, cpPositions[1].Circle);
-                //common.m_OutlineColor = new(0f, 1f, 0f, 0.6f);
-                //DrawTools.CircleSimple(m_OverlayRenderBuffer, common, cpPositions[2].Circle);
-                //common.m_OutlineColor = new(0f, 0.75f, 0.75f, 0.6f);
-                //DrawTools.CircleSimple(m_OverlayRenderBuffer, common, cpPositions[3].Circle);
+                for (int i = 0; i < dashed.Length; i++)
+                {
+                    DrawLineDashed(common, dashed[i].Line, Projection.Fixed, Colors.Get(common, m_ToolFlags));
+                }
+            }
+
+            public readonly void RenderMVSurface(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
+            {
+                if (IsManipulating) return;
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    DrawLine(common, lines[i].Line, Projection.Fixed, Colors.Get(common, m_ToolFlags));
+                }
             }
 
             public readonly void RenderMVControlPoint(MIO_Common common, Circle3 circle)
@@ -232,14 +248,20 @@ namespace MoveIt.Overlays
                 if (common.ShowShadow) DrawDashedCircle(common, circle, Projection.Ground, Colors.Get(ColorData.Contexts.Shadow), default, common.m_ShadowOpacity);
             }
 
-            public readonly void RenderMVManipSegment(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
+            public readonly void RenderMVManipSegment(MIO_Common common, DynamicBuffer<MIO_Beziers> curves, DynamicBuffer<MIO_DashedLines> dashed)
             {
                 if (!IsManipulating) return;
 
                 Color c = Colors.Get(common, m_ToolFlags);
-                for (int i = 0; i < lines.Length; i++)
+
+                for (int i = 0; i < curves.Length; i++)
                 {
-                    DrawLineDashed(common, lines[i].Line, Projection.Fixed, c);
+                    DrawCurve(common, curves[i].Curve, Projection.Fixed, c, 0.2f);
+                }
+
+                for (int i = 0; i < dashed.Length; i++)
+                {
+                    DrawLineDashed(common, dashed[i].Line, Projection.Fixed, c);
                 }
             }
 
@@ -272,7 +294,7 @@ namespace MoveIt.Overlays
             {
                 common.m_OutlineColor = color.Equals(default) ? Colors.Get(common, m_ToolFlags) : color;
                 common.m_OutlineColor.a *= opacity;
-                DrawTools.CurveSimple(m_OverlayRenderBuffer, common, curve, proj, width);
+                DrawTools.Curve(m_OverlayRenderBuffer, common, curve, proj, width);
             }
 
             public readonly void DrawLineDashed(MIO_Common common, Line3.Segment line, Projection proj, Color color = default, float opacity = 1f)

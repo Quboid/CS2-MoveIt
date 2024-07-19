@@ -33,20 +33,23 @@ namespace MoveIt.QAccessor
             RefRW<MIT_ControlPoint> cpRef = m_Lookup.MIT_ControlPoint.GetRefRW(m_Entity);
             Entity parent = cpRef.ValueRO.m_Parent;
             Game.Net.Edge edge = m_Lookup.gnEdge.GetRefRO(parent).ValueRO;
-            QEntity node = new(ref m_Lookup, edge.m_Start, Identity.Node);
+            QEntity node = new(m_Manager, ref m_Lookup, edge.m_Start, Identity.Node);
             node.Node_SetUpdated();
-            node = new(ref m_Lookup, edge.m_End, Identity.Node);
+            node = new(m_Manager, ref m_Lookup, edge.m_End, Identity.Node);
             node.Node_SetUpdated();
 
             // Attempting to reset the street name, it does not work
-            if (Manager.HasComponent<Game.Net.Aggregated>(parent))
+            if (m_Manager.HasComponent<Game.Net.Aggregated>(parent))
             {
-                Game.Net.Aggregated aggregated = Manager.GetComponentData<Game.Net.Aggregated>(parent);
+                Game.Net.Aggregated aggregated = m_Manager.GetComponentData<Game.Net.Aggregated>(parent);
                 TryAddUpdate(aggregated.m_Aggregate);
             }
 
             return true;
         }
+
+        private readonly void ControlPoint_TransformEnd()
+        { }
 
 
         private bool ControlPoint_MoveBy(State state, float3 newPosition, float3 delta)

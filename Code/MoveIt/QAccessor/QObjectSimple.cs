@@ -22,7 +22,7 @@ namespace MoveIt.QAccessor
             m_Manager   = manager;
             m_Entity    = e;
             m_Identity  = QTypes.GetEntityIdentity(manager, e);
-            m_Parent    = new(ref lookup, e, m_Identity);
+            m_Parent    = new(m_Manager, ref lookup, e, m_Identity);
 
             //DebugDumpFullObject();
         }

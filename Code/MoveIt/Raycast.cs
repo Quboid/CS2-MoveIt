@@ -23,6 +23,23 @@ namespace MoveIt
         }
     }
 
+    internal class RaycastSurface : RaycastBase
+    {
+        internal RaycastSurface(World gameWorld) : base(gameWorld)
+        { }
+
+        protected override RaycastInput GetInput()
+        {
+            RaycastInput result = default;
+            result.m_Line = Line;
+            result.m_Offset = default;
+            result.m_TypeMask = TypeMask.Areas;
+            result.m_AreaTypeMask = Game.Areas.AreaTypeMask.Surfaces | Game.Areas.AreaTypeMask.Spaces | Game.Areas.AreaTypeMask.Lots;
+            return result;
+        }
+    }
+
+
     internal abstract class RaycastBase
     {
         private readonly RaycastSystem _RaycastSystem;
@@ -45,9 +62,14 @@ namespace MoveIt
             _RaycastSystem.AddInput(this, input);
         }
 
+        public NativeArray<RaycastResult> GetResults()
+        {
+            return _RaycastSystem.GetResult(this);
+        }
+
         public RaycastHit GetHit()
         {
-            NativeArray<RaycastResult> result = _RaycastSystem.GetResult(this);
+            NativeArray<RaycastResult> result = GetResults();
             if (result == null || result.Length == 0)
             {
                 RaycastHit res = new()

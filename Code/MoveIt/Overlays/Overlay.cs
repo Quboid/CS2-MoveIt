@@ -94,6 +94,11 @@ namespace MoveIt.Overlays
             _Tool.QueueOverlayUpdate(this);
         }
 
+        public virtual void EnqueueUpdateDeferred()
+        {
+            _Tool.QueueOverlayUpdateDeferred(this);
+        }
+
         public virtual bool Update()
         {
             if (m_Moveable is null) return false;

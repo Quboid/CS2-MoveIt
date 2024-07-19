@@ -29,9 +29,9 @@ namespace MoveIt.QAccessor
             TryAddUpdate(m_Entity);
 
             Game.Net.Edge edge = m_Lookup.gnEdge.GetRefRO(m_Entity).ValueRO;
-            QEntity node = new(ref m_Lookup, edge.m_Start, Identity.Node);
+            QEntity node = new(m_Manager, ref m_Lookup, edge.m_Start, Identity.Node);
             node.Node_SetUpdated();
-            node = new(ref m_Lookup, edge.m_End, Identity.Node);
+            node = new(m_Manager, ref m_Lookup, edge.m_End, Identity.Node);
             node.Node_SetUpdated();
 
             if (TryGetComponent<Game.Net.Aggregated>(out var component))
@@ -42,6 +42,9 @@ namespace MoveIt.QAccessor
 
             return true;
         }
+
+        private readonly void Lane_TransformEnd()
+        { }
 
 
         private bool Lane_MoveBy(State state, float3 newPosition, float3 delta)

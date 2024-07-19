@@ -3,6 +3,7 @@ using MoveIt.Actions;
 using MoveIt.Managers;
 using QCommonLib;
 using System;
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 
@@ -12,6 +13,19 @@ namespace MoveIt.Tool
     {
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
+            //NativeArray<Game.Common.RaycastResult> vanillaRaycastResults = m_RaycastSystem.GetResult(m_ToolRaycastSystem);
+
+            //int surfaces = m_SurfacesQuery.CalculateEntityCount();
+            //try
+            //{
+            //    MIT_ToolTipSystem.instance.Set($"{surfaces} - {vanillaRaycastResults.Length}:{vanillaRaycastResults[0].m_Hit.m_HitEntity}");
+            //}
+            //catch (Exception ex)
+            //{
+            //    MIT_ToolTipSystem.instance.Set($"{surfaces} - Nope {ex.GetType()}");
+            //}
+
+
             m_InputDeps = base.OnUpdate(inputDeps);
             //ClearDebugOverlays();
 
