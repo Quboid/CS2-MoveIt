@@ -36,6 +36,7 @@ Manipulating segments - you can move the control points in all three axis; the 2
 * Alt+M - Toggle Manipulation mode
 * Alt+D - Deselect all
 * Page Up/Down - move selected objects vertically
+* Numpad 9/3 - move selected objects vertically, including in editor
 * Control+Z - Undo
 * Control+Shift+Z - Redo
 * Hold Alt - Snap rotation to 45 degrees, snap segments as described above.
