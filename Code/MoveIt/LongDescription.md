@@ -1,4 +1,10 @@
-﻿# Move It for Cities Skylines 2.
+﻿# Move It Beta for Cities Skylines 2.
+
+This is the unstable beta version and may have unexpected issues. Please report any in the forum or on Discord.
+
+Stable version:
+https://mods.paradoxplaza.com/mods/74324/Windows
+
 
 You can move trees, props, decals, buildings, surfaces, nodes, and segment curves.
 

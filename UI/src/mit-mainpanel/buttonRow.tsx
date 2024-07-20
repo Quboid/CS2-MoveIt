@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Button, Tooltip } from "cs2/ui";
-import { trigger, useValue } from "cs2/api";
 import { VanillaComponentResolver } from "classes/VanillaComponentResolver";
 import { ButtonState, TopRowButtonStates } from "mit-mainpanel/panelState";
-import mod from "../../mod.json";
+import { ButtonPressed } from "bindings";
 
 import styles from "./panel.module.scss";
 // Ugly code to force these images to build
@@ -17,12 +16,17 @@ import ic6 from "../img/icon_Single_Active.svg";
 import ic7 from "../img/icon_Marquee_Active.svg";
 import ic8 from "../img/icon_Manipulation_Active.svg";
 import ic9 from "../img/icon_Redo_Disabled.svg";
+import icA from "../img/icon_OpenDropdown.svg";
+import icB from "../img/icon_CloseDropdown.svg";
+// import icC from "../img/checkbox-false.svg";
+// import icD from "../img/checkbox-true.svg";
+// import icE from "../img/checkbox-partial.svg";
 
 export function ButtonRowTop(topRowState : TopRowButtonStates) {
     const classes: string = `${styles.row} ${styles.buttonRow}`;
 
     // Ugly code to force these images to build
-    var x = ic0; x = ic1; x = ic2; x = ic3; x = ic4; x = ic5; x = ic6; x = ic7; x = ic8; x = ic9;
+    var x = ic0; x = ic1; x = ic2; x = ic3; x = ic4; x = ic5; x = ic6; x = ic7; x = ic8; x = ic9; x = icA; x = icB; //x = icC; x = icD; x = icE;
 
     return (
         <div className={classes}>
@@ -41,28 +45,11 @@ export function ButtonRowTop(topRowState : TopRowButtonStates) {
 
 function ButtonRowButton(data : ButtonData, state : ButtonState)
 {
-    if (!state.IsEnabled)
-    {
-        return (
-            <div className={styles.buttonContainer}>
-            <Tooltip tooltip={data.Tooltip}>
-            <Button
-                disabled
-                className={styles.button}
-                src={data.GetIconPath(state)}
-                id={data.Id}
-                focusKey={VanillaComponentResolver.instance.FOCUS_DISABLED}
-                onSelect={() => ButtonPressed(data.Id)}
-                variant="icon" />
-            </Tooltip>
-            </div>
-        );
-    }
-
     return (
         <div className={styles.buttonContainer}>
         <Tooltip tooltip={data.Tooltip}>
         <Button
+            disabled={!state.IsEnabled}
             className={styles.button}
             src={data.GetIconPath(state)}
             id={data.Id}
@@ -72,11 +59,6 @@ function ButtonRowButton(data : ButtonData, state : ButtonState)
         </Tooltip>
         </div>
     );
-}
-
-function ButtonPressed(id : string)
-{
-    trigger(mod.id, "MIT_PanelButtonPress", id);
 }
 
 class ButtonData

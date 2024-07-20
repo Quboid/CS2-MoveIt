@@ -1,0 +1,51 @@
+.row {
+    padding: 0;
+    margin: 2rem 0 0 0;
+}
+
+.dropdownTitleBtn {
+    height: 100%;
+    width: 100%;
+    text-align: left !important;
+    justify-content: flex-start;
+    padding-left: 10rem;
+}
+
+.dropdownTitle
+{
+    border-left: 3rem #0000ff66 solid;
+    height: 35rem;
+    padding: 5rem 0 0 28rem;
+    text-align: left !important;
+}
+.dropdownTitle:hover
+{
+    background-color: #0000ff22;
+}
+.dropdownTitleOpen
+{
+    border-right: 3rem #00000066 solid;
+}
+.dropdownTitleClosed
+{
+    border-right: 3rem #0000ff66 solid;
+}
+
+.dropdownContainer
+{
+    text-align: left;
+}
+.dropdownEntries
+{   
+    font-size: 95%;
+}
+.dropdownEntry
+{
+    height: 28rem;
+    padding: 5rem 0 4rem 28rem;
+    background-color: #ffffff08;
+}
+.dropdownEntry:hover
+{
+    background-color: #ffffff20;
+}

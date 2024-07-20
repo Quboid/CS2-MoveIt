@@ -41,7 +41,7 @@ namespace MoveIt.QAccessor
                 {
                     if (subEntities[i] == Entity.Null) throw new NullReferenceException($"Creating child for {e.D()} with null entity");
 
-                    if (m_Manager.HasComponent<Game.Net.ConnectionLane>(subEntities[i])) continue;// && !m_Manager.HasComponent<Game.Net.AreaLane>(subEntities[i])) continue;
+                    if (m_Manager.HasComponent<Game.Net.ConnectionLane>(subEntities[i]) && !m_Manager.HasComponent<Game.Net.AreaLane>(subEntities[i])) continue;
 
                     Identity subType = QTypes.GetEntityIdentity(manager, subEntities[i]);
                     m_Children.Add(new(m_Manager, ref lookup, subEntities[i], subType, m_Entity));
@@ -276,10 +276,12 @@ namespace MoveIt.QAccessor
         }
 
 #if USE_BURST
-        internal readonly void DebugDumpFullObject(NativeList<int> ids, bool forceAll = false, string prefix = "")
-        { } // Do nothing if in burst mode
+        // Do nothing if in burst mode
 
-        internal readonly string DebugFullObject() => ""; // Do nothing if in burst mode
+        internal readonly void DebugDumpFullObject(NativeList<int> ids, bool forceAll = false, string prefix = "")
+        { }
+
+        internal readonly string DebugFullObject() => ""; 
 #else
         internal readonly string DebugFullObject(NativeList<int> ids, bool forceAll = false)
         {
@@ -295,7 +297,14 @@ namespace MoveIt.QAccessor
                 {
                     if (ids.Length == 0 || ids.Contains((int)m_Children[i].m_Identity))
                     {
-                        sb.AppendFormat("\n    {0}: {1} ({2})", i, m_Children[i].m_Entity.DX(true), m_Children[i].m_Parent.D());
+                        if (!m_Children[i].m_Owner.Equals(m_Children[i].m_Parent) && !m_Children[i].m_Owner.Equals(Entity.Null))
+                        {
+                            sb.AppendFormat("\n    {0}: {1} ({2}, {3})", i, m_Children[i].m_Entity.DX(true), m_Children[i].m_Parent.D(), m_Children[i].m_Owner.D());
+                        }
+                        else
+                        {
+                            sb.AppendFormat("\n    {0}: {1} ({2})", i, m_Children[i].m_Entity.DX(true), m_Children[i].m_Parent.D());
+                        }
 
                         if (idMatch++ > max) break;
                     }

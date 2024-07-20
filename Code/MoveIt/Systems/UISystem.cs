@@ -2,6 +2,7 @@
 using Game.UI;
 using MoveIt.Moveables;
 using MoveIt.Overlays;
+using MoveIt.Systems.UIElements;
 using MoveIt.Tool;
 using QCommonLib;
 using System.Collections.Generic;
@@ -27,6 +28,8 @@ namespace MoveIt.Systems
         private ValueBinding<string>        _RebindExistingMsg;
         private PanelState _DefaultState;
         private PanelState _PanelState;
+
+        internal bool m_isFiltersOpen = false;
 
         private EntityQuery _DrawQuery;
 
@@ -80,38 +83,6 @@ namespace MoveIt.Systems
             _RebindExistingMsg.Update(msg.ToString());
         }
 
-        private string GenerateDebugPanelContents()
-        {
-            if (!_Tool.ShowDebugPanel) return string.Empty;
-            if (_Tool.Queue is null || _Tool.Queue.Current is null) return string.Empty;
-
-            _DrawQuery.CompleteDependency();
-
-            StringBuilder sb = new();
-            sb.AppendFormat("**{0}** Tool:**{1}**/**{2}**\n", _Tool.IsManipulating ? "Manip" : (_Tool.m_MarqueeSelect ? "Marquee" : "Single"), _Tool.ToolState, _Tool.ToolAction);
-            sb.AppendFormat("Action:**{0}**{1} {2}\n", _Tool.Queue.Current, _Tool.Queue.HasCreationAction ? "*" : "", _Tool.Queue.GetQueueIndexes());
-            if (_Tool.Hover.IsNull)
-            {
-                sb.AppendFormat("Nothing hovered\n");
-            }
-            else
-            {
-                string prefabName = QCommon.GetPrefabName(EntityManager, _Tool.Hover.Definition.m_Entity);
-                if (prefabName.Length > 26) prefabName = prefabName.Substring(0, 24) + "...";
-                sb.AppendFormat("**{0}** {1}\n", _Tool.Hover.Definition.m_Entity.DX(), prefabName);
-            }
-            sb.AppendFormat("**{0}**\n", _Tool.m_PointerPos.DX());
-            sb.AppendFormat("MVs:**{0}** (CPs:{1}), Sel:**{2}** ({3})\n",
-                _Tool.Moveables.Count, _Tool.Moveables.CountOf<MVControlPoint>(), _Tool.Selection.Count,
-                _Tool.Selection.CountFull - _Tool.Selection.Count >= 0 ? _Tool.Selection.CountFull - _Tool.Selection.Count : "...");
-            sb.AppendFormat("Overlays:**{0}** ({1} types), Util:**{2}**, CPs:**{3}**\n",
-                GetOverlayCount(),
-                GetOverlayTypeCount(),
-                GetOverlayCount(OverlayTypes.SelectionCenter) + GetOverlayCount(OverlayTypes.Marquee),
-                GetOverlayCount(OverlayTypes.MVControlPoint));
-            return sb.ToString();
-        }
-
         /// <summary>
         /// Called from the UI
         /// </summary>
@@ -155,9 +126,48 @@ namespace MoveIt.Systems
                     _Tool.SetManipulationMode(true);
                     break;
 
+                case "filtersTitle":
+                    m_isFiltersOpen = !m_isFiltersOpen;
+
+                    QLog.Debug($"UIButton: {buttonId} isOpen:{m_isFiltersOpen}");
+                    break;
+
                 default:
                     break;
             }
+        }
+
+
+        private string GenerateDebugPanelContents()
+        {
+            if (!_Tool.ShowDebugPanel) return string.Empty;
+            if (_Tool.Queue is null || _Tool.Queue.Current is null) return string.Empty;
+
+            _DrawQuery.CompleteDependency();
+
+            StringBuilder sb = new();
+            sb.AppendFormat("**{0}** Tool:**{1}**/**{2}**\n", _Tool.IsManipulating ? "Manip" : (_Tool.m_MarqueeSelect ? "Marquee" : "Single"), _Tool.ToolState, _Tool.ToolAction);
+            sb.AppendFormat("Action:**{0}**{1} {2}\n", _Tool.Queue.Current, _Tool.Queue.HasCreationAction ? "*" : "", _Tool.Queue.GetQueueIndexes());
+            if (_Tool.Hover.IsNull)
+            {
+                sb.AppendFormat("Nothing hovered\n");
+            }
+            else
+            {
+                string prefabName = QCommon.GetPrefabName(EntityManager, _Tool.Hover.Definition.m_Entity);
+                if (prefabName.Length > 26) prefabName = prefabName.Substring(0, 24) + "...";
+                sb.AppendFormat("**{0}** {1}\n", _Tool.Hover.Definition.m_Entity.DX(), prefabName);
+            }
+            sb.AppendFormat("**{0}**\n", _Tool.m_PointerPos.DX());
+            sb.AppendFormat("MVs:**{0}** (CPs:{1}), Sel:**{2}** ({3})\n",
+                _Tool.Moveables.Count, _Tool.Moveables.CountOf<MVControlPoint>(), _Tool.Selection.Count,
+                _Tool.Selection.CountFull - _Tool.Selection.Count >= 0 ? _Tool.Selection.CountFull - _Tool.Selection.Count : "...");
+            sb.AppendFormat("Overlays:**{0}** ({1} types), Util:**{2}**, CPs:**{3}**\n",
+                GetOverlayCount(),
+                GetOverlayTypeCount(),
+                GetOverlayCount(OverlayTypes.SelectionCenter) + GetOverlayCount(OverlayTypes.Marquee),
+                GetOverlayCount(OverlayTypes.MVControlPoint));
+            return sb.ToString();
         }
 
         private void MIT_ShowRebindConfirm(bool doRebind)

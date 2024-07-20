@@ -10,7 +10,6 @@ const register: ModRegistrar = (moduleRegistry) => {
     // - You should see a hello world output to the console.
     // - use the useModding() hook to access exposed UI, api and native coherent engine interfaces. 
     // Good luck and have fun!
-    
     moduleRegistry.extend("game-ui/game/components/toolbar/top/toggles.tsx", "PhotoModeToggle", MoveItButton);
     moduleRegistry.append("Game", MIT_MainPanel);
     moduleRegistry.append("Game", MIT_DebugPanel);

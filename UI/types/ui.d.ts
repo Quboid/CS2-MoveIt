@@ -34,21 +34,61 @@ declare module "cs2/ui" {
   export interface TooltipProps extends ClassProps {
   	tooltip: ReactNode;
   	disabled?: boolean;
+  	forceVisible?: boolean;
   	theme?: Partial<BalloonTheme>;
   	direction?: BalloonDirection;
   	alignment?: BalloonAlignment;
   	children: RefReactElement;
   }
-  export export const Tooltip: ({ tooltip, disabled, theme, direction, alignment, className, children }: PropsWithChildren<TooltipProps>) => JSX.Element;
+  export export const Tooltip: ({ tooltip, forceVisible, disabled, theme, direction, alignment, className, children }: PropsWithChildren<TooltipProps>) => JSX.Element;
+  export const FOCUS_DISABLED: unique symbol;
+  export const FOCUS_AUTO: unique symbol;
+  export type FocusKey = typeof FOCUS_DISABLED | typeof FOCUS_AUTO | UniqueFocusKey;
+  export type UniqueFocusKey = FocusSymbol | string | number;
+  export class FocusSymbol {
+  	readonly debugName: string;
+  	readonly r: number;
+  	constructor(debugName: string);
+  	toString(): string;
+  }
+  export interface PanelTheme extends PanelTitleBarTheme {
+  	panel: string;
+  	header: string;
+  	content: string;
+  	footer: string;
+  }
+  export interface PanelTitleBarTheme {
+  	titleBar: string;
+  	title: string;
+  	icon: string;
+  	iconSpace: string;
+  	closeButton: string;
+  	closeIcon: string;
+  	toggle: string;
+  	toggleIcon: string;
+  	toggleIconExpanded: string;
+  }
+  export interface DialogStackProps {
+  	showDialog: (dialog: ReactNode) => void;
+  	closeAll: () => void;
+  }
+  export export const DialogStack: import("react").Context<DialogStackProps>;
+  export interface DialogContextProps {
+  	onClose: () => void;
+  }
+  export export const DialogContext: import("react").Context<DialogContextProps>;
+  export export const DialogRenderer: ({ children }: PropsWithChildren) => JSX.Element;
   export interface ConfirmationDialogProps {
   	title?: ReactNode;
   	message: ReactNode;
+  	details?: string;
   	confirm?: ReactNode;
   	cancel?: ReactNode;
   	onConfirm: (dismiss: boolean) => void;
   	onCancel?: () => void;
   	dismissable?: boolean;
   	cancellable?: boolean;
+  	zIndex?: number;
   }
   export const UITriggeredConfirmationDialog: React.FC<ConfirmationDialogProps>;
   export enum UISound {
@@ -98,16 +138,6 @@ declare module "cs2/ui" {
   	openMenu = "open-menu",
   	closeMenu = "close-menu"
   }
-  export const FOCUS_DISABLED: unique symbol;
-  export const FOCUS_AUTO: unique symbol;
-  export type FocusKey = typeof FOCUS_DISABLED | typeof FOCUS_AUTO | UniqueFocusKey;
-  export type UniqueFocusKey = FocusSymbol | string | number;
-  export class FocusSymbol {
-  	readonly debugName: string;
-  	readonly r: number;
-  	constructor(debugName: string);
-  	toString(): string;
-  }
   export interface Number2 {
   	readonly x: number;
   	readonly y: number;
@@ -144,6 +174,7 @@ declare module "cs2/ui" {
   	"Leave Underground Mode": Action;
   	"Leave Info View": Action;
   	"Switch Tab": Action1D;
+  	"Switch Option Section": Action1D;
   	"Switch DLC": Action1D;
   	"Switch Ordering": Action1D;
   	"Switch Radio Network": Action1D;
@@ -154,6 +185,7 @@ declare module "cs2/ui" {
   	"Toggle Snapping": Action;
   	"Capture Keyframe": Action;
   	"Reset Property": Action;
+  	"Toggle Property": Action;
   	"Previous Tutorial Phase": Action;
   	"Continue Tutorial": Action;
   	"Focus Tutorial List": Action;
@@ -189,7 +221,13 @@ declare module "cs2/ui" {
   	"Save Options": Action;
   	"Switch User": Action;
   	"Unset Binding": Action;
+  	"Reset Binding": Action;
   	"Switch Savegame Location": Action1D;
+  	"Show Advanced": Action;
+  	"Hide Advanced": Action;
+  	"Select Directory": Action;
+  	"Search Options": Action;
+  	"Clear Search": Action;
   	"Debug UI": Action;
   	"Debug Prefab Tool": Action;
   	"Debug Change Field": Action1D;
@@ -204,7 +242,7 @@ declare module "cs2/ui" {
   	hover?: UISound | string | null;
   	focus?: UISound | string | null;
   }
-  export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement | HTMLDivElement> {
   	focusKey?: FocusKey;
   	debugName?: string;
   	selected?: boolean;
@@ -212,8 +250,10 @@ declare module "cs2/ui" {
   	sounds?: ButtonSounds | null;
   	selectAction?: InputAction;
   	selectSound?: UISound | string | null;
+  	tooltipLabel?: ReactNode;
   	/** When the button is clicked or the SELECT button on a gamepad is pressed */
   	onSelect?: () => void;
+  	as?: "button" | "div";
   }
   export interface IconButtonTheme extends ButtonTheme {
   	icon: string;
@@ -237,6 +277,7 @@ declare module "cs2/ui" {
   export export const Button: (props: ButtonProps$1) => JSX.Element;
   export export const MenuButton: (props: Partial<LabeledIconButtonProps>) => JSX.Element;
   export export const FloatingButton: (props: Partial<IconButtonProps>) => JSX.Element;
+  export type AnchoredPopupAlignment = "left" | "right";
   export interface DropdownTheme extends DropdownToggleTheme, DropdownMenuTheme, DropdownItemTheme {
   }
   export interface DropdownToggleTheme {
@@ -259,8 +300,9 @@ declare module "cs2/ui" {
   	initialFocused?: UniqueFocusKey | null;
   	theme?: Partial<DropdownTheme>;
   	content: ReactNode;
+  	alignment?: AnchoredPopupAlignment;
   }
-  export export const Dropdown: ({ focusKey, initialFocused, theme: partialTheme, content, children }: PropsWithChildren<DropdownProps>) => JSX.Element;
+  export export const Dropdown: ({ focusKey, initialFocused, theme: partialTheme, content, alignment, children }: PropsWithChildren<DropdownProps>) => JSX.Element;
   export interface DropdownToggleProps extends DropdownToggleBaseProps {
   	theme?: DropdownToggleTheme;
   }
@@ -270,6 +312,7 @@ declare module "cs2/ui" {
   	theme?: Partial<DropdownToggleTheme>;
   	sounds?: ButtonSounds | null;
   	selectSound?: UISound | string | null;
+  	tooltipLabel?: ReactNode;
   }
   export interface DropdownItemProps<T> extends ClassProps {
   	focusKey?: FocusKey;
@@ -298,23 +341,6 @@ declare module "cs2/ui" {
   export interface TransitionSounds {
   	enter?: UISound | string | null;
   	exit?: UISound | string | null;
-  }
-  export interface PanelTheme extends PanelTitleBarTheme {
-  	panel: string;
-  	header: string;
-  	content: string;
-  	footer: string;
-  }
-  export interface PanelTitleBarTheme {
-  	titleBar: string;
-  	title: string;
-  	icon: string;
-  	iconSpace: string;
-  	closeButton: string;
-  	closeIcon: string;
-  	toggle: string;
-  	toggleIcon: string;
-  	toggleIconExpanded: string;
   }
   export interface PanelProps extends HTMLAttributes<HTMLDivElement> {
   	focusKey?: FocusKey;
@@ -410,6 +436,8 @@ declare module "cs2/ui" {
   	className?: string;
   	style?: CSSProperties;
   	onScroll?: () => void;
+  	onOverflowX?: (overflow: boolean) => void;
+  	onOverflowY?: (overflow: boolean) => void;
   	autoScroll?: boolean;
   	autoScrollSettings?: AutoScrollSettings;
   }

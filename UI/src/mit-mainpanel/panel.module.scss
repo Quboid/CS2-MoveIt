@@ -26,6 +26,7 @@
 }
 
 .section {
+    font-size: 90%;
     padding: 1rem 3rem 3rem 3rem;
     background-color: #00000011;
 }
@@ -38,7 +39,7 @@
 .buttonRow {
     align-items: stretch;
     display: flex;
-    flex-flow: row nowrap;
+    // flex-flow: row nowrap;
     height: 38rem;
 }
 
@@ -77,15 +78,4 @@
 .checkboxRow:hover
 {
     background-color: #00000022;
-}
-
-.dropdownRow
-{
-    height: 35rem;
-    border-left: 3rem #0000ff66 solid;
-    padding: 5rem 0 0 6rem;
-}
-.dropdownRow:hover
-{
-    background-color: #0000ff22;
 }

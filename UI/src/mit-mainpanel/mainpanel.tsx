@@ -9,11 +9,8 @@ import icon from "../img/MoveIt_Active.svg";
 import styles from "./panel.module.scss";
 
 import { ButtonRowTop } from "./buttonRow";
-
-function OnClose()
-{
-    trigger(mod.id, "MIT_EnableToggle");
-}
+import { CheckboxRow } from "./checkboxRow";
+import { FiltersDropdown } from "./filtersFoldout";
 
 export const MIT_MainPanel = () =>
 {
@@ -34,7 +31,6 @@ export const MIT_MainPanel = () =>
                 <Panel
                     draggable
                     className={styles.panel}
-                    // onClose={OnClose}
                     initialPosition={position}
                     header={(
                         <div className={styles.header}>
@@ -46,8 +42,8 @@ export const MIT_MainPanel = () =>
                         <div ref={panelRef}>
                             {ButtonRowTop(panelState.TopRow)}
                             {/* {CheckboxRow("Hello", "hello")}
-                            {CheckboxRow("World", "world")}
-                            {DropdownParentRow("Noot!", "noot")} */}
+                            {CheckboxRow("World", "world")} */}
+                            {FiltersDropdown(panelState.FilterSection)}
                         </div>
                     </PanelSection>
                 </Panel>

@@ -2,11 +2,17 @@
   <!--Id must be set in order to update existed mod. it is not required for publishing mod for the first time-->
   <ModId Value="74324" />
   <!--Name of the mod to display to players-->
-  <DisplayName Value="Move It (Beta)" />
+  <DisplayName Value="Move It" />
   <!--Short description of the mod-->
   <ShortDescription Value="Move Things" />
   <!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
-  <LongDescription># Move It for Cities Skylines 2.
+  <LongDescription># Move It Beta for Cities Skylines 2.
+
+This is the unstable beta version and may have unexpected issues. Please report any in the forum or on Discord.
+
+Stable version:
+https://mods.paradoxplaza.com/mods/74324/Windows
+
 
 You can move trees, props, decals, buildings, surfaces, nodes, and segment curves.
 
@@ -44,6 +50,7 @@ Manipulating segments - you can move the control points in all three axis; the 2
 * Alt+M - Toggle Manipulation mode
 * Alt+D - Deselect all
 * Page Up/Down - move selected objects vertically
+* Numpad 9/3 - move selected objects vertically, including in editor
 * Control+Z - Undo
 * Control+Shift+Z - Redo
 * Hold Alt - Snap rotation to 45 degrees, snap segments as described above.
@@ -78,18 +85,13 @@ Icons from SVG Repo, and from WishForge.Games under CC Attribution License.</Lon
   <!--Link to the forum post where the mod can be discussed-->
   <ForumLink Value="https://forum.paradoxplaza.com/forum/threads/move-it.1684140/" />
   <!--Version of the mod-->
-  <ModVersion Value="0.4.2" />
+  <ModVersion Value="0.4.3.1" />
   <!--Recommended version of the base game to use the mod-->
   <GameVersion Value="1.*" />
   <!--Dependency for the mod, can be set multiple-->
   <Dependency Id="" DisplayName="" Version="" />
   <!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-  <ChangeLog>0.4.2:
-- Surfaces can be moved/rotated
-- Move It attempts to pick the most likely object when they overlap
-- Added alternative up/down keybindings
-- Mouse hover detection improved
-- Segment selection overlays now highlight edges</ChangeLog>
+  <ChangeLog>Fixed moving buildings breaking some pedestrian pathing</ChangeLog>
   <!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
   <ExternalLink Type="discord" Url="https://discord.gg/nURB9MQ" />
   <ExternalLink Type="patreon" Url="https://www.patreon.com/Quboid" />

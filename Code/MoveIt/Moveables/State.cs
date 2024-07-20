@@ -108,7 +108,7 @@ namespace MoveIt.Moveables
                 manager.HasComponent<Game.Net.Edge>(e) ||
                 manager.HasComponent<Game.Net.Node>(e) ||
                 manager.HasComponent<Game.Areas.Surface>(e) ||
-                manager.HasComponent<Game.Areas.HangaroundLocation>(e) ||
+                manager.HasComponent<Game.Areas.Space>(e) ||
                 manager.HasComponent<Components.MIT_ControlPoint>(e)
                 )) return false;
 

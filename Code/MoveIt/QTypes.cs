@@ -114,7 +114,7 @@ namespace MoveIt
             {
                 return Identity.Node;
             }
-            else if (manager.HasComponent<Game.Areas.Surface>(e) || manager.HasComponent<Game.Areas.HangaroundLocation>(e))
+            else if (manager.HasComponent<Game.Areas.Surface>(e) || manager.HasComponent<Game.Areas.Space>(e))
             {
                 return Identity.Surface;
             }

@@ -1,4 +1,5 @@
-﻿using MoveIt.Moveables;
+﻿using Colossal.Entities;
+using MoveIt.Moveables;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -8,8 +9,18 @@ namespace MoveIt.QAccessor
 {
     internal partial struct QEntity
     {
+        /// <summary>
+        /// This object's entity
+        /// </summary>
         internal Entity m_Entity;
+        /// <summary>
+        /// The ultimate parent entity, what the player sees as selected
+        /// </summary>
         internal Entity m_Parent;
+        /// <summary>
+        /// The direct owner of this object
+        /// </summary>
+        internal Entity m_Owner;
         internal Identity m_Identity;
         internal ID m_ID;
         internal QLookup m_Lookup;
@@ -17,11 +28,12 @@ namespace MoveIt.QAccessor
 
         internal QEntity(EntityManager manager, ref QLookup lookup, Entity e, Identity identity, Entity parent = default)
         {
-            m_Lookup = lookup;
-            m_Entity = e;
-            m_Identity = identity;
-            m_Parent = parent;
-            m_Manager = manager;
+            m_Lookup    = lookup;
+            m_Entity    = e;
+            m_Identity  = identity;
+            m_Parent    = parent;
+            m_Owner     = default;
+            m_Manager   = manager;
 
             m_ID = identity switch
             {
@@ -32,6 +44,11 @@ namespace MoveIt.QAccessor
                 Identity.Surface        => ID.Surface,
                 _ => ID.Generic,
             };
+
+            if (m_Manager.TryGetComponent<Game.Common.Owner>(e, out var owner))
+            {
+                m_Owner = owner.m_Owner;
+            }
         }
 
         internal readonly float3 Position => m_ID switch

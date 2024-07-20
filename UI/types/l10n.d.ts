@@ -40,7 +40,8 @@ declare module "cs2/l10n" {
   	XP = "xp",
   	Temperature = "temperature",
   	NetElevation = "netElevation",
-  	ScreenFrequency = "screenFrequency"
+  	ScreenFrequency = "screenFrequency",
+  	Custom = "custom"
   }
   export enum LocElementType {
   	Bounds = "Game.UI.Localization.LocalizedBounds",
@@ -171,6 +172,7 @@ declare module "cs2/l10n" {
   export interface LocalizedStringProps {
   	id: string | null;
   	fallback?: string | null;
+  	showIdOnFail?: boolean;
   	args?: Record<string, LocReactNode> | null;
   }
   export const LocalizedString$1: LocComponent<LocalizedStringProps>;

@@ -118,7 +118,7 @@ namespace MoveIt.Tool
 
         protected override void OnDestroy()
         {
-            Log.Info("Tool.OnDestroy()" + ControlPointManager is null ? " (CPM destroyed)" : "");
+            Log.Info($"Tool.OnDestroy() {(ControlPointManager is null ? "(CPM destroyed)" : "(CPM closing)")}");
             //ControlPointManager?.DestroyAll();
             base.OnDestroy();
         }
