@@ -7,7 +7,7 @@ namespace MoveIt.Selection
 {
     public class SelectionManip : SelectionBase
     {
-        public override bool IsActive => _Tool.IsManipulating;
+        public override bool IsActive => _MIT.IsManipulating;
         public override bool Any => _Buffer.Count(mvd => GetMV(mvd).IsManipChild) > 0;
 
         internal override string Name => "SelManip";
@@ -18,7 +18,7 @@ namespace MoveIt.Selection
 
         public override void ProcessAdd(MVDefinition mvd, bool append)
         {
-            Moveable mv = _Tool.Moveables.GetOrCreate<Moveable>(mvd);
+            Moveable mv = _MIT.Moveables.GetOrCreate<Moveable>(mvd);
 
             if (!mv.IsManipulatable)
             {
@@ -34,9 +34,10 @@ namespace MoveIt.Selection
                 else
                 {
                     Add(mvd);
+                    Add(mv.ParentDefinition);
                 }
             }
-            else if (!_Tool.Selection.Has(mvd))
+            else if (!_MIT.Selection.Has(mvd))
             {
                 if (mv.IsManipChild)
                 {
@@ -60,6 +61,7 @@ namespace MoveIt.Selection
                     Clear();
                 }
                 Add(mvd);
+                Add(mv.ParentDefinition);
             }
         }
 

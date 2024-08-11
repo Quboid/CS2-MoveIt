@@ -10,7 +10,7 @@
 //{
 //    internal abstract class Widget : IDisposable
 //    {
-//        protected static readonly MIT _Tool = MIT.m_Instance;
+//        protected static readonly MIT _MIT = MIT.m_Instance;
 //        internal string m_Name;
 //        protected List<Polygon> _Polygons;
 
@@ -36,10 +36,10 @@
 
 //        internal static bool TryUnset(string name)
 //        {
-//            if (!_Tool.m_RenderSystem.TryGet(name, out Widget widget)) return false;
-//            if (_Tool.m_OverlaySystem.m_DebugFreeze) return true; // Pretend we deleted it
+//            if (!_MIT.m_RenderSystem.TryGet(name, out Widget widget)) return false;
+//            if (_MIT.m_OverlaySystem.m_DebugFreeze) return true; // Pretend we deleted it
 //            widget.Dispose();
-//            _Tool.m_RenderSystem.Remove(widget);
+//            _MIT.m_RenderSystem.Remove(widget);
 //            return true;
 //        }
 
@@ -81,15 +81,15 @@
 
 //        internal static void Set(string name, Bounds3 bounds)
 //        {
-//            if (_Tool.m_OverlaySystem.m_DebugFreeze) return;
+//            if (_MIT.m_OverlaySystem.m_DebugFreeze) return;
 
-//            if (!_Tool.m_RenderSystem.Has(name))
+//            if (!_MIT.m_RenderSystem.Has(name))
 //            {
-//                _Tool.m_RenderSystem.Add(new Cuboid(name, bounds));
+//                _MIT.m_RenderSystem.Add(new Cuboid(name, bounds));
 //                return;
 //            }
 
-//            if (_Tool.m_RenderSystem.Get<Widget>(name) is not Cuboid c)
+//            if (_MIT.m_RenderSystem.Get<Widget>(name) is not Cuboid c)
 //            {
 //                MIT.Log.Error($"Updating {name} but it is not a Cuboid");
 //                return;
@@ -119,15 +119,15 @@
 
 //        internal static void Set(string name, Circle2 circle, Bounds1 bounds)
 //        {
-//            if (_Tool.m_OverlaySystem.m_DebugFreeze) return;
+//            if (_MIT.m_OverlaySystem.m_DebugFreeze) return;
 
-//            if (!_Tool.m_RenderSystem.Has(name))
+//            if (!_MIT.m_RenderSystem.Has(name))
 //            {
-//                _Tool.m_RenderSystem.Add(new Cylinder(name, circle, bounds));
+//                _MIT.m_RenderSystem.Add(new Cylinder(name, circle, bounds));
 //                return;
 //            }
 
-//            if (_Tool.m_RenderSystem.Get<Widget>(name) is not Cylinder c)
+//            if (_MIT.m_RenderSystem.Get<Widget>(name) is not Cylinder c)
 //            {
 //                MIT.Log.Error($"Updating {name} but it is not a Cylinder");
 //                return;
@@ -154,13 +154,13 @@
 
 //        internal static void Set(string name, float3 position)
 //        {
-//            if (!_Tool.m_RenderSystem.Has(name))
+//            if (!_MIT.m_RenderSystem.Has(name))
 //            {
-//                _Tool.m_RenderSystem.Add(new Point(name, position));
+//                _MIT.m_RenderSystem.Add(new Point(name, position));
 //                return;
 //            }
 
-//            _Tool.m_RenderSystem.Update(name, position);
+//            _MIT.m_RenderSystem.Update(name, position);
 //        }
 //    }
 

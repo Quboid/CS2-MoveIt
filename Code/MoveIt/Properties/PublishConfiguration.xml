@@ -6,22 +6,18 @@
   <!--Short description of the mod-->
   <ShortDescription Value="Move Things" />
   <!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
-  <LongDescription># Move It Beta for Cities Skylines 2.
-
-This is the unstable beta version and may have unexpected issues. Please report any in the forum or on Discord.
-
-Stable version:
-https://mods.paradoxplaza.com/mods/74324/Windows
-
+  <LongDescription># Move It for Cities Skylines 2
 
 You can move trees, props, decals, buildings, surfaces, nodes, and segment curves.
 
-Press M or click on the Move It icon at the bottom right to enable the tool.
+Press **M** or click on the Move It icon at the bottom right to enable the tool.
 
 
 ## Selecting:
 
 Left-click to select, shift+click on unselected object to add to selection or on selected object to remove from selection. Press Control+M or check options to toggle Marquee mode; when enabled you can drag out a rectangle to select multiple objects. Right-click to clear selection and hide all control points.
+
+You can limit what times of objects are selected by opening the Filters foldout menu and unticking whatever you don't want. The tick box at the top toggles all filters on or off, and you can right-click on any filter to enable it and disable all others. If the Filters foldout menu is closed filtering doesn't apply.
 
 
 ## Mode Icons:
@@ -30,11 +26,13 @@ Left-click to select, shift+click on unselected object to add to selection or on
 * Manipulation Mode - Alter aspects within an object.
 
 
-## Moving:
+## Moving and Rotating:
 
-Left-click drag to move selection, right-click drag to rotate selection. Alt+right-click drag to rotate in 45 degree increments.
+Left-Click drag to move selection, right-click drag to rotate selection. Alt+Right-Click drag to rotate in 45 degree increments.
 
 While reshaping a single segment, drag to the mid-point between the nodes and hold Alt to snap to straight.
+
+Hold Control while moving for more precision by switching to low sensitivity and hiding selection overlays.
 
 
 ## Manipulation:
@@ -44,27 +42,28 @@ To enter manipulation mode, click on the icon, press Alt+M, or Alt+click on a ma
 Manipulating segments - you can move the control points in all three axis; the 2 node connections and the 2 curve points. This is very powerful, and extreme alterations will cause visual glitching and may break traffic routing. Control Points snap along their visible line. Also, for node connections drag to the node and hold Alt to snap to the node's position, and for curve points, drag to a third of the way between the segment's two nodes and hold Alt to snap it to a straight line.
 
 
-## Default Keys:
-* M - open or close tool (you must unbind the vanilla binding for M)
-* Control+M - Toggle Marquee selection
-* Alt+M - Toggle Manipulation mode
-* Alt+D - Deselect all
-* Page Up/Down - move selected objects vertically
-* Numpad 9/3 - move selected objects vertically, including in editor
-* Control+Z - Undo
-* Control+Shift+Z - Redo
-* Hold Alt - Snap rotation to 45 degrees, snap segments as described above.
+## Toolbox
+* Align to Terrain Height [Control+G] - Selected objects move up or down to terrain height. This does **not** work with objects that affect terrain, which includes buildings and ground-level networks.
+* Align to Object Height [Control+H] - Selected objects move up or down to the height of whatever object you click on.
+* Rotate at Centre [Alt+A] - Selected objects rotate to face the same direction as whatever object you click on, rotating around the selection's central point.
+* Rotate in-Place [Shift+A] - Selected objects rotate to face the same direction as whatever object you click on, without changing their position.
 
 
 ## Options:
 * Invert Rotation - Move It uses the same rotation direction that Cities 1 and Move It for Cities 1 used. If you prefer Cities 2's direction, you can invert it.
-* Show Debug Panel - Show some technical information about Move It's current status. You probably don't want this.
 * Extended Debug Logging - Saves more information to the log file to help me hunt down errors.
 * Save Logs To Desktop - Saves your current log files to your desktop so you can easily submit them with bug reports. You can also do this with Skyve.
+* Advanced: Show Debug Panel - Show some technical information about Move It's current status. You probably don't want this.
 * Advanced: Hide Move It Icon - If the icon is causing crashing issues and nothing else helps, enable this to hide the icon.
 * Advanced: Show Debug Lines - Displays some debugging data.
 
-This is an beta version of Move It. Save often, save different.
+Hotkeys: view and change any keyboard settings here.
+
+
+## Known Issues
+* Align to terrain height does yet not work with objects that affect terrain, e.g. buildings and on-ground roads.
+* Page Up/Down do not work in the editor. Use Numpad 9 and 3 instead, or rebind the move up/down keys.
+* Some players experience an occasional crash the first time they use Move It after using Undo. If you get this, please send me your log files.
 
 
 ## Credits:
@@ -83,15 +82,26 @@ Icons from SVG Repo, and from WishForge.Games under CC Attribution License.</Lon
   <!--Tag, can be set multiple-->
   <Tag Value="Code Mod" />
   <!--Link to the forum post where the mod can be discussed-->
-  <ForumLink Value="https://forum.paradoxplaza.com/forum/threads/move-it.1684140/" />
+  <ForumLink Value="https://forum.paradoxplaza.com/forum/threads/move-it.1699016/" />
   <!--Version of the mod-->
-  <ModVersion Value="0.4.3.1" />
+  <ModVersion Value="0.5.0.0" />
   <!--Recommended version of the base game to use the mod-->
   <GameVersion Value="1.*" />
   <!--Dependency for the mod, can be set multiple-->
   <Dependency Id="" DisplayName="" Version="" />
   <!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-  <ChangeLog>Fixed moving buildings breaking some pedestrian pathing</ChangeLog>
+  <ChangeLog>0.5.0
+- Selection filters (Alt+F to enable/disable filtering)
+- Toolbox!
+- Align to terrain height (Control+G) - does not apply to buildings or on-ground roads!
+- Align to to object height (Control+H)
+- Rotate At Centre (Alt+A)
+- Rotate In-Place (Shift+A)
+- Precision mode: hold Control while moving to hide overlays and reduce mouse sensitivity
+- Improved logging performance and detail
+- Fixed occasional crash on Undo
+- Fixed occasional crash when dragging buildings over other buildings
+- Fixed props dropping to ground height</ChangeLog>
   <!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
   <ExternalLink Type="discord" Url="https://discord.gg/nURB9MQ" />
   <ExternalLink Type="patreon" Url="https://www.patreon.com/Quboid" />

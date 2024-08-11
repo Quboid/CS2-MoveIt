@@ -81,21 +81,23 @@ namespace MoveIt.Overlays
 
         protected override void OnUpdate()
         {
+            if (_MIT.IsLowSensitivity) return;
+
             //string msg = $"\nOverlays:{_DrawQuery.CalculateEntityCount()}";
             //var all = _DrawQuery.ToEntityArray(Allocator.Temp);
             //foreach (var olay in all)
             //{
-            //    var t = _Tool.EntityManager.GetComponentData<MIO_Type>(olay).m_Type;
+            //    var t = _MIT.EntityManager.GetComponentData<MIO_Type>(olay).m_Type;
             //    msg += $"\n    [{olay.D()}-{t}]";
             //}
-            //msg += $"\n{_Tool.Moveables.DebugFull()}";
+            //msg += $"\n{_MIT.Moveables.DebugFull()}";
             //QLog.Bundle("OVRL", msg);
-            //QLog.Debug($"Draw:{_DrawQuery.CalculateEntityCount()}, Cleanup:{_CleanupQuery.CalculateEntityCount()}, TTLTick:{_TTLTickQuery.CalculateEntityCount()}, Freeze:{DebugFreeze}({_DebugFreeze},{_DebugFirstFrozen})");
+            //MIT.Log.Debug($"Draw:{_DrawQuery.CalculateEntityCount()}, Cleanup:{_CleanupQuery.CalculateEntityCount()}, TTLTick:{_TTLTickQuery.CalculateEntityCount()}, Freeze:{DebugFreeze}({_DebugFreeze},{_DebugFirstFrozen})");
 
             ToolFlags toolFlags = ToolFlags.None;
-            if (_Tool.IsManipulating)                           toolFlags |= ToolFlags.ManipulationMode;
+            if (_MIT.IsManipulating)                            toolFlags |= ToolFlags.ManipulationMode;
             if (QKeyboard.Shift)                                toolFlags |= ToolFlags.HasShift;
-            if (_Tool.ToolState == ToolStates.DrawingSelection) toolFlags |= ToolFlags.IsMarquee;
+            if (_MIT.MITState == MITStates.DrawingSelection)    toolFlags |= ToolFlags.IsMarquee;
             if (Mod.Settings.ShowDebugLines)                    toolFlags |= ToolFlags.ShowDebug;
 
             #region old overlays
@@ -109,7 +111,7 @@ namespace MoveIt.Overlays
                 UpdateOverlaysJob updateOverlays = new()
                 {
                     m_ToolFlags                 = toolFlags,
-                    m_IsManipMode               = _Tool.m_IsManipulateMode,
+                    m_IsManipMode               = _MIT.m_IsManipulateMode,
                     m_CameraPosition            = (float3)Camera.main.transform.position,
                     cth_Overlay                 = GetComponentTypeHandle<MIO_Type>(),
                     cth_CommonData              = GetComponentTypeHandle<MIO_Common>(),
@@ -142,7 +144,7 @@ namespace MoveIt.Overlays
                 {
                     m_OverlayRenderBuffer   = buffer,
                     m_ToolFlags             = toolFlags,
-                    m_IsManipMode           = _Tool.m_IsManipulateMode,
+                    m_IsManipMode           = _MIT.m_IsManipulateMode,
                     m_CameraPosition        = (float3)Camera.main.transform.position,
                     cth_Overlay             = GetComponentTypeHandle<MIO_Type>(true),
                     cth_CommonData          = GetComponentTypeHandle<MIO_Common>(true),
@@ -208,10 +210,10 @@ namespace MoveIt.Overlays
             var all = _DrawQuery.ToEntityArray(Allocator.Temp);
             foreach (Entity olay in all)
             {
-                var t = _Tool.EntityManager.GetComponentData<MIO_Type>(olay).m_Type;
+                var t = _MIT.EntityManager.GetComponentData<MIO_Type>(olay).m_Type;
                 msg += $"  [{olay.D()}-{t}]";
             }
-            return msg + $"\n{_Tool.Moveables.DebugFull()}";
+            return msg + $"\n{_MIT.Moveables.DebugFull()}";
         }
     }
 }

@@ -10,12 +10,12 @@ namespace MoveIt.Moveables
         {
             get
             {
-                Circle3 circle = QAccessor.QEntity.GetSurfaceCircle(_Tool.EntityManager, m_Entity);
+                Circle3 circle = QAccessor.QEntity.GetSurfaceCircle(_MIT.EntityManager, m_Entity);
                 return new(circle.position, circle.rotation);
             }
         }
 
-        public MVSurface(Entity e) : base(e, Identity.Surface, ObjectType.Normal)
+        public MVSurface(Entity e) : base(e, Identity.Surface)
         {
             m_Overlay = Factory.Create<OverlaySurface>(this, OverlayTypes.MVSurface);
             Refresh();
@@ -23,7 +23,7 @@ namespace MoveIt.Moveables
 
         internal override float GetRadius()
         {
-            return QAccessor.QEntity.GetSurfaceCircle(_Tool.EntityManager, m_Entity).radius;
+            return QAccessor.QEntity.GetSurfaceCircle(_MIT.EntityManager, m_Entity).radius;
         }
     }
 }

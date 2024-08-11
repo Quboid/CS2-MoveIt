@@ -6,7 +6,7 @@ namespace MoveIt.Overlays
 {
     public class OverlayMarquee : Overlay
     {
-        private static EntityArchetype _Archetype = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                 typeof(MIO_Type),
                 typeof(MIO_Common),
@@ -16,7 +16,7 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Entity owner)
         {
-            Entity e = _Tool.EntityManager.CreateEntity(_Archetype);
+            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new()
             {
@@ -25,8 +25,8 @@ namespace MoveIt.Overlays
                 m_Owner = owner,
             };
 
-            _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.Marquee));
-            _Tool.EntityManager.SetComponentData(e, common);
+            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.Marquee));
+            _MIT.EntityManager.SetComponentData(e, common);
 
             return e;
         }
@@ -56,7 +56,7 @@ namespace MoveIt.Overlays
 
         public void Update(Quad3 quad)
         {
-            _Tool.EntityManager.SetComponentData<MIO_Quad>(m_Entity, new(quad));
+            _MIT.EntityManager.SetComponentData<MIO_Quad>(m_Entity, new(quad));
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using Colossal.Mathematics;
 using Game.Prefabs;
-using MoveIt.Actions;
+using MoveIt.Actions.Transform;
 using MoveIt.Overlays;
 using MoveIt.Tool;
 using QCommonLib;
@@ -16,7 +16,7 @@ namespace MoveIt.Moveables
     {
         public const int CURVE_CPS = 4;
 
-        protected static readonly MIT _Tool = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
 
         /// <summary>
         /// The game object (building/node/CP/etc)'s entity
@@ -35,7 +35,6 @@ namespace MoveIt.Moveables
         public short m_ParentKey = -1;
 
         public Identity m_Identity;
-        public ObjectType m_ObjectType;
         public Overlay m_Overlay;
         public string Name => GetType().Name;
 
@@ -56,19 +55,18 @@ namespace MoveIt.Moveables
         /// </summary>
         public virtual bool IsManaged => false;
 
-        public float m_YOffset = 0f;
-        public virtual bool IsValid => _Tool.IsValid(m_Entity);
+        public virtual bool IsValid => _MIT.IsValid(m_Entity);
         public virtual bool IsOverlayValid => m_Overlay is not null;
 
-        public virtual Game.Objects.Transform Transform => _Tool.EntityManager.GetComponentData<Game.Objects.Transform>(m_Entity);
+        public virtual Game.Objects.Transform Transform => _MIT.EntityManager.GetComponentData<Game.Objects.Transform>(m_Entity);
         public virtual MVDefinition Definition => new(m_Identity, m_Entity, IsManipulatable, IsManaged, m_Parent, m_ParentKey);
+        public virtual MVDefinition ParentDefinition => new(QTypes.GetEntityIdentity(m_Parent), m_Parent, IsManipulatable, false, Entity.Null, -1);
 
-        public Moveable(Entity e, Identity identity, ObjectType objectType)
+
+        public Moveable(Entity e, Identity identity)
         {
             m_Entity = e;
             m_Identity = identity;
-            m_ObjectType = objectType;
-            UpdateYOffset();
         }
 
         /// <summary>
@@ -84,13 +82,7 @@ namespace MoveIt.Moveables
             return true;
         }
 
-        internal virtual void UpdateYOffset()
-        {
-            float3 position = Transform.m_Position;
-            m_YOffset = position.y - _Tool.GetTerrainHeight(position);
-        }
-
-        internal virtual void MoveIt(TransformAction action, State state, bool move, bool rotate)
+        internal virtual void MoveIt(TransformBase action, State state, bool move, bool rotate)
         {
             if (!move && !rotate) return;
 
@@ -111,7 +103,7 @@ namespace MoveIt.Moveables
         {
             try
             {
-                Game.Rendering.CullingInfo cullingInfo = _Tool.EntityManager.GetComponentData<Game.Rendering.CullingInfo>(m_Entity);
+                Game.Rendering.CullingInfo cullingInfo = _MIT.EntityManager.GetComponentData<Game.Rendering.CullingInfo>(m_Entity);
                 Bounds3 bounds = cullingInfo.m_Bounds;
                 return bounds;
             }
@@ -124,13 +116,16 @@ namespace MoveIt.Moveables
 
         public virtual void OnHover()
         {
-            //QLog.Debug($"{m_Entity.D()} {Name} OnHover {m_Overlay.Common.m_Flags}");
+            InteractionFlags flags = InteractionFlags.Hovering | (_MIT.MITState == MITStates.ToolActive ? InteractionFlags.ToolHover : 0);
+            m_Overlay.AddFlag(flags);
 
-            m_Overlay.AddFlag(InteractionFlags.Hovering);
+            flags = InteractionFlags.ParentHovering | (_MIT.MITState == MITStates.ToolActive ? InteractionFlags.ToolParentHover : 0);
             foreach (var mv in GetChildMoveablesForOverlays<Moveable>())
             {
-                mv.m_Overlay.AddFlag(InteractionFlags.ParentHovering);
+                mv.m_Overlay.AddFlag(flags);
             }
+
+            //QLog.XDebug($"{m_Entity.D()} {Name} OnHover {m_Overlay.Common.m_Flags}");
         }
 
         /// <summary>
@@ -138,28 +133,29 @@ namespace MoveIt.Moveables
         /// </summary>
         public virtual void OnUnhover()
         {
-            //QLog.Debug($"{m_Entity.D()} {Name} OnUnhover {m_Overlay.Common.m_Flags}");
+            //QLog.XDebug($"{m_Entity.D()} {Name} OnUnhover {m_Overlay.Common.m_Flags}");
 
-            m_Overlay.RemoveFlag(InteractionFlags.Hovering);
+            m_Overlay.RemoveFlag(InteractionFlags.Hovering | InteractionFlags.ToolHover);
+
             foreach (var mv in GetChildMoveablesForOverlays<Moveable>())
             {
-                mv.m_Overlay.RemoveFlag(InteractionFlags.ParentHovering);
+                mv.m_Overlay.RemoveFlag(InteractionFlags.ParentHovering | InteractionFlags.ToolParentHover);
             }
 
             if (m_Overlay.Common.m_Flags == 0)
             {
-                _Tool.Moveables.RemoveIfUnused(Definition);
+                _MIT.Moveables.RemoveIfUnused(Definition);
             }
         }
 
         public virtual void OnClick()
         {
-            //QLog.Debug($"{m_Entity.D()} {Name} OnClick");
+            //MIT.Log.Debug($"{m_Entity.D()} {Name} OnClick angle:{Transform.m_Rotation.Y()}");
         }
 
         public virtual void OnSelect()
         {
-            //QLog.Debug($"{m_Entity.D()} {Name} OnSelect");
+            //MIT.Log.Debug($"{m_Entity.D()} {Name} OnSelect");
             m_Overlay.AddFlag(InteractionFlags.Selected);
             foreach (var mv in GetChildMoveablesForOverlays<Moveable>())
             {
@@ -172,13 +168,13 @@ namespace MoveIt.Moveables
         /// </summary>
         public virtual void OnDeselect()
         {
-            //QLog.Debug($"{m_Entity.D()} {Name} OnDeselect");
+            //MIT.Log.Debug($"{m_Entity.D()} {Name} OnDeselect");
             m_Overlay.RemoveFlag(InteractionFlags.Selected);
             foreach (var mv in GetChildMoveablesForOverlays<Moveable>())
             {
                 mv.m_Overlay.RemoveFlag(IsManipulatable ? InteractionFlags.ParentManipulating : InteractionFlags.ParentSelected);
             }
-            _Tool.Moveables.RemoveIfUnused(Definition);
+            _MIT.Moveables.RemoveIfUnused(Definition);
         }
 
         public bool OverlayHasFlag(InteractionFlags flag)
@@ -187,14 +183,14 @@ namespace MoveIt.Moveables
             if (m_Overlay is null) return false;
             if (m_Overlay.m_Entity.Equals(Entity.Null)) return false;
 
-            MIO_Common common = _Tool.EntityManager.GetComponentData<MIO_Common>(m_Overlay.m_Entity);
+            MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Overlay.m_Entity);
             return (common.m_Flags & flag) != 0;
         }
 
         internal virtual float GetRadius()
         {
-            PrefabRef prefab = _Tool.EntityManager.GetComponentData<PrefabRef>(m_Entity);
-            ObjectGeometryData geoData = _Tool.EntityManager.GetComponentData<ObjectGeometryData>(prefab);
+            PrefabRef prefab = _MIT.EntityManager.GetComponentData<PrefabRef>(m_Entity);
+            ObjectGeometryData geoData = _MIT.EntityManager.GetComponentData<ObjectGeometryData>(prefab);
             return math.max(math.cmax(new float2(geoData.m_Size.x, geoData.m_Size.z)), 2f) / 2;
         }
 
@@ -206,13 +202,13 @@ namespace MoveIt.Moveables
 
         internal bool TryGetBuffer<T>(out DynamicBuffer<T> buffer, bool isReadOnly = false) where T : unmanaged, IBufferElementData
         {
-            if (!_Tool.EntityManager.HasBuffer<T>(m_Entity))
+            if (!_MIT.EntityManager.HasBuffer<T>(m_Entity))
             {
                 buffer = default;
                 return false;
             }
 
-            buffer = _Tool.EntityManager.GetBuffer<T>(m_Entity, isReadOnly);
+            buffer = _MIT.EntityManager.GetBuffer<T>(m_Entity, isReadOnly);
             return true;
         }
 

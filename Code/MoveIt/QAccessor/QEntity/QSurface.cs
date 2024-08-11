@@ -63,7 +63,7 @@ namespace MoveIt.QAccessor
                 }
             }
             //msg += $"\n{m_Entity.DebugEntity()}";
-            //QLog.Debug(msg);
+            //QLog.XDebug(msg);
 
             Surface_SetUpdated();
             return true;
@@ -71,8 +71,6 @@ namespace MoveIt.QAccessor
 
         private readonly bool Surface_RotateBy(State state, float delta, ref Matrix4x4 matrix, float3 origin)
         {
-            //float3 oldAngles = Node_Rotation.ToEulerDegrees();
-            //return Surface_RotateTo(state, Quaternion.Euler(oldAngles.x, oldAngles.y + delta, oldAngles.z), ref matrix, origin);
             return Surface_RotateTo(state, quaternion.identity, ref matrix, origin);
         }
 

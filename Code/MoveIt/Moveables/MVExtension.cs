@@ -7,9 +7,9 @@ namespace MoveIt.Moveables
     {
         public override bool IsManipChild => true;
 
-        public MVExtension(Entity e) : base(e, Identity.Extension, ObjectType.Normal)
+        public MVExtension(Entity e) : base(e, Identity.Extension)
         {
-            if (_Tool.EntityManager.HasComponent<Game.Common.Owner>(e))
+            if (_MIT.EntityManager.HasComponent<Game.Common.Owner>(e))
             {
                 m_Overlay = Factory.Create<OverlayNone>(this, OverlayTypes.None);
             }

@@ -1,4 +1,4 @@
-import { FoldoutCBState } from "./foldout/foState";
+import { FoldoutState } from "./foldout/foState";
 
 export interface ButtonState
 {
@@ -25,5 +25,6 @@ export interface TopRowButtonStates
 export interface PanelState
 {
     TopRow : TopRowButtonStates;
-    FilterSection : FoldoutCBState;
+    FilterSection : FoldoutState;
+    ToolboxSection : FoldoutState;
 }

@@ -9,7 +9,7 @@ namespace MoveIt.Overlays
 {
     public sealed class Factory
     {
-        private static readonly MIT _Tool = MIT.m_Instance;
+        private static readonly MIT _MIT = MIT.m_Instance;
 
         /// <summary>
         /// Create an Overlay subclass
@@ -32,9 +32,9 @@ namespace MoveIt.Overlays
 
         //public static bool RemoveOverlay(Overlay overlay)
         //{
-        //    if (!_Tool.EntityManager.Exists(overlay.m_Entity)) return false;
+        //    if (!_MIT.EntityManager.Exists(overlay.m_Entity)) return false;
 
-        //    return _Tool.EntityManager.AddComponent<Game.Common.Deleted>(overlay.m_Entity);
+        //    return _MIT.EntityManager.AddComponent<Game.Common.Deleted>(overlay.m_Entity);
         //}
     }
 

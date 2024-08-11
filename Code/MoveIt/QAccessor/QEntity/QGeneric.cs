@@ -69,6 +69,23 @@ namespace MoveIt.QAccessor
 
         private readonly quaternion Generic_Rotation => m_Lookup.goTransform.HasComponent(m_Entity) ? m_Lookup.goTransform.GetRefRO(m_Entity).ValueRO.m_Rotation : quaternion.identity;
 
+        private readonly bool Generic_TryGetElevation(out float elevation)
+        {
+            elevation = 0f;
+            if (!m_Lookup.goElevation.HasComponent(m_Entity)) return false;
+
+            elevation = m_Lookup.goElevation.GetRefRO(m_Entity).ValueRO.m_Elevation;
+            return true;
+        }
+
+        private readonly bool Generic_TrySetElevation(float elevation)
+        {
+            if (!m_Lookup.goElevation.HasComponent(m_Entity)) return false;
+
+            m_Lookup.goElevation.GetRefRW(m_Entity).ValueRW.m_Elevation = elevation;
+            return true;
+        }
+
 
         private readonly bool Generic_SetUpdated()
         {
@@ -124,6 +141,8 @@ namespace MoveIt.QAccessor
                 m_Lookup.grCullingInfo.GetRefRW(m_Entity).ValueRW.m_Bounds = MoveBounds3(m_Lookup.grCullingInfo.GetRefRO(m_Entity).ValueRO.m_Bounds, delta);
             }
 
+            SetElevation(state, delta);
+
             Generic_SetUpdated();
 
             return true;
@@ -149,7 +168,7 @@ namespace MoveIt.QAccessor
 
             Generic_SetUpdated();
 
-            //QLog.Debug(sb.ToString());
+            //QLog.XDebug(sb.ToString());
             return true;
         }
     }

@@ -8,7 +8,7 @@ namespace MoveIt.Overlays
 {
     internal class OverlayManipControlPoint : Overlay
     {
-        private static EntityArchetype _Archetype = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Common),
@@ -17,7 +17,7 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(MVManipControlPoint mcp)
         {
-            Entity e = _Tool.EntityManager.CreateEntity(_Archetype);
+            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new()
             {
@@ -26,9 +26,9 @@ namespace MoveIt.Overlays
                 m_IsManipChild      = mcp.IsManipChild,
             };
 
-            _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVManipControlPoint));
-            _Tool.EntityManager.SetComponentData(e, common);
-            _Tool.EntityManager.SetComponentData<MIO_Circle>(e, new(new(CP_RADIUS, mcp.Transform.m_Position, quaternion.identity)));
+            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVManipControlPoint));
+            _MIT.EntityManager.SetComponentData(e, common);
+            _MIT.EntityManager.SetComponentData<MIO_Circle>(e, new(new(CP_RADIUS, mcp.Transform.m_Position, quaternion.identity)));
             return e;
         }
 
@@ -62,8 +62,8 @@ namespace MoveIt.Overlays
         {
             if (m_Moveable is not MVManipControlPoint cp) throw new System.Exception($"CP ManipOverlay is not for ControlPoint! (mv:{m_Moveable.m_Entity.DX(true)}-{m_Moveable.Name})");
 
-            _Tool.QueueOverlayUpdate(this);
-            if (_Tool.Moveables.TryGet(cp.SegmentDefinition, out MVManipSegment seg)) seg.UpdateOverlayDeferred();
+            _MIT.QueueOverlayUpdate(this);
+            if (_MIT.Moveables.TryGet(cp.ParentDefinition, out MVManipSegment seg)) seg.UpdateOverlayDeferred();
         }
     }
 }

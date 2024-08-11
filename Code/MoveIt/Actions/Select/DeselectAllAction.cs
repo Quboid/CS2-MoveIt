@@ -3,7 +3,7 @@ using MoveIt.Selection;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace MoveIt.Actions
+namespace MoveIt.Actions.Select
 {
     internal class DeselectAllAction : Action
     {
@@ -38,7 +38,7 @@ namespace MoveIt.Actions
         {
             base.Undo();
 
-            _Tool.Selection = _Tool.m_IsManipulateMode ? new SelectionManip(_InitialStateManip) : new SelectionNormal(_InitialStateNormal);
+            _MIT.Selection = _MIT.m_IsManipulateMode ? new SelectionManip(_InitialStateManip) : new SelectionNormal(_InitialStateNormal);
         }
 
         /// <summary>
@@ -56,15 +56,15 @@ namespace MoveIt.Actions
             Deselect(normal.Union(manip));
 
             // Set fresh action
-            _Tool.Selection = _Tool.m_IsManipulateMode ? new SelectionManip() : new SelectionNormal();
+            _MIT.Selection = _MIT.m_IsManipulateMode ? new SelectionManip() : new SelectionNormal();
 
             // Cleanup
-            _Tool.Moveables.Clear();
+            _MIT.Moveables.Clear();
         }
 
         private List<MVDefinition> GetModeSwitchList()
         {
-            ModeSwitchAction modeSwitch = _Tool.Queue.GetPrevious<ModeSwitchAction>();
+            ModeSwitchAction modeSwitch = _MIT.Queue.GetPrevious<ModeSwitchAction>();
             List<MVDefinition> result = modeSwitch is null ? new() : modeSwitch.GetInitialSelectionStates();
 
             return result;
@@ -72,7 +72,7 @@ namespace MoveIt.Actions
 
         private List<MVDefinition> GetPreviousList()
         {
-            Action previous = _Tool.Queue.PrevAction;
+            Action previous = _MIT.Queue.PrevAction;
             List<MVDefinition> result = previous is null ? new() : previous.GetSelectionStates();
 
             return result;

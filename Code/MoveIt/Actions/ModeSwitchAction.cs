@@ -17,7 +17,7 @@ namespace MoveIt.Actions
 
         public ModeSwitchAction()
         {
-            _InitialSelectionState = SelectionState.SelectionToState(_Tool.m_IsManipulateMode, _Tool.Selection.Definitions);
+            _InitialSelectionState = SelectionState.SelectionToState(_MIT.m_IsManipulateMode, _MIT.Selection.Definitions);
         }
 
         /// <summary>
@@ -29,10 +29,10 @@ namespace MoveIt.Actions
         {
             base.Do();
             List<MVDefinition> fromSelection = _InitialSelectionState.Definitions;
-            ModeSwitchAction prev = _Tool.Queue.GetPrevious<ModeSwitchAction>();// GetPrecedingModeSwitchActionFromQueue(false);
+            ModeSwitchAction prev = _MIT.Queue.GetPrevious<ModeSwitchAction>();// GetPrecedingModeSwitchActionFromQueue(false);
             List<MVDefinition> toSelection = prev is null ? new() : prev.GetInitialSelectionStates();
             ToggleMode(fromSelection, toSelection, !m_IsManipulationMode);
-            //MIT.Log.Debug($"MSA.Do is:{_Tool.m_IsManipulateMode} |{prev}| from:{fromSelection.Count}, to:{toSelection.Count}");
+            //MIT.Log.Debug($"MSA.Do is:{_MIT.m_IsManipulateMode} |{prev}| from:{fromSelection.Count}, to:{toSelection.Count}");
         }
 
         /// <summary>
@@ -41,11 +41,11 @@ namespace MoveIt.Actions
         /// </summary>
         /// <param name="toolAction">The tool action at the time of unarchiving</param>
         /// <param name="idx">This action's queue index</param>
-        public override void Unarchive(ToolActions toolAction, int idx)
+        public override void Unarchive(MITActions toolAction, int idx)
         {
             _SelectionState.CleanDefinitions();
             _InitialSelectionState.CleanDefinitions();
-            //MIT.Log.Debug($"MSA.Unarchive {idx}:{_Tool.Queue.Current.Name} ToolAction:{toolAction}");
+            //MIT.Log.Debug($"MSA.Unarchive {idx}:{_MIT.Queue.Current.Name} ToolAction:{toolAction}");
         }
 
         /// <summary>
@@ -72,20 +72,20 @@ namespace MoveIt.Actions
 
         private void ToggleMode(List<MVDefinition> fromSelection, List<MVDefinition> toSelection, bool willBeManipulating)
         {
-            _Tool.m_IsManipulateMode = willBeManipulating;
+            _MIT.m_IsManipulateMode = willBeManipulating;
 
             ProcessModeSelectionChange(fromSelection, toSelection);
 
-            _Tool.Moveables.UpdateAllControlPoints();
-            _Tool.Moveables.UpdateAllOverlays();
-            _Tool.Selection.CalculateCenter();
+            _MIT.Moveables.UpdateAllControlPoints();
+            _MIT.Moveables.UpdateAllOverlays();
+            _MIT.Selection.CalculateCenter();
 
-            _Tool.SetModesTooltip();
+            _MIT.SetModesTooltip();
         }
 
         private void ProcessModeSelectionChange(List<MVDefinition> fromSelection, List<MVDefinition> toSelection)
         {
-            SelectionState newSelectionStates = new(_Tool.m_IsManipulateMode, toSelection);
+            SelectionState newSelectionStates = new(_MIT.m_IsManipulateMode, toSelection);
 
             MIT.Log.Debug($"ModeSwitchAction.ProcessSelectionChange" +
                 $"\n FromSelection: {MIT.DebugDefinitions(fromSelection)}" +
@@ -94,15 +94,15 @@ namespace MoveIt.Actions
 
             try
             {
-                _Tool.Selection = _Tool.m_IsManipulateMode ? new SelectionManip(newSelectionStates) : new SelectionNormal(newSelectionStates);
-                _Tool.Selection.Refresh();
+                _MIT.Selection = _MIT.m_IsManipulateMode ? new SelectionManip(newSelectionStates) : new SelectionNormal(newSelectionStates);
+                _MIT.Selection.Refresh();
             }
             catch (System.Exception ex)
             {
                 MIT.Log.Error($"Failed ProcessSelectionChange toSel:{toSelection.Count}, newSelStates:{newSelectionStates.Count}\n" + ex);
 
-                _Tool.Selection = _Tool.m_IsManipulateMode ? new SelectionManip() : new SelectionNormal();
-                _Tool.Selection.Refresh();
+                _MIT.Selection = _MIT.m_IsManipulateMode ? new SelectionManip() : new SelectionNormal();
+                _MIT.Selection.Refresh();
             }
         }
 

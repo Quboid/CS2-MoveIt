@@ -1,16 +1,17 @@
 ﻿using Colossal.UI.Binding;
+using QCommonLib;
 
-namespace MoveIt.Systems.UIElements
+namespace MoveIt.UI
 {
-    public abstract class StateBase : IJsonWritable
+    public class ButtonState : IJsonWritable
     {
         public string m_Id;
         public bool m_Enabled;
         public bool m_Active;
 
-        protected bool _Changed;
+        private bool _Changed;
 
-        public StateBase(string id, bool enabled, bool active)
+        public ButtonState(string id, bool enabled, bool active)
         {
             m_Id = id;
             m_Enabled = enabled;
@@ -28,6 +29,7 @@ namespace MoveIt.Systems.UIElements
 
             m_Enabled = enabled;
             m_Active = active;
+
             _Changed = true;
         }
 
@@ -40,12 +42,8 @@ namespace MoveIt.Systems.UIElements
             writer.Write(m_Enabled);
             writer.PropertyName("IsActive");
             writer.Write(m_Active);
-            WriteExtend(writer);
             writer.TypeEnd();
         }
-
-        public virtual void WriteExtend(IJsonWriter writer)
-        { }
 
         public override string ToString()
         {
@@ -54,7 +52,7 @@ namespace MoveIt.Systems.UIElements
 
         public override bool Equals(object obj)
         {
-            if (!obj.GetType().Equals(GetType())) return false;
+            if (obj is not ButtonState) return false;
 
             if (_Changed)
             {

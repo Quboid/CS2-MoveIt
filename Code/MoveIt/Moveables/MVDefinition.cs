@@ -38,6 +38,19 @@ namespace MoveIt.Moveables
         public MVDefinition()
         { }
 
+        //public Entity RefreshEntity()
+        //{
+        //    if (!m_IsManaged) return m_Entity;
+        //    if (!IsChild) return m_Entity;
+
+        //    if (m_Identity == Identity.ControlPoint)
+        //    {
+        //        MIT.m_Instance.ControlPointManager.GetOrCreate
+        //    }
+
+        //    return m_Entity;
+        //}
+
         public readonly bool Equals(MVDefinition rhs)
         {
             if (IsChild)

@@ -9,7 +9,7 @@ namespace MoveIt.Moveables
         public override bool IsManipChild       => true;
         public override bool IsNormalChild      => false;
 
-        public MVManipControlPoint(Entity e) : base(e, Identity.ControlPoint, ObjectType.Managed)
+        public MVManipControlPoint(Entity e) : base(e, Identity.ControlPoint)
         {
             m_Overlay = Factory.Create<OverlayManipControlPoint>(this, OverlayTypes.MVManipControlPoint);
             Refresh();
@@ -17,12 +17,13 @@ namespace MoveIt.Moveables
 
         internal override void DisposeIfUnused()
         {
-            if (_Tool.Hover.Is(Definition))                 return;
-            if (_Tool.Selection.HasFull(Definition))        return;
-            if (_Tool.Selection.HasFull(NodeDefinition))    return;
-            if (_Tool.Selection.HasFull(SegmentDefinition)) return;
+            if (_MIT.Hover.Is(Definition))                 return;
+            if (_MIT.Hover.Is(ParentDefinition))           return;
+            if (_MIT.Selection.HasFull(Definition))        return;
+            if (_MIT.Selection.HasFull(NodeDefinition))    return;
+            if (_MIT.Selection.HasFull(ParentDefinition))  return;
 
-            _Tool.Moveables.RemoveDo(this);
+            _MIT.Moveables.RemoveDo(this);
         }
     }
 }

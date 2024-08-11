@@ -52,7 +52,7 @@ namespace MoveIt.Systems
         //    m_UpdateOverlayQueue = new (m_UpdateOverlayQueueDeferred);
         //    m_UpdateOverlayQueueDeferred.Clear();
         //    //if (isOnlyCenter) return;
-        //    QLog.Debug(msg);
+        //    QLog.XDebug(msg);
         //}
     }
 }

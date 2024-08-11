@@ -4,7 +4,7 @@ namespace MoveIt.Overlays
 {
     public class OverlaySelectionCenter : Overlay
     {
-        private static EntityArchetype _Archetype = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                 typeof(MIO_Type),
                 typeof(MIO_Common),
@@ -15,10 +15,10 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Entity owner)
         {
-            Entity e = _Tool.EntityManager.CreateEntity(_Archetype);
+            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
 
-            _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.SelectionCenter));
-            _Tool.EntityManager.SetComponentData<MIO_Common>(e, new(owner));
+            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.SelectionCenter));
+            _MIT.EntityManager.SetComponentData<MIO_Common>(e, new(owner));
             return e;
         }
 
@@ -39,11 +39,11 @@ namespace MoveIt.Overlays
 
         public override bool Update()
         {
-            if (!_Tool.Selection.Any)
+            if (!_MIT.Selection.Any)
             {
                 if (!m_Entity.Equals(Entity.Null))
                 {
-                    _Tool.EntityManager.DestroyEntity(m_Entity);
+                    _MIT.EntityManager.DestroyEntity(m_Entity);
                     m_Entity = Entity.Null;
                 }
                 return false;
@@ -55,10 +55,10 @@ namespace MoveIt.Overlays
             }
 
             MIO_SelectionData selection = new(
-                _Tool.Selection.Count,
-                _Tool.Selection.Center,
-                _Tool.Selection.CenterTerrainHeight);
-            _Tool.EntityManager.SetComponentData(m_Entity, selection);
+                _MIT.Selection.Count,
+                _MIT.Selection.Center,
+                _MIT.Selection.CenterTerrainHeight);
+            _MIT.EntityManager.SetComponentData(m_Entity, selection);
 
             return true;
         }

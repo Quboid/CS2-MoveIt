@@ -17,7 +17,7 @@
 //        private float3 _PointerPos;
 //        private RaycastSystem _RaycastSystem;
 
-//        private RaycastTerrain RaycastTerrain => _Tool.m_RaycastTerrain;
+//        private RaycastTerrain RaycastTerrain => _MIT.m_RaycastTerrain;
 
 //        protected override void OnCreate()
 //        {
@@ -45,7 +45,7 @@
 //            Entity actual = GetHit();
 //            Entity saved = Get();
 
-//            if (!actual.Equals(Entity.Null)) QLog.Debug($"HoverSys hit:{actual.DX()}");
+//            if (!actual.Equals(Entity.Null)) QLog.XDebug($"HoverSys hit:{actual.DX()}");
 
 //            if (!saved.Equals(actual))
 //            {
@@ -61,8 +61,8 @@
 //        private (Entity e, float d)[] GetRaycastResults()
 //        {
 //            NativeArray<RaycastResult> vanillaRaycastResults = _RaycastSystem.GetResult(m_ToolRaycastSystem);
-//            if (vanillaRaycastResults.Length > 0) QLog.Debug($"HoverSys vanRes:{vanillaRaycastResults.Length}  {vanillaRaycastResults[0].m_Owner.DX()}");
-//            Manipulate f = Manipulate.Parent | (_Tool.m_IsManipulateMode ? Manipulate.Child : Manipulate.Normal);
+//            if (vanillaRaycastResults.Length > 0) QLog.XDebug($"HoverSys vanRes:{vanillaRaycastResults.Length}  {vanillaRaycastResults[0].m_Owner.DX()}");
+//            Manipulate f = Manipulate.Parent | (_MIT.m_IsManipulateMode ? Manipulate.Child : Manipulate.Normal);
 //            Searcher.Ray searcher = new(Searcher.Filters.All, vanillaRaycastResults, f);
 //            vanillaRaycastResults.Dispose();
 //            return searcher.OnLine(RaycastTerrain.Line, _PointerPos);
@@ -81,14 +81,14 @@
 //            if (_HoverQuery.CalculateEntityCount() > 0) throw new System.Exception($"MIT_HoverSystem.Get: {_HoverQuery.CalculateEntityCount()} entities selected!");
 
 //            using var list = _HoverQuery.ToEntityArray(Allocator.Temp);
-//            QLog.Debug($"HoverSys.Get {list[0].DX()}");
+//            QLog.XDebug($"HoverSys.Get {list[0].DX()}");
 //            return list[0];
 //        }
 
 //        private void Unset()
 //        {
 //            if (_HoverQuery.IsEmpty) return;
-//            QLog.Debug($"HoverSys.Unset");
+//            QLog.XDebug($"HoverSys.Unset");
 //            _ECB.RemoveComponent<MIT_Hover>(_HoverQuery, EntityQueryCaptureMode.AtRecord);
 //        }
 
@@ -96,7 +96,7 @@
 //        {
 //            if (e.Equals(Entity.Null)) return;
 //            if (!_HoverQuery.IsEmpty) throw new System.Exception($"MIT_HoverSystem.Set: {_HoverQuery.CalculateEntityCount()} entities selected!");
-//            QLog.Debug($"HoverSys.Set {e.DX()}");
+//            QLog.XDebug($"HoverSys.Set {e.DX()}");
 //            _ECB.AddComponent<MIT_Hover>(e);
 //        }
 
@@ -111,9 +111,9 @@
 //        //    m_ToolRaycastSystem.netLayerMask = (Layer.Road | Layer.Fence | Layer.TrainTrack | Layer.TramTrack | Layer.SubwayTrack | Layer.Pathway);
 //        //    m_ToolRaycastSystem.iconLayerMask = Game.Notifications.IconLayerMask.None;
 
-//        //    QLog.Debug($"Hover.InitRay1 {(_RaycastTerrain is null ? "Null" : _RaycastTerrain)}");
+//        //    QLog.XDebug($"Hover.InitRay1 {(_RaycastTerrain is null ? "Null" : _RaycastTerrain)}");
 //        //    _RaycastTerrain = new RaycastTerrain(World);
-//        //    QLog.Debug($"Hover.InitRay2 {(_RaycastTerrain is null ? "Null" : _RaycastTerrain)}");
+//        //    QLog.XDebug($"Hover.InitRay2 {(_RaycastTerrain is null ? "Null" : _RaycastTerrain)}");
 //        //}
 
 //        public override string toolID => "MIT_Hover";

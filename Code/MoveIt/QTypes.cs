@@ -23,16 +23,6 @@ namespace MoveIt
         Invalid
     }
 
-    /// <summary>
-    /// Whether a Moveable or State refers to a normal vanilla object or something managed by Move It
-    /// </summary>
-    public enum ObjectType
-    {
-        None,
-        Normal,
-        Managed
-    }
-
     public class QTypes
     {
         public static bool IsManipulationPredict(Identity identity, bool isToolManipulating)
@@ -45,7 +35,21 @@ namespace MoveIt
             return false;
         }
 
-        public static string GetIdentityCode(Identity identity) => identity switch
+        public static bool IsManipChildPredict(Identity identity, bool isToolManipulating)
+        {
+            if (identity == Identity.ControlPoint)
+            {
+                return isToolManipulating;
+            }
+
+            return false;
+        }
+
+        public static bool IsManagedPredict(Identity identity)
+            => identity == Identity.ControlPoint;
+
+        public static string GetIdentityCode(Identity identity)
+            => identity switch
             {
                 Identity.None           => "###",
                 Identity.Building       => "BLD",
@@ -64,11 +68,11 @@ namespace MoveIt
                 _ => throw new System.NotImplementedException(),
             };
 
+        public static string GetIdentityCode(Entity e)
+            => GetIdentityCode(GetEntityIdentity(e));
 
         public static Identity GetEntityIdentity(Entity e)
-        {
-            return GetEntityIdentity(World.DefaultGameObjectInjectionWorld.EntityManager, e);
-        }
+            => GetEntityIdentity(World.DefaultGameObjectInjectionWorld.EntityManager, e);
 
         public static Identity GetEntityIdentity(EntityManager manager, Entity e)
         {

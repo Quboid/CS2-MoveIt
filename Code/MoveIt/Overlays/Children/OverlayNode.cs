@@ -13,7 +13,7 @@ namespace MoveIt.Overlays
 {
     public class OverlayNode : Overlay
     {
-        private static EntityArchetype _Archetype = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Common),
@@ -24,16 +24,16 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Entity owner, Circle3 circle)
         {
-            Entity e = _Tool.EntityManager.CreateEntity(_Archetype);
+            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new()
             {
                 m_Owner = owner,
             };
 
-            _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVNode));
-            _Tool.EntityManager.SetComponentData(e, common);
-            _Tool.EntityManager.SetComponentData<MIO_Circle>(e, new(circle));
+            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVNode));
+            _MIT.EntityManager.SetComponentData(e, common);
+            _MIT.EntityManager.SetComponentData<MIO_Circle>(e, new(circle));
 
             return e;
         }
@@ -44,9 +44,9 @@ namespace MoveIt.Overlays
             get
             {
                 var transform = m_Moveable.Transform;
-                transform.m_Position = _Tool.EntityManager.TryGetComponent<Game.Net.NodeGeometry>(m_Owner, out var nodeGeo) ?
+                transform.m_Position = _MIT.EntityManager.TryGetComponent<Game.Net.NodeGeometry>(m_Owner, out var nodeGeo) ?
                     nodeGeo.m_Bounds.Center() :
-                    _Tool.EntityManager.GetComponentData<Game.Net.Node>(m_Owner).m_Position;
+                    _MIT.EntityManager.GetComponentData<Game.Net.Node>(m_Owner).m_Position;
 
                 return transform;
             }
@@ -64,7 +64,7 @@ namespace MoveIt.Overlays
             
             foreach (var cpd in node.m_CPDefinitions)
             {
-                MVControlPoint cp = _Tool.ControlPointManager.GetOrCreate(cpd);
+                MVControlPoint cp = _MIT.ControlPointManager.GetOrCreate(cpd);
                 ((OverlayControlPoint)cp.m_Overlay).CreateOverlayEntityIfNoneExists();
             }
 
@@ -76,13 +76,13 @@ namespace MoveIt.Overlays
             if (m_Moveable is not MVNode node) return;
             if (m_Entity.Equals(Entity.Null)) return;
 
-            _Tool.QueueOverlayUpdate(this);
+            _MIT.QueueOverlayUpdate(this);
 
             foreach (Entity seg in node.m_Segments.Keys)
             {
-                if (_Tool.Moveables.TryGet<MVSegment>(new MVDefinition(Identity.Segment, seg, m_Moveable.IsManipulatable), out var mvSeg))
+                if (_MIT.Moveables.TryGet<MVSegment>(new MVDefinition(Identity.Segment, seg, m_Moveable.IsManipulatable), out var mvSeg))
                 {
-                    _Tool.QueueOverlayUpdate(mvSeg.m_Overlay);
+                    _MIT.QueueOverlayUpdate(mvSeg.m_Overlay);
                 }
             }
         }
@@ -92,15 +92,15 @@ namespace MoveIt.Overlays
             if (m_Moveable is not MVNode node) return false;
             if (m_Entity.Equals(Entity.Null)) return false;
 
-            MIO_Common common = _Tool.EntityManager.GetComponentData<MIO_Common>(m_Entity);
+            MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
             UpdateCommon(ref common);
-            _Tool.EntityManager.SetComponentData(m_Entity, common);
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
 
-            MIO_Circle nodeCircle = _Tool.EntityManager.GetComponentData<MIO_Circle>(m_Entity);
+            MIO_Circle nodeCircle = _MIT.EntityManager.GetComponentData<MIO_Circle>(m_Entity);
             nodeCircle.Circle.position = Transform.m_Position;
 
-            DynamicBuffer<MIO_Circles> cpPosBuffer = _Tool.EntityManager.GetBuffer<MIO_Circles>(m_Entity);
-            DynamicBuffer<MIO_Lines> linesBuffer = _Tool.EntityManager.GetBuffer<MIO_Lines>(m_Entity);
+            DynamicBuffer<MIO_Circles> cpPosBuffer = _MIT.EntityManager.GetBuffer<MIO_Circles>(m_Entity);
+            DynamicBuffer<MIO_Lines> linesBuffer = _MIT.EntityManager.GetBuffer<MIO_Lines>(m_Entity);
             cpPosBuffer.Clear();
             linesBuffer.Clear();
             List<MIO_Circles> cpPosList = new();
@@ -110,13 +110,13 @@ namespace MoveIt.Overlays
             float circleYPos = 0f;
             foreach ((Entity seg, bool isNodeA) in node.m_Segments)
             {
-                Bezier4x3 curve = _Tool.EntityManager.GetComponentData<Game.Net.Curve>(seg).m_Bezier;
+                Bezier4x3 curve = _MIT.EntityManager.GetComponentData<Game.Net.Curve>(seg).m_Bezier;
                 circleYPos += isNodeA ? curve.a.y : curve.d.y;
 
                 // Don't show this control point circle/line if the segment is hovered or selected in the same mode
                 MVDefinition segDef = new(Identity.Segment, seg, m_Moveable.IsManipulatable);
-                if (_Tool.Hover.Is(segDef)) continue;
-                if (_Tool.Selection.Has(segDef)) continue;
+                if (_MIT.Hover.Is(segDef)) continue;
+                if (_MIT.Selection.Has(segDef)) continue;
 
                 MVDefinition cpdA = node.m_CPDefinitions.First(mvd => mvd.m_Parent.Equals(seg) && mvd.m_ParentKey.IsEnd());
                 MVDefinition cpdB = node.m_CPDefinitions.First(mvd => mvd.m_Parent.Equals(seg) && mvd.m_ParentKey.IsMiddle());
@@ -131,7 +131,7 @@ namespace MoveIt.Overlays
 
             // Calculate the node circle's overlay height based on the control points
             nodeCircle.Circle.position.y = node.m_Segments.Count > 0 ? circleYPos / node.m_Segments.Count : nodeCircle.Circle.position.y;
-            _Tool.EntityManager.SetComponentData(m_Entity, nodeCircle);
+            _MIT.EntityManager.SetComponentData(m_Entity, nodeCircle);
 
             // Remove circles hidden by node circle and lines where both circles are hidden
             float2 pos = nodeCircle.Circle.position.XZ();

@@ -7,9 +7,9 @@ namespace MoveIt.Overlays
 {
     public class DebugLine
     {
-        protected static readonly MIT _Tool = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
 
-        private static EntityArchetype _Archetype = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                 typeof(MIO_Type),
                 typeof(MIO_Common),
@@ -18,7 +18,7 @@ namespace MoveIt.Overlays
                 typeof(MIO_Line),
             });
 
-        private static EntityArchetype _ArchetypeTTL = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _ArchetypeTTL = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                 typeof(MIO_Type),
                 typeof(MIO_Common),
@@ -29,10 +29,10 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Line3.Segment line, int ttl = 0, UnityEngine.Color color = default, int index = 6, int version = 1)
         {
-            if (_Tool.m_OverlaySystem.DebugFreeze) return Entity.Null;
+            if (_MIT.m_OverlaySystem.DebugFreeze) return Entity.Null;
 
             Entity owner = new() { Index = index, Version = version };
-            Entity e = _Tool.EntityManager.CreateEntity(ttl == 0 ? _Archetype : _ArchetypeTTL);
+            Entity e = _MIT.EntityManager.CreateEntity(ttl == 0 ? _Archetype : _ArchetypeTTL);
 
             float3 position = line.a + (line.ab / 2);
 
@@ -45,12 +45,12 @@ namespace MoveIt.Overlays
                 m_Transform = new(position, default),
             };
 
-            _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.Line));
-            _Tool.EntityManager.SetComponentData(e, common);
-            _Tool.EntityManager.SetComponentData<MIO_Line>(e, new(line));
+            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.Line));
+            _MIT.EntityManager.SetComponentData(e, common);
+            _MIT.EntityManager.SetComponentData<MIO_Line>(e, new(line));
             if (ttl > 0)
             {
-                _Tool.EntityManager.SetComponentData<MIO_TTL>(e, new(ttl));
+                _MIT.EntityManager.SetComponentData<MIO_TTL>(e, new(ttl));
             }
 
             return e;

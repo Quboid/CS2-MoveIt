@@ -69,6 +69,12 @@ namespace MoveIt.Settings
                 { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_DeselectAll)), "Deselect all selected objects." },
                 { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_DeselectAll)), "\"Deselect All\"" },
 
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_FiltersToggle)), "Toggle Filters" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_FiltersToggle)), "Open or close the Filters foldout menu, enabling or disabling filters" },
+                { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_FiltersToggle)), "\"Toggle Filters\"" },
+
+                { m_Settings.GetOptionGroupLocaleID(Settings.groupMovement), $"Movement" },
+
                 { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_MoveDown)), "Move Objects Down" },
                 { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_MoveDown)), "Move selected objects down. Each press is 1/8 of a metre. Shift+Press for 1m increments, or Control+Press for 1/64m increments." },
                 { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_MoveDown)), "\"Move Down\"" },
@@ -96,6 +102,25 @@ namespace MoveIt.Settings
                 //{ m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_DebugClear)), "Debug: Clear Lines" },
                 //{ m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_DebugClear)), "Ignore this, it's just here in case you need to rebind it." },
                 //{ m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_DebugClear)), "\"Clear Lines\"" },
+
+
+                { m_Settings.GetOptionGroupLocaleID(Settings.groupToolbox), $"Toolbox Tools" },
+
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_TB_TerrainHeight)), "Align To Terrain Height" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_TB_TerrainHeight)), "Move selected objects to the terrain height. Does not work with buildings or on-ground networks." },
+                { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_TB_TerrainHeight)), "\"Terrain Height\"" },
+
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_TB_ObjectHeight)), "Align To Object Height" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_TB_ObjectHeight)), "Move selected objects to the height of the next clicked object." },
+                { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_TB_ObjectHeight)), "\"Object Height\"" },
+
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_TB_ObjAngleGroup)), "Align To Angle (Group)" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_TB_ObjAngleGroup)), "Turn selected objects to face the same angle as the next clicked object. This tool rotates all selected objects around the central point." },
+                { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_TB_ObjAngleGroup)), "\"Angle (Group)\"" },
+
+                { m_Settings.GetOptionLabelLocaleID(nameof(Settings.Key_TB_ObjAngleIndiv)), "Align To Angle (Individual)" },
+                { m_Settings.GetOptionDescLocaleID(nameof(Settings.Key_TB_ObjAngleIndiv)), "Turn selected objects to face the same angle as the next clicked object. This tool rotates all selected objects in place." },
+                { m_Settings.GetBindingKeyLocaleID(nameof(Settings.Key_TB_ObjAngleIndiv)), "\"Angle (Individual)\"" },
             };
 
             #region Gooee Warning

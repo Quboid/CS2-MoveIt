@@ -3,49 +3,134 @@
     margin: 2rem 0 0 0;
 }
 
-.dropdownTitleBtn {
-    height: 100%;
-    width: 100%;
-    text-align: left !important;
-    justify-content: flex-start;
-    padding-left: 10rem;
-}
-
-.dropdownTitle
-{
-    border-left: 3rem #0000ff66 solid;
-    height: 35rem;
-    padding: 5rem 0 0 28rem;
-    text-align: left !important;
-}
-.dropdownTitle:hover
-{
-    background-color: #0000ff22;
-}
-.dropdownTitleOpen
-{
-    border-right: 3rem #00000066 solid;
-}
-.dropdownTitleClosed
-{
-    border-right: 3rem #0000ff66 solid;
-}
-
-.dropdownContainer
+.container
 {
     text-align: left;
 }
-.dropdownEntries
-{   
-    font-size: 95%;
-}
-.dropdownEntry
+
+.title
 {
-    height: 28rem;
-    padding: 5rem 0 4rem 28rem;
+    height: 35rem;
+    width: 100%;
+    position: relative;
+}
+.title:hover
+{
+    background-color: #0000ff22;
+}
+.titleOpen
+{
     background-color: #ffffff08;
 }
-.dropdownEntry:hover
+// .titleClosed
+// {
+//     border-left: 2rem solid #1abeff;
+// }
+
+.titleBtn {
+    height: 100%;
+    width: 100%;
+    text-align: left !important;
+    align-content: flex-start;
+    flex-direction: row-reverse;
+    display: flex;
+    z-index: 4;
+}
+.titleBtn img
 {
-    background-color: #ffffff20;
+    width: 30rem;
+    height: 30rem;
+}
+.titleBtn .label
+{
+    text-align: left;
+    padding-left: 3rem;
+    width: 133rem;
+}
+.titleBtn .labelCB
+{
+    padding-left: 22rem;
+}
+.title .checkbox
+{
+    position: absolute;
+    margin: 3rem 0;
+    z-index: 5;
+}
+
+.entries
+{   
+    font-size: 94%;
+    border-left: 2rem solid #1abeffbb;
+    margin-left: 2rem;
+}
+.entry
+{
+    height: 28rem;
+    background-color: #ffffff08;
+    display: flex;
+    align-content: flex-start;
+    margin-left: 3rem;
+}
+.entry:hover
+{
+    background-color: #ffffff1a;
+}
+.checkbox
+{
+    width: 29rem;
+    padding: 6rem;
+}
+.entry .label
+{
+    width: 100%;
+    padding: 4rem;
+}
+.entry .labelCB
+{
+    width: 100%;
+    padding: 4rem 0;
+}
+.inactive
+{
+    border-right: 3rem solid #ffffff00;
+}
+.active
+{
+    border-right: 3rem solid #6ec200ff;
+    background-color: #ffffff22;
+}
+
+// .popoutBtn {
+//     height: 100%;
+//     width: 100%;
+//     text-align: left !important;
+//     align-content: flex-start;
+//     flex-direction: row-reverse;
+//     display: flex;
+//     z-index: 4;
+// }
+// .labelPO .label
+// {
+//     text-align: left;
+//     padding-left: 3rem;
+//     width: 111rem;
+// }
+.labelPO .labelCB
+{
+    padding-left: 22rem;
+    padding-right: 22rem;
+}
+
+.popoutArrow
+{
+    width: 29rem;
+    padding: 6rem;
+    
+}
+.popoutArrow img
+{
+    width: 22rem;
+    height: 22rem;
+    position: relative;
 }

@@ -1,13 +1,15 @@
 ﻿using MoveIt.Actions;
+using MoveIt.Actions.Select;
 using MoveIt.Selection;
 using MoveIt.Tool;
+using System.Text;
 
 namespace MoveIt.Managers
 {
     internal class QueueManager
     {
         protected const int QUEUE_LENGTH = 100;
-        protected static readonly MIT _Tool = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
         protected Action _CreationAction;
 
         internal QueueManager()
@@ -15,7 +17,7 @@ namespace MoveIt.Managers
             Index++;
             _Head = Index;
 
-            _Tool.Selection ??= new SelectionNormal();
+            _MIT.Selection ??= new SelectionNormal();
             _Actions[Index] = new SelectAction();
             _CreationAction = null;
             Do();
@@ -95,7 +97,8 @@ namespace MoveIt.Managers
                 _Tail = (Index + 2) % QUEUE_LENGTH;
             }
 
-            Current.Archive(ToolActions.None, Index);
+            MIT.Log.Info("--- QueueManager.Push");
+            Current.Archive(MITActions.None, Index);
             if (Index != _Head)
             {
                 Invalidate();
@@ -106,25 +109,24 @@ namespace MoveIt.Managers
 
             _Actions[Index] = action;
 
-            //MIT.Log.Debug($"{UnityEngine.Time.frameCount} Push {Debug()}");
+            MIT.Log.Info($"Push {Index}:{_Actions[Index].Name}");
         }
 
         public void FireAction()
         {
-            //if (action != ToolActions.None) MIT.Log.Bundle("FIRE", $"{UnityEngine.Time.frameCount} Queue.Fire {action}: {Debug()}");
-            if (_Tool.ToolAction == ToolActions.Do)
+            if (_MIT.MITAction == MITActions.Do)
             {
-                _Tool.ToolAction = ToolActions.None;
+                _MIT.MITAction = MITActions.None;
                 Do();
             }
-            else if (_Tool.ToolAction == ToolActions.Undo)
+            else if (_MIT.MITAction == MITActions.Undo)
             {
-                _Tool.ToolAction = ToolActions.None;
+                _MIT.MITAction = MITActions.None;
                 Undo();
             }
-            else if (_Tool.ToolAction == ToolActions.Redo)
+            else if (_MIT.MITAction == MITActions.Redo)
             {
-                _Tool.ToolAction = ToolActions.None;
+                _MIT.MITAction = MITActions.None;
                 Redo();
             }
         }
@@ -144,13 +146,14 @@ namespace MoveIt.Managers
         {
             if (!CanUndo()) return;
 
-            _Actions[Index].Archive(ToolActions.Undo, Index);
-            _Actions[IndexPrev].Unarchive(ToolActions.Undo, IndexPrev);
+            MIT.Log.Debug("--- QueueManager.Undo");
+            _Actions[Index].Archive(MITActions.Undo, Index);
+            _Actions[IndexPrev].Unarchive(MITActions.Undo, IndexPrev);
 
             _Actions[Index].Undo();
             Index--;
 
-            //MIT.Log.Debug($"{UnityEngine.Time.frameCount} Undo (Can Redo:{CanRedo()}) {Debug()}");
+            //MIT.Log.Debug($"Undo (Can Redo:{CanRedo()}) {Debug()}");
         }
 
         public bool CanRedo()
@@ -162,14 +165,15 @@ namespace MoveIt.Managers
         {
             if (!CanRedo()) return;
 
-            _Actions[Index].Archive(ToolActions.Redo, Index);
-            _Actions[IndexNext].Unarchive(ToolActions.Redo, IndexNext);
+            MIT.Log.Debug("--- QueueManager.Redo");
+            _Actions[Index].Archive(MITActions.Redo, Index);
+            _Actions[IndexNext].Unarchive(MITActions.Redo, IndexNext);
 
             Index++;
 
             _Actions[Index].Redo();
 
-            //MIT.Log.Debug($"{UnityEngine.Time.frameCount} Redo (Can Undo:{CanUndo()},Redo:{CanRedo()}) {Debug()}");
+            //MIT.Log.Debug($"Redo (Can Undo:{CanUndo()},Redo:{CanRedo()}) {Debug()}");
         }
 
         public T GetPrevious<T>() where T : Action
@@ -213,6 +217,7 @@ namespace MoveIt.Managers
             int end = IndexNext > _Head ? _Head + QUEUE_LENGTH : _Head;
             int idx = -1;
             int i;
+            string prewipeDebug = DebugQueue();
 
             for (i = start; i <= end; i++)
             {
@@ -220,7 +225,7 @@ namespace MoveIt.Managers
                 _Actions[idx] = null;
             }
 
-            MIT.Log.Debug($"QM.Invalidate ({_Tail}-{Index}-{_Head}) {start}-{end} lastIdx:{idx}/{i}");
+            MIT.Log.Info($"QM.Invalidate ({_Tail}-{Index}-{_Head}) {start}-{end} lastIdx:{idx}/{i}\n{prewipeDebug}");
             _Head = Index;
         }
 
@@ -231,25 +236,35 @@ namespace MoveIt.Managers
             _Tail = 0;
         }
 
-        public string GetQueueIndexes() => $"{_Tail}-**{Index}**-{_Head}";
+        public string UI_GetQueueIndexes()
+            => $"{_Tail}-**{Index}**-{_Head}";
 
-        public string Debug()
+
+        public string DebugQueue()
         {
-            string msg = $"{Index} {_Tail}/{_Head} ";
+            StringBuilder sb = new();
+            sb.AppendFormat("Idx:{0} {1}/{2} Creation:{3} Current:{4}-{5}", Index, _Tail, _Head, _MIT.CreationPhase, Index, Current.Name);
             int min = (_Tail + 1) % QUEUE_LENGTH;
             int max = _Head;
             if (max < _Tail) max += QUEUE_LENGTH;
+
+            int c = 0;
             for (int i = min; i <= max; i++)
             {
+                if (c % 5 == 0) sb.Append("\n");
+                c++;
+
                 int idx = i % QUEUE_LENGTH;
 
-                //string manip = _Actions[idx].m_IsManipulate.from ? (_Actions[idx].m_IsManipulate.to ? "B": "F") : (_Actions[idx].m_IsManipulate.to ? "T" : "N" );
-                string manip = _Actions[idx].m_IsManipulationMode ? "M" : "n";
-                msg += $"{idx}{manip}:{_Actions[idx].Name}";
-                msg += ", ";
+                sb.AppendFormat("{0}: ", idx);
+                if (_Actions[idx].m_IsManipulationMode)
+                {
+                    sb.Append("M-");
+                }
+                sb.AppendFormat("{0},  ", idx == Index ? _Actions[idx].Name.ToUpper() : _Actions[idx].Name);
             }
 
-            return $"{msg} |{_Tool.CreationPhase}| {Current.GetActionState()}";
+            return sb.ToString();
         }
 
         //public static void UpdateEntityReferencesForward(Dictionary<Entity, Entity> toReplace)

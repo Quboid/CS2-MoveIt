@@ -59,7 +59,7 @@ namespace MoveIt.Overlays
                     MIO_Common common = data_CommonData[idx];
 
                     // Remember to disable Burst!
-                    //QLog.Debug($"UPDATE  {data_Overlay[idx].m_Type}  owner:{common.m_Owner.DX()}, {common.m_Flags}/{common.m_Manipulation} Tool:{m_ToolFlags}");
+                    //MIT.Log.Debug($"UPDATE  {data_Overlay[idx].m_Type}  owner:{common.m_Owner.DX()}, {common.m_Flags}/{common.m_Manipulation} Tool:{m_ToolFlags}");
 
                     if (common.m_Flags == InteractionFlags.None) continue;
                     CalculateLines(ref common, m_CameraPosition);

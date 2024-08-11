@@ -10,9 +10,15 @@ using UnityEngine;
 
 namespace MoveIt.Managers
 {
-    public class HoverManager : MIT_Manager
+    public record HoverHolder
     {
-        //private readonly MIT_HoverSystem _HoverSystem;
+        protected readonly MIT _MIT = MIT.m_Instance;
+
+        public HoverHolder(bool isForManipChild)
+        {
+            m_IsForManipChild = isForManipChild;
+        }
+        public bool m_IsForManipChild;
 
         /// <summary>
         /// The hovered object, or default MVDefinition if none
@@ -54,26 +60,6 @@ namespace MoveIt.Managers
         }
         private Moveable _HoveredMoveable;
 
-        public bool IsNull          => Definition.m_Entity.Equals(Entity.Null) && Definition.m_Parent.Equals(Entity.Null);
-        public bool IsSelected      => !IsNull && _Tool.Selection.Has(Definition);
-        public bool IsManipulatable => !IsNull && MV.IsManipulatable;
-
-        //public HoverManager()
-        //{
-        //    _HoverSystem = _Tool.World.GetOrCreateSystemManaged<MIT_HoverSystem>();
-        //}
-
-        public bool Is(MVDefinition mvd)
-        {
-            return mvd.Equals(Definition);
-        }
-
-        /// <summary>
-        /// Refresh the hovered object on tool activation
-        /// </summary>
-        internal void Refresh()
-        { }
-
         /// <summary>
         /// Set hovered to nothing
         /// </summary>
@@ -88,93 +74,245 @@ namespace MoveIt.Managers
             OnPress     = new();
         }
 
+        internal void Set(MVDefinition to)
+        {
+            MV          = _MIT.Moveables.GetOrCreate<Moveable>(to);
+            Definition  = to;
+            LastValid   = to;
+            MV.OnHover();
+        }
+
+        internal void Unset()
+        {
+            Moveable mv = MV;
+            Definition  = new();
+            MV          = null;
+            mv?.OnUnhover();
+        }
+
+        public bool IsNull => Definition.m_Entity.Equals(Entity.Null) && Definition.m_Parent.Equals(Entity.Null);
+        public bool IsSelected => !IsNull && _MIT.Selection.Has(Definition);
+        public bool IsManipulatable => !IsNull && MV.IsManipulatable;
+
+    }
+
+    public class HoverManager : MIT_Manager
+    {
+        //private readonly MIT_HoverSystem _HoverSystem;
+
+        public HoverManager()
+        {
+            Normal = new(false);
+            Child = new(true);
+            //_HoverSystem = _MIT.World.GetOrCreateSystemManaged<MIT_HoverSystem>();
+        }
+
+        public HoverHolder Normal { get; set; }
+        public HoverHolder Child { get; set; }
+
+        public HoverHolder TopHovered
+        {
+            get
+            {
+                if (!Child.IsNull) return Child;
+                return Normal;
+            }
+        }
+
+        public bool Is(MVDefinition mvd)
+        {
+            return mvd.Equals(Normal.Definition) || mvd.Equals(Child.Definition);
+        }
+
+        /// <summary>
+        /// Refresh the hovered object on tool activation
+        /// </summary>
+        internal void Refresh()
+        { }
+
+        /// <summary>
+        /// Set hovered to nothing
+        /// </summary>
+        internal void Clear()
+        {
+            Normal.Clear();
+            Child.Clear();
+        }
+
         internal void Process(ToolRaycastSystem toolRaycastSystem)
         {
-            if (_Tool.ToolState == ToolStates.DrawingSelection)
+            if (_MIT.MITState == MITStates.DrawingSelection)
             {
-                Unset();
+                Normal.Unset();
+                Child.Unset();
                 return;
             }
 
-            NativeArray<Game.Common.RaycastResult> vanillaNetworkResults = _Tool.m_RaycastSystem.GetResult(toolRaycastSystem);
-            NativeArray<Game.Common.RaycastResult> vanillaSurfaceResults = _Tool.m_RaycastSurface.GetResults();
+            //_MIT.Hovered = _MIT.IsManipulating ? Child : Normal;
 
-            using Searcher.Searcher searcher = new(Searcher.Utils.FilterAll, _Tool.IsManipulating, _Tool.m_PointerPos);
+            using Searcher.Searcher searcher = new(_MIT.Filtering.GetMask(), _MIT.IsManipulating, _MIT.m_PointerPos);
 
+            NativeArray<Game.Common.RaycastResult> vanillaNetworkResults = _MIT.m_RaycastSystem.GetResult(toolRaycastSystem);
+            NativeArray<Game.Common.RaycastResult> vanillaSurfaceResults = _MIT.m_RaycastSurface.GetResults();
             Ray ray = Camera.main.ScreenPointToRay(Game.Input.InputManager.instance.mousePosition);
             searcher.SearchRay(ToolRaycastSystem.CalculateRaycastLine(Camera.main), vanillaNetworkResults, vanillaSurfaceResults);
             vanillaNetworkResults.Dispose();
             vanillaSurfaceResults.Dispose();
 
-            MVDefinition to = new();
-            if (searcher.Count > 0)
+            ProcessMode(searcher, Normal);
+
+            if (_MIT.IsManipulating)
             {
-                Entity e = searcher.m_Results[0].m_Entity;
-                Identity id = QTypes.GetEntityIdentity(e);
-                Entity parent = Entity.Null;
-                short parentKey = -1;
-                if (id == Identity.ControlPoint)
+                ProcessMode(searcher, Child);
+            }
+            else
+            {
+                if (!Child.IsNull)
                 {
-                    var component = _Tool.EntityManager.GetComponentData<Components.MIT_ControlPoint>(e);
-                    parent = component.m_Parent;
-                    parentKey = component.m_ParentKey;
+                    Child.Clear();
                 }
-                to = new(id, e, QTypes.IsManipulationPredict(id, _Tool.IsManipulating), false, parent, parentKey);
-            }
-
-            if (Definition.Equals(to)) return;
-
-            if (_Tool.ToolState == ToolStates.ApplyButtonHeld || _Tool.ToolState == ToolStates.SecondaryButtonHeld) return;
-
-            if (!Definition.m_Entity.Equals(Entity.Null))
-            {
-                Unset();
-            }
-
-            Definition = new();
-
-            if (_Tool.IsValid(to))
-            {
-                if (_Tool.IsManipulating != to.m_IsManipulatable) return;
-
-                MV          = _Tool.Moveables.GetOrCreate<Moveable>(to);
-                Definition  = to;
-                LastValid   = to;
-                MV.OnHover();
             }
         }
 
-        private void Unset()
+        private void ProcessMode(Searcher.Searcher searcher, HoverHolder holder)
         {
-            Moveable mv = MV;
-            Definition = new();
-            MV = null;
-            mv?.OnUnhover();
+            MVDefinition to = new();
+            if (searcher.Count > 0)
+            {
+                int i = 0;
+                bool found = false;
+                do
+                {
+                    Entity e = searcher.m_Results[i++].m_Entity;
+                    Identity id = QTypes.GetEntityIdentity(e);
+                    bool objIsManip = QTypes.IsManipulationPredict(id, _MIT.IsManipulating);
+
+                    if (objIsManip != _MIT.IsManipulating) continue;
+
+                    if (_MIT.IsManipulating)
+                    {
+                        if (QTypes.IsManipChildPredict(id, _MIT.IsManipulating) != holder.m_IsForManipChild) continue;
+                    }
+
+                    Entity parent = Entity.Null;
+                    short parentKey = -1;
+                    if (id == Identity.ControlPoint)
+                    {
+                        var component = _MIT.EntityManager.GetComponentData<Components.MIT_ControlPoint>(e);
+                        parent = component.m_Parent;
+                        parentKey = component.m_ParentKey;
+                    }
+                    to = new(id, e, objIsManip, QTypes.IsManagedPredict(id), parent, parentKey);
+                    found = true;
+                }
+                while (!found && i < searcher.m_Results.Length);
+            }
+
+            if (holder.Definition.Equals(to)) return;
+
+            if (_MIT.MITState == MITStates.ApplyButtonHeld || _MIT.MITState == MITStates.SecondaryButtonHeld) return;
+
+            if (!holder.Definition.m_Entity.Equals(Entity.Null))
+            {
+                holder.Unset();
+            }
+
+            holder.Definition = new();
+
+            if (_MIT.IsValid(to))
+            {
+                holder.Set(to);
+            }
+        }
+
+        internal void SetToolFlagEnabled()
+        {
+            if (_MIT.MITState != MITStates.ToolActive) return;
+
+            if (Normal.MV is not null)
+            {
+                Normal.MV.m_Overlay.AddFlag(InteractionFlags.ToolHover);
+                foreach (var mv in Normal.MV.GetChildMoveablesForOverlays<Moveable>())
+                {
+                    mv.m_Overlay.AddFlag(InteractionFlags.ToolParentHover);
+                }
+            }
+
+            if (Child.MV is not null)
+            {
+                Child.MV.m_Overlay.AddFlag(InteractionFlags.ToolHover);
+                foreach (var mv in Child.MV.GetChildMoveablesForOverlays<Moveable>())
+                {
+                    mv.m_Overlay.AddFlag(InteractionFlags.ToolParentHover);
+                }
+            }
+        }
+
+        internal void SetToolFlagDisabled()
+        {
+            if (_MIT.MITState == MITStates.ToolActive) return;
+
+            if (Normal.MV is not null)
+            {
+                Normal.MV.m_Overlay.RemoveFlag(InteractionFlags.ToolHover);
+                foreach (var mv in Normal.MV.GetChildMoveablesForOverlays<Moveable>())
+                {
+                    mv.m_Overlay.RemoveFlag(InteractionFlags.ToolParentHover);
+                }
+            }
+
+            if (Child.MV is not null)
+            {
+                Child.MV.m_Overlay.RemoveFlag(InteractionFlags.ToolHover);
+                foreach (var mv in Child.MV.GetChildMoveablesForOverlays<Moveable>())
+                {
+                    mv.m_Overlay.RemoveFlag(InteractionFlags.ToolParentHover);
+                }
+            }
         }
 
 
         public override string ToString()
         {
             StringBuilder sb = new();
-            if (Definition.IsNull)
+            sb.Append("Normal: ");
+            if (Normal.Definition.IsNull)
             {
-                sb.Append("Nothing Hovered");
+                sb.Append("Nothing");
             }
             else
             {
-                sb.AppendFormat("{0}-{1}", Definition.m_Entity.DX(true), (MV.IsManipulatable ? (MV.IsManipChild ? "C" : "P") : "N"));
+                sb.AppendFormat("{0}-{1}", Normal.Definition.m_Entity.DX(true), (Normal.MV.IsManipulatable ? (Normal.MV.IsManipChild ? "C" : "P") : "N"));
+            }
+            if (!Normal.LastValid.Equals(Entity.Null))
+            {
+                sb.AppendFormat(", Valid:{0}", Normal.LastValid.m_Entity.DX(true));
+            }
+            if (!Normal.OnPress.Equals(Entity.Null))
+            {
+                sb.AppendFormat(", Press:{0}", Normal.OnPress.m_Entity.DX(true));
             }
 
-            if (!LastValid.Equals(Entity.Null))
+            sb.Append(" - Child: ");
+            if (Child.Definition.IsNull)
             {
-                sb.AppendFormat(", Valid:{0}", LastValid.m_Entity.DX(true));
+                sb.Append("Nothing");
             }
-            if (!OnPress.Equals(Entity.Null))
+            else
             {
-                sb.AppendFormat(", Press:{0}", OnPress.m_Entity.DX(true));
+                sb.AppendFormat("{0}-{1}", Child.Definition.m_Entity.DX(true), (Child.MV.IsManipulatable ? (Child.MV.IsManipChild ? "C" : "P") : "N"));
+            }
+            if (!Child.LastValid.Equals(Entity.Null))
+            {
+                sb.AppendFormat(", Valid:{0}", Child.LastValid.m_Entity.DX(true));
+            }
+            if (!Child.OnPress.Equals(Entity.Null))
+            {
+                sb.AppendFormat(", Press:{0}", Child.OnPress.m_Entity.DX(true));
             }
             return sb.ToString();
         }
+
 
         public static void DebugRaycastLine()
         {
@@ -201,11 +339,11 @@ namespace MoveIt.Managers
             string msg = prefix + DebugVanillaResults(networkResults, surfaceResults);
             if (bundle.Equals(string.Empty))
             {
-                QLog.Debug(msg);
+                MIT.Log.Debug(msg);
             }
             else
             {
-                QLog.Bundle(bundle, msg);
+                MIT.Log.Bundle(bundle, msg);
             }
         }
     }

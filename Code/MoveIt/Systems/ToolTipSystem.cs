@@ -8,7 +8,7 @@ namespace MoveIt
     {
         private ToolSystem _ToolSystem;
         private StringTooltip _Tooltip;
-        private Tool.MIT _Tool;
+        private Tool.MIT _MIT;
 
         public static MIT_ToolTipSystem instance;
 
@@ -43,7 +43,7 @@ namespace MoveIt
         {
             base.OnCreate();
             _ToolSystem = base.World.GetOrCreateSystemManaged<ToolSystem>();
-            _Tool = base.World.GetOrCreateSystemManaged<Tool.MIT>();
+            _MIT = base.World.GetOrCreateSystemManaged<Tool.MIT>();
             _Tooltip = new StringTooltip
             {
                 path = "QTesting_Main"
@@ -56,7 +56,7 @@ namespace MoveIt
         protected override void OnUpdate()
         {
             UpdateForTTL();
-            if (_ToolSystem.activeTool != _Tool || !Enabled)
+            if (_ToolSystem.activeTool != _MIT || !Enabled)
             {
                 return;
             }

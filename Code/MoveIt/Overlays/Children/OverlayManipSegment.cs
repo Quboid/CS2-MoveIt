@@ -1,4 +1,5 @@
 ﻿using Colossal.Mathematics;
+using Game.Net;
 using MoveIt.Moveables;
 using Unity.Collections;
 using Unity.Entities;
@@ -8,7 +9,7 @@ namespace MoveIt.Overlays
 {
     internal class OverlayManipSegment : Overlay
     {
-        private static EntityArchetype _Archetype = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Bezier),
@@ -19,7 +20,7 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(MVManipSegment mseg)
         {
-            Entity e = _Tool.EntityManager.CreateEntity(_Archetype);
+            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new()
             {
@@ -28,14 +29,9 @@ namespace MoveIt.Overlays
                 m_IsManipChild      = mseg.IsManipChild,
             };
 
-            MIO_Bezier Bezier = new()
-            {
-                Curve = mseg.Curve,
-            };
-
-            _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVManipSegment));
-            _Tool.EntityManager.SetComponentData(e, common);
-            _Tool.EntityManager.SetComponentData(e, Bezier);
+            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVManipSegment));
+            _MIT.EntityManager.SetComponentData(e, common);
+            _MIT.EntityManager.SetComponentData<MIO_Bezier>(e, new(mseg.Curve, mseg.Width));
             return e;
         }
 
@@ -52,7 +48,7 @@ namespace MoveIt.Overlays
 
             foreach (var cpd in mseg.m_CPDefinitions)
             {
-                MVManipControlPoint cp = _Tool.ControlPointManager.GetOrCreate(cpd) as MVManipControlPoint;
+                MVManipControlPoint cp = _MIT.ControlPointManager.GetOrCreate(cpd) as MVManipControlPoint;
                 ((OverlayManipControlPoint)cp.m_Overlay).CreateOverlayEntityIfNoneExists();
             }
 
@@ -64,16 +60,16 @@ namespace MoveIt.Overlays
             if (m_Moveable is not MVManipSegment seg) return false;
             if (m_Entity.Equals(Entity.Null)) return false;
             
-            MIO_Common common = _Tool.EntityManager.GetComponentData<MIO_Common>(m_Entity);
+            MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
             UpdateCommon(ref common);
-            _Tool.EntityManager.SetComponentData(m_Entity, common);
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
 
-            MIO_Bezier curve = _Tool.EntityManager.GetComponentData<MIO_Bezier>(m_Entity);
+            MIO_Bezier curve = _MIT.EntityManager.GetComponentData<MIO_Bezier>(m_Entity);
             curve.Curve = seg.Curve;
-            _Tool.EntityManager.SetComponentData(m_Entity, curve);
+            _MIT.EntityManager.SetComponentData(m_Entity, curve);
 
-            DynamicBuffer<MIO_Beziers> curvesBuffer = _Tool.EntityManager.GetBuffer<MIO_Beziers>(m_Entity);
-            DynamicBuffer<MIO_DashedLines> dashedBuffer = _Tool.EntityManager.GetBuffer<MIO_DashedLines>(m_Entity);
+            DynamicBuffer<MIO_Beziers> curvesBuffer = _MIT.EntityManager.GetBuffer<MIO_Beziers>(m_Entity);
+            DynamicBuffer<MIO_DashedLines> dashedBuffer = _MIT.EntityManager.GetBuffer<MIO_DashedLines>(m_Entity);
             curvesBuffer.Clear();
             dashedBuffer.Clear();
 
@@ -88,9 +84,9 @@ namespace MoveIt.Overlays
             dashedBuffer.Add(new(DrawTools.CalculateProtrudedLine(cpPos[3], cpPos[2])));
 
             // Outline
-            var edgeGeo = _Tool.EntityManager.GetComponentData<Game.Net.EdgeGeometry>(m_Owner);
+            var edgeGeo = _MIT.EntityManager.GetComponentData<Game.Net.EdgeGeometry>(m_Owner);
             float3 offset = new(0f);
-            if (_Tool.EntityManager.HasComponent<Game.Net.Elevation>(m_Owner))
+            if (_MIT.EntityManager.HasComponent<Game.Net.Elevation>(m_Owner))
             {
                 offset.y = 0.5f;
             }

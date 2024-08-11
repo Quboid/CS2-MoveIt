@@ -1,4 +1,5 @@
-﻿using MoveIt.Actions;
+﻿using MoveIt.Actions.Select;
+using MoveIt.Actions.Toolbox;
 using MoveIt.Tool;
 using QCommonLib;
 
@@ -6,7 +7,7 @@ namespace MoveIt.Systems
 {
     internal partial class MIT_InputSystem : QInputSystem
     {
-        protected static readonly MIT _Tool = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
 
         protected override void OnCreate()
         {
@@ -21,13 +22,13 @@ namespace MoveIt.Systems
             RegisterBinding(new(
                 action: Mod.Settings.GetAction(Inputs.KEY_TOGGLEMARQUEE),
                 context: QInput_Contexts.ToolEnabled,
-                trigger: _Tool.ToggleSelectionMode
+                trigger: _MIT.ToggleSelectionMode
             ));
 
             RegisterBinding(new(
                 action: Mod.Settings.GetAction(Inputs.KEY_TOGGLEMANIP),
                 context: QInput_Contexts.ToolEnabled,
-                trigger: _Tool.ToggleManipulationMode
+                trigger: _MIT.ToggleManipulationMode
             ));
 
             RegisterBinding(new(
@@ -49,6 +50,12 @@ namespace MoveIt.Systems
             ));
 
             RegisterBinding(new(
+                action: Mod.Settings.GetAction(Inputs.KEY_FILTERSTOGGLE),
+                context: QInput_Contexts.ToolEnabled,
+                trigger: DoFiltersToggle
+            ));
+
+            RegisterBinding(new(
                 action: Mod.Settings.GetAction(Inputs.KEY_DEBUGFREEZE),
                 context: QInput_Contexts.ToolEnabled,
                 trigger: DoDebugFreeze
@@ -63,7 +70,7 @@ namespace MoveIt.Systems
             //RegisterBinding(new(
             //    action: Mod.Settings.GetAction(Inputs.KEY_DEJANK),
             //    context: QInput_Contexts.ToolEnabled,
-            //    trigger: _Tool.DejankNodes
+            //    trigger: _MIT.DejankNodes
             //));
 
             RegisterBinding(new(
@@ -94,51 +101,72 @@ namespace MoveIt.Systems
                 isPassive: true
             ));
 
+            // Toolbox
+
+            foreach (ToolBoxTool tool in Managers.ToolboxManager.ToolList)
+            {
+                RegisterBinding(new(
+                    action: Mod.Settings.GetAction(tool.m_Hotkey),
+                    context: QInput_Contexts.ToolEnabled,
+                    trigger: () => ToolboxActivate(tool.m_Id)
+                ));
+            }
+
             //DebugDumpAllBindings();
         }
 
         private void DoToolToggle()
         {
-            //QLog.Debug($"Key: {Inputs.KEY_TOGGLETOOL}");
-            _Tool.RequestToggle();
+            //MIT.Log.Debug($"Key: {Inputs.KEY_TOGGLETOOL}");
+            _MIT.RequestToggle();
         }
 
         private void DoUndo()
         {
-            //QLog.Debug($"Key: {Inputs.KEY_UNDO}");
-            if (_Tool.ToolState == ToolStates.Default)
+            //MIT.Log.Debug($"Key: {Inputs.KEY_UNDO}");
+            if (_MIT.MITState == MITStates.Default)
             {
-                _Tool.ToolAction = ToolActions.Undo;
+                _MIT.MITAction = MITActions.Undo;
             }
         }
 
         private void DoRedo()
         {
-            //QLog.Debug($"Key: {Inputs.KEY_REDO}");
-            if (_Tool.ToolState == ToolStates.Default)
+            //MIT.Log.Debug($"Key: {Inputs.KEY_REDO}");
+            if (_MIT.MITState == MITStates.Default)
             {
-                _Tool.ToolAction = ToolActions.Redo;
+                _MIT.MITAction = MITActions.Redo;
             }
         }
-
+        
         private void DoDeselectAll()
         {
-            //QLog.Debug($"Key: {Inputs.KEY_DESELECTALL}");
-            _Tool.Queue.Push(new DeselectAllAction());
-            _Tool.ToolAction = ToolActions.Do;
-            //_Tool.Queue.Do();
+            //MIT.Log.Debug($"Key: {Inputs.KEY_DESELECTALL}");
+            _MIT.Queue.Push(new DeselectAllAction());
+            _MIT.MITAction = MITActions.Do;
+            //_MIT.Queue.Do();
+        }
+        private void DoFiltersToggle()
+        {
+            //MIT.Log.Debug($"Key: {Inputs.KEY_FILTERSTOGGLE}");
+            _MIT.m_UISystem.ToggleFiltersPanel();
         }
 
         private void DoDebugFreeze()
         {
-            _Tool.m_OverlaySystem.DebugFreeze = !_Tool.m_OverlaySystem.DebugFreeze;
-            QLog.Debug($"Key: {Inputs.KEY_DEBUGFREEZE} ({_Tool.m_OverlaySystem.DebugFreeze})");
+            _MIT.m_OverlaySystem.DebugFreeze = !_MIT.m_OverlaySystem.DebugFreeze;
+            MIT.Log.Debug($"Key: {Inputs.KEY_DEBUGFREEZE} ({_MIT.m_OverlaySystem.DebugFreeze})");
+        }
+
+        private void ToolboxActivate(string id)
+        {
+            _MIT.ToolboxManager.Activate(id);
         }
 
         //private void DoDebugClear()
         //{
-        //    //QLog.Debug($"Key: {Inputs.KEY_DEBUGCLEAR}");
-        //    _Tool.m_RenderSystem.Clear();
+        //    //MIT.Log.Debug($"Key: {Inputs.KEY_DEBUGCLEAR}");
+        //    _MIT.m_RenderSystem.Clear();
         //}
     }
 }

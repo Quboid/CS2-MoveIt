@@ -1,5 +1,5 @@
 ﻿using Colossal.Mathematics;
-using MoveIt.Actions;
+using MoveIt.Actions.Select;
 using MoveIt.Tool;
 using QCommonLib;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ namespace MoveIt.Input
 {
     internal class Marquee
     {
-        protected static readonly MIT _Tool = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
 
         internal float3 m_StartPosition;
         internal Quad3 m_SelectArea;
@@ -41,8 +41,8 @@ namespace MoveIt.Input
             if (m_HasMoved) return true;
             if (position.Equals(m_StartPosition)) return false;
 
-            _Tool.Queue.Push(new SelectMarqueeAction(QKeyboard.Shift));
-            _Tool.Queue.Do();
+            _MIT.Queue.Push(new SelectMarqueeAction(QKeyboard.Shift));
+            _MIT.Queue.Do();
             m_HasMoved = true;
             return true;
         }

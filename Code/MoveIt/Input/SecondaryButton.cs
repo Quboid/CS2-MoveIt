@@ -1,7 +1,8 @@
 ﻿using Game.Input;
-using MoveIt.Actions;
+using MoveIt.Actions.Select;
+using MoveIt.Actions.Transform;
 using MoveIt.Tool;
-using UnityEngine.InputSystem;
+using QCommonLib;
 
 namespace MoveIt.Input
 {
@@ -13,27 +14,34 @@ namespace MoveIt.Input
         internal override void OnPress()
         {
             m_Status = ButtonStatus.Down;
-            if (_Tool.ToolState == ToolStates.Default)
+            if (_MIT.MITState == MITStates.Default)
             {
-                _Tool.m_MouseStartX = Mouse.current.position.x.ReadValue();
+                _MIT.m_MouseStartX = QCommon.MouseScreenPosition.x;
+                _MIT.m_SensitivityTogglePosX = _MIT.m_MouseStartX;
             }
         }
 
         internal override void OnClick()
         {
-            if (_Tool.ToolState != ToolStates.Default) return;
-
-            if (_Tool.IsManipulating && _Tool.Selection.Count == 0)
+            if (_MIT.MITState == MITStates.ToolActive)
             {
-                _Tool.SetManipulationMode(false);
+                _MIT.ToolboxManager.Phase = Managers.Phases.Finalize;
+                return;
+            }
+
+            if (_MIT.MITState != MITStates.Default) return;
+
+            if (_MIT.IsManipulating && _MIT.Selection.Count == 0)
+            {
+                _MIT.SetManipulationMode(false);
 
                 return;
             }
 
-            _Tool.Queue.Push(new SelectAction());
-            _Tool.Queue.Do();
+            _MIT.Queue.Push(new SelectAction());
+            _MIT.Queue.Do();
 
-            _Tool.CreationPhase = CreationPhases.Cleanup;
+            _MIT.CreationPhase = CreationPhases.Cleanup;
 
             //MIT.Log.Debug($"SecondaryButton.OnClick {Queue.Debug()}");
         }
@@ -41,21 +49,26 @@ namespace MoveIt.Input
         internal override void OnHold()
         {
             //MIT.Log.Debug($"SecondaryButton.OnDrag");
-            if (m_Status == ButtonStatus.Down && _Tool.ToolState == ToolStates.Default)
+            if (m_Status == ButtonStatus.Down && _MIT.MITState == MITStates.Default)
             {
-                if (_Tool.Hover.LastValid.IsNull) return;
+                if (_MIT.Hovered.LastValid.IsNull) return;
 
-                _Tool.RotationStart();
+                _MIT.RotationStart();
+            }
+            if (_MIT.MITState == MITStates.SecondaryButtonHeld)
+            {
+                _MIT.UpdateSensitivityMode();
             }
         }
 
         internal override void OnHoldEnd()
         {
-            //MIT.Log.Debug($"SecondaryButton.OnHoldEnd ts:{ToolState}");
-            if (m_Status == ButtonStatus.Down && _Tool.Queue.Current is TransformAction ta && _Tool.ToolState == ToolStates.SecondaryButtonHeld)
+            //MIT.Log.Debug($"SecondaryButton.OnHoldEnd ts:{MITState}");
+            if (m_Status == ButtonStatus.Down && _MIT.Queue.Current is TransformBase ta && _MIT.MITState == MITStates.SecondaryButtonHeld)
             {
-                _Tool.RotationEnd();
+                _MIT.RotationEnd();
             }
+            _MIT.ProcessSensitivityMode(false);
         }
 
         internal override void OnRelease()

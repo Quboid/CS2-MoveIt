@@ -9,7 +9,7 @@ namespace MoveIt.Overlays
 {
     public abstract class Overlay : IDisposable
     {
-        protected static readonly MIT _Tool = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
 
         public const float LINE_MIN_WIDTH           = 0.1f;
         public const float LINE_MAX_WIDTH           = 3f;
@@ -41,12 +41,12 @@ namespace MoveIt.Overlays
         public string Name => GetType().Name;
 
         protected virtual Game.Objects.Transform Transform => m_Moveable.Transform;
-        internal MIO_Common Common => _Tool.EntityManager.GetComponentData<MIO_Common>(m_Entity);
+        internal MIO_Common Common => _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
 
         public override string ToString()
         {
             return $"[Overlay {Name.Substring(7, Name.Length - 7)}, " +
-                $"ent:{(m_Entity.Equals(Entity.Null) ? "Null" : m_Entity.D() + "/" + _Tool.EntityManager.GetComponentData<MIO_Type>(m_Entity).m_Type + "/" + Common.m_Flags)}, " +
+                $"ent:{(m_Entity.Equals(Entity.Null) ? "Null" : m_Entity.D() + "/" + _MIT.EntityManager.GetComponentData<MIO_Type>(m_Entity).m_Type + "/" + Common.m_Flags)}, " +
                 $"owner:{m_Moveable?.Name} {(m_Moveable is null ? "null" : $"{m_Moveable.D(true)}")}]";
         }
 
@@ -58,18 +58,18 @@ namespace MoveIt.Overlays
         protected void UpdateCommon(ref MIO_Common common)
         {
             common.m_Transform = Transform;
-            common.m_TerrainHeight = _Tool.GetTerrainHeight(common.m_Transform.m_Position);
+            common.m_TerrainHeight = _MIT.GetTerrainHeight(common.m_Transform.m_Position);
 
             float elevation = 0f;
 
-            if (_Tool.EntityManager.HasComponent<Game.Net.Elevation>(m_Owner))
+            if (_MIT.EntityManager.HasComponent<Game.Net.Elevation>(m_Owner))
             {
-                Game.Net.Elevation el = _Tool.EntityManager.GetComponentData<Game.Net.Elevation>(m_Owner);
+                Game.Net.Elevation el = _MIT.EntityManager.GetComponentData<Game.Net.Elevation>(m_Owner);
                 elevation = (el.m_Elevation.y + el.m_Elevation.x) / 2;
             }
-            else if (_Tool.EntityManager.HasComponent<Game.Objects.Elevation>(m_Owner))
+            else if (_MIT.EntityManager.HasComponent<Game.Objects.Elevation>(m_Owner))
             {
-                Game.Objects.Elevation el = _Tool.EntityManager.GetComponentData<Game.Objects.Elevation>(m_Owner);
+                Game.Objects.Elevation el = _MIT.EntityManager.GetComponentData<Game.Objects.Elevation>(m_Owner);
                 elevation = el.m_Elevation;
             }
 
@@ -91,12 +91,12 @@ namespace MoveIt.Overlays
 
         public virtual void EnqueueUpdate()
         {
-            _Tool.QueueOverlayUpdate(this);
+            _MIT.QueueOverlayUpdate(this);
         }
 
         public virtual void EnqueueUpdateDeferred()
         {
-            _Tool.QueueOverlayUpdateDeferred(this);
+            _MIT.QueueOverlayUpdateDeferred(this);
         }
 
         public virtual bool Update()
@@ -104,23 +104,23 @@ namespace MoveIt.Overlays
             if (m_Moveable is null) return false;
             if (m_Entity.Equals(Entity.Null)) return false;
 
-            MIO_Common common = _Tool.EntityManager.GetComponentData<MIO_Common>(m_Entity);
+            MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
             UpdateCommon(ref common);
 
-            if (_Tool.EntityManager.HasComponent<MIO_Circle>(m_Entity))
+            if (_MIT.EntityManager.HasComponent<MIO_Circle>(m_Entity))
             {
-                MIO_Circle circle = _Tool.EntityManager.GetComponentData<MIO_Circle>(m_Entity);
+                MIO_Circle circle = _MIT.EntityManager.GetComponentData<MIO_Circle>(m_Entity);
                 circle.Circle.position = common.m_Transform.m_Position;
-                _Tool.EntityManager.SetComponentData(m_Entity, circle);
+                _MIT.EntityManager.SetComponentData(m_Entity, circle);
             }
 
-            _Tool.EntityManager.SetComponentData(m_Entity, common);
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
             return true;
         }
         
         public virtual void AddFlag(InteractionFlags flags)
         {
-            //QLog.Debug($"Adding flag {flags} to overlay {m_Entity.D()} of {m_Owner.DX()}");
+            //MIT.Log.Debug($"Adding flag {flags} to overlay {m_Entity.D()} of {m_Owner.DX()}");
             if (m_Entity.Equals(Entity.Null))
             {
                 if (!CreateOverlayEntity())
@@ -129,18 +129,18 @@ namespace MoveIt.Overlays
                 }
             }
 
-            MIO_Common common = _Tool.EntityManager.GetComponentData<MIO_Common>(m_Entity);
+            MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
 
             common.m_Flags |= flags;
-            _Tool.EntityManager.SetComponentData(m_Entity, common);
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
         }
 
         public virtual void RemoveFlag(InteractionFlags flags)
         {
-            //QLog.Debug($"Removing flag {flags} to overlay {m_Entity.D()} of {m_Owner.DX()}");
+            //MIT.Log.Debug($"Removing flag {flags} to overlay {m_Entity.D()} of {m_Owner.DX()}");
             if (m_Entity.Equals(Entity.Null)) return;
 
-            MIO_Common common = _Tool.EntityManager.GetComponentData<MIO_Common>(m_Entity);
+            MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
 
             common.m_Flags &= ~flags;
 
@@ -149,7 +149,7 @@ namespace MoveIt.Overlays
                 DestroyOverlayEntity();
             }
 
-            _Tool.EntityManager.SetComponentData(m_Entity, common);
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
         }
 
 
@@ -171,8 +171,8 @@ namespace MoveIt.Overlays
                 return false;
             }
 
-            //QLog.Debug($"Overlay.DestroyOlayEnt {m_Entity.D()}/{m_Type}, owner:{m_Moveable?.D()}, exists:{_Tool.EntityManager.Exists(m_Entity)} hasDel:{_Tool.EntityManager.HasComponent<Game.Common.Deleted>(m_Entity)}");
-            _Tool.EntityManager.AddComponent<Game.Common.Deleted>(m_Entity);
+            //MIT.Log.Debug($"Overlay.DestroyOlayEnt {m_Entity.D()}/{m_Type}, owner:{m_Moveable?.D()}, exists:{_MIT.EntityManager.Exists(m_Entity)} hasDel:{_MIT.EntityManager.HasComponent<Game.Common.Deleted>(m_Entity)}");
+            _MIT.EntityManager.AddComponent<Game.Common.Deleted>(m_Entity);
 
             m_Entity = Entity.Null;
             return true;

@@ -62,10 +62,12 @@ namespace MoveIt.Tool
             Hover = new();
             Moveables = new();
             Queue = new();
+            ToolboxManager = new();
+            Filtering = new();
 
             CreationPhase = CreationPhases.None;
-            ToolState = ToolStates.Default;
-            ToolAction = ToolActions.None;
+            MITState = MITStates.Default;
+            MITAction = MITActions.None;
 
             m_MarqueeSelect = false;
             m_IsManipulateMode = false;

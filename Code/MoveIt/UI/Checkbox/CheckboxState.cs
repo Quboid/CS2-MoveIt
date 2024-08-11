@@ -1,4 +1,4 @@
-﻿namespace MoveIt.Systems.UIElements.Checkbox
+﻿namespace MoveIt.UI.Checkbox
 {
     public class CheckboxState : StateBase
     {

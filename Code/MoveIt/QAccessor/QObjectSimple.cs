@@ -59,7 +59,7 @@ namespace MoveIt.QAccessor
 
         internal readonly void DebugDumpFullObject(string prefix = "")
         {
-            QLog.Debug(prefix + DebugFullObject());
+            MIT.Log.Debug(prefix + DebugFullObject());
         }
 #endif
     }

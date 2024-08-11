@@ -1,4 +1,5 @@
 import { useState } from "react";
+import classNames from "classnames";
 import { Button, Tooltip } from "cs2/ui";
 import { VanillaComponentResolver } from "classes/VanillaComponentResolver";
 import { ButtonState, TopRowButtonStates } from "mit-mainpanel/panelState";
@@ -16,17 +17,20 @@ import ic6 from "../img/icon_Single_Active.svg";
 import ic7 from "../img/icon_Marquee_Active.svg";
 import ic8 from "../img/icon_Manipulation_Active.svg";
 import ic9 from "../img/icon_Redo_Disabled.svg";
-import icA from "../img/icon_OpenDropdown.svg";
-import icB from "../img/icon_CloseDropdown.svg";
-// import icC from "../img/checkbox-false.svg";
-// import icD from "../img/checkbox-true.svg";
-// import icE from "../img/checkbox-partial.svg";
+import icA from "../img/icon_FoldoutOpen.svg";
+import icB from "../img/icon_FoldoutClose.svg";
+import icC from "../img/icon_PopoutOpen.svg";
+import icD from "../img/icon_PopoutClose.svg";
 
 export function ButtonRowTop(topRowState : TopRowButtonStates) {
-    const classes: string = `${styles.row} ${styles.buttonRow}`;
+    const classes = classNames({
+        [styles.row]: true,
+        [styles.buttonRow]: true,
+    });
 
     // Ugly code to force these images to build
-    var x = ic0; x = ic1; x = ic2; x = ic3; x = ic4; x = ic5; x = ic6; x = ic7; x = ic8; x = ic9; x = icA; x = icB; //x = icC; x = icD; x = icE;
+    var x = ic0; x = ic1; x = ic2; x = ic3; x = ic4; x = ic5; x = ic6; 
+    x = ic7; x = ic8; x = ic9; x = icA; x = icB; x = icC; x = icD;
 
     return (
         <div className={classes}>
@@ -54,7 +58,7 @@ function ButtonRowButton(data : ButtonData, state : ButtonState)
             src={data.GetIconPath(state)}
             id={data.Id}
             focusKey={VanillaComponentResolver.instance.FOCUS_DISABLED}
-            onSelect={() => ButtonPressed(data.Id)}
+            onSelect={() => ButtonPressed(data.Section, data.Id)}
             variant="icon" />
         </Tooltip>
         </div>
@@ -63,12 +67,14 @@ function ButtonRowButton(data : ButtonData, state : ButtonState)
 
 class ButtonData
 {
+    Section : string;
     Id : string;
     Icon : string;
     Tooltip : string;
 
-    constructor(id : string, icon : string, tooltip : string)
+    constructor(section : string, id : string, icon : string, tooltip : string)
     {
+        this.Section = section;
         this.Id = id;
         this.Icon = icon;
         this.Tooltip = tooltip;
@@ -84,9 +90,9 @@ class ButtonData
 }
 
 const TopButtonsData : ButtonData[] = [
-    new ButtonData("undo",          "Undo",         "Undo"),
-    new ButtonData("single",        "Single",       "Single Mode"),
-    new ButtonData("marquee",       "Marquee",      "Marquee Mode"),
-    new ButtonData("manipulation",  "Manipulation", "Manipulation Mode"),
-    new ButtonData("redo",          "Redo",         "Redo"),
+    new ButtonData("toprow",    "undo",          "Undo",         "Undo"),
+    new ButtonData("toprow",    "single",        "Single",       "Single Mode"),
+    new ButtonData("toprow",    "marquee",       "Marquee",      "Marquee Mode"),
+    new ButtonData("toprow",    "manipulation",  "Manipulation", "Manipulation Mode"),
+    new ButtonData("toprow",    "redo",          "Redo",         "Redo"),
 ];

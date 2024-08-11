@@ -7,9 +7,9 @@ namespace MoveIt.Moveables
     {
         public override bool IsManipChild => true;
 
-        public MVServiceUpgrade(Entity e) : base(e, Identity.ServiceUpgrade, ObjectType.Normal)
+        public MVServiceUpgrade(Entity e) : base(e, Identity.ServiceUpgrade)
         {
-            if (_Tool.EntityManager.HasComponent<Game.Common.Owner>(e))
+            if (_MIT.EntityManager.HasComponent<Game.Common.Owner>(e))
             {
                 m_Overlay = Factory.Create<OverlayNone>(this, OverlayTypes.None);
             }

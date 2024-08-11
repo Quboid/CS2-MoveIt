@@ -6,7 +6,7 @@ namespace MoveIt.Overlays
 {
     public abstract class OverlayMoveableCircle : Overlay
     {
-        private static EntityArchetype _Archetype = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Common),
@@ -20,11 +20,11 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Entity owner, Circle3 circle)
         {
-            Entity e = _Tool.EntityManager.CreateEntity(_Archetype);
+            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
 
-            _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVCircle));
-            _Tool.EntityManager.SetComponentData<MIO_Common>(e, new(owner));
-            _Tool.EntityManager.SetComponentData<MIO_Circle>(e, new(circle));
+            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVCircle));
+            _MIT.EntityManager.SetComponentData<MIO_Common>(e, new(owner));
+            _MIT.EntityManager.SetComponentData<MIO_Circle>(e, new(circle));
 
             return e;
         }

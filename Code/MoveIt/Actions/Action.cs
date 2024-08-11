@@ -1,24 +1,22 @@
-﻿using Colossal.IO.AssetDatabase.Internal;
-using Colossal.Mathematics;
+﻿using Colossal.Mathematics;
 using MoveIt.Moveables;
 using MoveIt.Selection;
 using MoveIt.Tool;
 using QCommonLib;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace MoveIt.Actions
 {
     internal class ActionState : IDisposable
     {
-        protected readonly MIT _Tool = MIT.m_Instance;
+        protected readonly MIT _MIT = MIT.m_Instance;
 
         public virtual void Dispose() { }
 
         public override string ToString()
         {
-            return string.Empty;
+            return "(normal)";
         }
     }
 
@@ -34,7 +32,7 @@ namespace MoveIt.Actions
 
     internal abstract class Action
     {
-        protected static readonly MIT _Tool = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
 
         public abstract string Name { get; }
         public int m_InitialFrame;
@@ -74,9 +72,14 @@ namespace MoveIt.Actions
         /// </summary>
         internal bool m_UpdateRotate = false;
 
+        /// <summary>
+        /// Can this action use low sensitivty mode? (Slower mouse movement, no overlays)
+        /// </summary>
+        internal bool m_CanUseLowSensitivity = false;
+
         public Action()
         {
-            m_IsManipulationMode = _Tool.m_IsManipulateMode;
+            m_IsManipulationMode = _MIT.m_IsManipulateMode;
             m_InitialFrame = UnityEngine.Time.frameCount;
         }
 
@@ -97,13 +100,15 @@ namespace MoveIt.Actions
         /// </summary>
         /// <param name="toolState">The tool action at the time of archiving</param>
         /// <param name="idx">This action's queue index</param>
-        public void Archive(ToolActions toolAction, int idx)
+        public void Archive(MITActions toolAction, int idx)
         {
-            int old = _Tool.Selection.Count;
-            int oldFull = _Tool.Selection.CountFull;
-            //_Tool.Selection.DebugDumpSelection("Archiving...");
-            _SelectionState = SelectionState.SelectionToState(_Tool.m_IsManipulateMode, _Tool.Selection.Definitions);
-            MIT.Log.Debug($"Archive {idx}:{_Tool.Queue.Current.Name} ToolAction:{toolAction} Definitions:{old}/{oldFull}->{_SelectionState.Count}");
+            string oldSelection = _SelectionState is null ? "<null>" : _SelectionState.Debug();
+            int old = _MIT.Selection.Count;
+            int oldFull = _MIT.Selection.CountFull;
+            string moveables = _MIT.Selection.DebugSelection();
+            _SelectionState = SelectionState.SelectionToState(_MIT.m_IsManipulateMode, _MIT.Selection.Definitions);
+            string newSelection = _SelectionState.Debug();
+            MIT.Log.Debug($"ARCHIVE {idx}:{_MIT.Queue.Current.Name} ToolAction:{toolAction} Definitions:{old}/{oldFull}->{_SelectionState.Count}\nOld: {oldSelection}\nNew: {newSelection}\nAll Moveables: {moveables}");
         }
 
         /// <summary>
@@ -112,11 +117,14 @@ namespace MoveIt.Actions
         /// </summary>
         /// <param name="toolAction">The tool action at the time of unarchiving</param>
         /// <param name="idx">This action's queue index</param>
-        public virtual void Unarchive(ToolActions toolAction, int idx)
+        public virtual void Unarchive(MITActions toolAction, int idx)
         {
+            string oldSelection = _SelectionState is null ? "<null>" : _SelectionState.Debug();
             int old = _SelectionState.Count;
+            string moveables = _MIT.Selection.DebugSelection();
             _SelectionState = _SelectionState.CleanDefinitions();
-            MIT.Log.Debug($"Unarchive {idx}:{_Tool.Queue.Current.Name} ToolAction:{toolAction} Definitions:{old}->{_SelectionState.Count}");
+            string newSelection = _SelectionState.Debug();
+            MIT.Log.Debug($"UNARCHIVE {idx}:{_MIT.Queue.Current.Name} ToolAction:{toolAction} Definitions:{old}->{_SelectionState.Count}\nOld: {oldSelection}\nNew: {newSelection}\nAll Moveables: {moveables}");
         }
 
         /// <summary>
@@ -134,44 +142,20 @@ namespace MoveIt.Actions
         protected void Deselect(IEnumerable<MVDefinition> definitions)
         {
             MIT.Log.Debug($"Action.Deselect {MIT.DebugDefinitions(definitions)}" +
-                $"\n{_Tool.Moveables.DebugFull()}" +
+                $"\n{_MIT.Moveables.DebugFull()}" +
                 $"\n{QCommon.GetStackTrace(3)}");
 
             foreach (var mvd in definitions)
             {
-                if (_Tool.Moveables.TryGet(mvd, out Moveable mv))
+                if (_MIT.Moveables.TryGet(mvd, out Moveable mv))
                 {
                     mv.OnDeselect();
                 }
                 else
                 {
-                    MIT.Log.Warning($"Tried to Deselect {mvd}, but no Moveable found.\n{_Tool.Moveables.DebugFull()}\n{QCommon.GetStackTrace()}");
+                    MIT.Log.Warning($"Tried to Deselect {mvd}, but no Moveable found.\n{_MIT.Moveables.DebugFull()}\n{QCommon.GetStackTrace()}");
                 }
             }
-        }
-
-        /// <summary>
-        /// Switch the current selection when traversing action history, calling OnSelect/OnDeselect as needed
-        /// </summary>
-        protected void ProcessSelectionChange(List<MVDefinition> fromSelection, List<MVDefinition> toSelection)
-        {
-            IEnumerable<MVDefinition> deselected = fromSelection.Except(toSelection);
-            IEnumerable<MVDefinition> reselected = toSelection.Except(fromSelection);
-
-            SelectionState newSelectionStates = new(_Tool.m_IsManipulateMode, toSelection);
-
-            MIT.Log.Debug($"{Name}.ProcessSelectionChange" +
-                $"\n FromSelection: {MIT.DebugDefinitions(fromSelection)}" +
-                $"\n   ToSelection: {MIT.DebugDefinitions(toSelection)}" +
-                $"\n      Deselect: {MIT.DebugDefinitions(deselected)}" +
-                $"\n      Reselect: {MIT.DebugDefinitions(reselected)}" +
-                $"\n         Final: {MIT.DebugDefinitions(newSelectionStates.Definitions)}");
-
-            _Tool.Selection = new SelectionNormal(newSelectionStates);
-            _Tool.Selection.Refresh();
-
-            deselected.ForEach(mvd => _Tool.Moveables.GetOrCreate(mvd).OnDeselect());
-            reselected.ForEach(mvd => _Tool.Moveables.GetOrCreate(mvd).OnSelect());
         }
 
         public override string ToString()

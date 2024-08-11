@@ -1,7 +1,7 @@
 ﻿using Colossal.Entities;
 using Colossal.Mathematics;
 using Game.Tools;
-using MoveIt.Actions;
+using MoveIt.Actions.Transform;
 using MoveIt.Moveables;
 using QCommonLib;
 using System;
@@ -55,7 +55,7 @@ namespace MoveIt.Tool
         {
             UpdateTerrain(Queue.CreationAction.m_TerrainUpdateBounds);
 
-            if (Queue.CreationAction is TransformAction ta)
+            if (Queue.CreationAction is TransformBase ta)
             {
                 int oldC = UpdateNearbyBuildingConnections(EntityManager, ta, ta.m_InitialBounds);
                 int newC = UpdateNearbyBuildingConnections(EntityManager, ta, ta.m_FinalBounds);
@@ -73,7 +73,7 @@ namespace MoveIt.Tool
 
         private void Transform(Actions.Action action)
         {
-            if (action is not TransformAction ta)
+            if (action is not TransformBase ta)
             {
                 Log.Error($"Error: action is {action.Name} during CreationMods.Create");
                 CreationPhase = CreationPhases.Cleanup;
@@ -132,7 +132,7 @@ namespace MoveIt.Tool
         /// <param name="ta">The TransformAction to update for</param>
         /// <param name="bounds">The outer bounds of the rectangle</param>
         /// <returns>The number of search results found</returns>
-        internal int UpdateNearbyBuildingConnections(EntityManager manager, TransformAction ta, Bounds3 bounds)
+        internal int UpdateNearbyBuildingConnections(EntityManager manager, TransformBase ta, Bounds3 bounds)
         {
             bool isRelevant = false;
             foreach (State state in ta.m_Active.m_States)
@@ -219,7 +219,7 @@ namespace MoveIt.Tool
                 }
             }
 
-            //QLog.Debug(sb.ToString());
+            //QLog.XDebug(sb.ToString());
             return searcher.Count;
         }
 

@@ -1,4 +1,4 @@
-﻿using MoveIt.Actions;
+﻿using MoveIt.Actions.Transform;
 using MoveIt.Input;
 using MoveIt.Tool;
 using QCommonLib;
@@ -20,13 +20,13 @@ namespace MoveIt.Managers
 
         public InputManager()
         {
-            _Key_MoveDown = _Tool.m_InputSystem.GetBinding(Inputs.KEY_MOVEDOWN);
-            _Key_MoveUp = _Tool.m_InputSystem.GetBinding(Inputs.KEY_MOVEUP);
-            _Key_MoveDown2 = _Tool.m_InputSystem.GetBinding(Inputs.KEY_MOVEDOWN2);
-            _Key_MoveUp2 = _Tool.m_InputSystem.GetBinding(Inputs.KEY_MOVEUP2);
+            _Key_MoveDown = _MIT.m_InputSystem.GetBinding(Inputs.KEY_MOVEDOWN);
+            _Key_MoveUp = _MIT.m_InputSystem.GetBinding(Inputs.KEY_MOVEUP);
+            _Key_MoveDown2 = _MIT.m_InputSystem.GetBinding(Inputs.KEY_MOVEDOWN2);
+            _Key_MoveUp2 = _MIT.m_InputSystem.GetBinding(Inputs.KEY_MOVEUP2);
 
-            _ApplyAction = new ApplyButton(_Tool.m_InputSystem.MouseApply);
-            _SecondaryAction = new SecondaryButton(_Tool.m_InputSystem.MouseCancel);
+            _ApplyAction = new ApplyButton(_MIT.m_InputSystem.MouseApply);
+            _SecondaryAction = new SecondaryButton(_MIT.m_InputSystem.MouseCancel);
         }
 
         internal void OnToolEnable()
@@ -43,24 +43,24 @@ namespace MoveIt.Managers
 
         internal bool Process()
         {
-            //QLog.Bundle("Keys", _Tool.m_HotkeySystem.DebugAllBindings() +
+            //QLog.Bundle("Keys", _MIT.m_HotkeySystem.DebugAllBindings() +
             //    $"\n        ApplyAction: {_ApplyAction.Enabled}" +
             //    $"\n    SecondaryAction: {_SecondaryAction.Enabled}");
 
             _ApplyAction.Update();
             _SecondaryAction.Update();
 
-            if (_Tool.ToolState == ToolStates.Default && _Tool.Selection.Any)
+            if (_MIT.MITState == MITStates.Default && _MIT.Selection.Any)
             {
                 if (ProcessKeyMovement(out float3 direction, out float _))
                 {
-                    if (_Tool.Queue.Current is not TransformKeyAction)
+                    if (_MIT.Queue.Current is not TransformKeyAction)
                     {
                         TransformKeyAction ta = new();
-                        _Tool.Queue.Push(ta);
+                        _MIT.Queue.Push(ta);
                     }
 
-                    TransformKeyAction tka = _Tool.Queue.Current as TransformKeyAction;
+                    TransformKeyAction tka = _MIT.Queue.Current as TransformKeyAction;
                     tka.Process(direction);
 
                     return true;

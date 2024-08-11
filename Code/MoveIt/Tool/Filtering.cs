@@ -79,7 +79,7 @@ namespace MoveIt.Tool
 
             Bounds3 bounds = marquee.GetBounds();
 
-            using Searcher.Searcher searcher = new(Searcher.Utils.FilterAll & ~Searcher.Filters.Segments, m_IsManipulateMode, m_PointerPos);
+            using Searcher.Searcher searcher = new(Filtering.GetMask() & ~Searcher.Filters.Segments, m_IsManipulateMode, m_PointerPos);
 
             searcher.SearchMarquee(bounds.xz, marquee.m_SelectArea.xz);
 

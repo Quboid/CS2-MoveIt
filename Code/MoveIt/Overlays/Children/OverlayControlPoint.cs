@@ -8,7 +8,7 @@ namespace MoveIt.Overlays
 {
     internal class OverlayControlPoint : Overlay
     {
-        private static EntityArchetype _Archetype = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Common),
@@ -17,7 +17,7 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Entity owner, float3 position)
         {
-            Entity e = _Tool.EntityManager.CreateEntity(_Archetype);
+            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new()
             {
@@ -25,9 +25,9 @@ namespace MoveIt.Overlays
                 m_IsManipulatable = false,
             };
 
-            _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVControlPoint));
-            _Tool.EntityManager.SetComponentData(e, common);
-            _Tool.EntityManager.SetComponentData<MIO_Circle>(e, new(new(CP_RADIUS, position, quaternion.identity)));
+            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVControlPoint));
+            _MIT.EntityManager.SetComponentData(e, common);
+            _MIT.EntityManager.SetComponentData<MIO_Circle>(e, new(new(CP_RADIUS, position, quaternion.identity)));
             return e;
         }
 

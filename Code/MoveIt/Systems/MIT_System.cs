@@ -6,7 +6,7 @@ namespace MoveIt.Systems
 {
     internal abstract partial class MIT_System : SystemBase
     {
-        protected static readonly MIT _Tool = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
 
         protected override void OnCreate()
         {
@@ -32,11 +32,11 @@ namespace MoveIt.Systems
 
     internal abstract partial class MIT_ToolSystem : ObjectToolBaseSystem
     {
-        protected static MIT _Tool;
+        protected static MIT _MIT;
 
         protected override void OnCreate()
         {
-            _Tool = World.GetOrCreateSystemManaged<MIT>();
+            _MIT = World.GetOrCreateSystemManaged<MIT>();
             Enabled = false;
         }
 

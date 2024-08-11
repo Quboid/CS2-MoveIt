@@ -36,7 +36,7 @@
 
 //        internal void Add(Overlays.Widget w)
 //        {
-//            if (_Tool.m_OverlaySystem.m_DebugFreeze) return;
+//            if (_MIT.m_OverlaySystem.m_DebugFreeze) return;
 
 //            if (Has(w.m_Name))
 //            {
@@ -48,7 +48,7 @@
 
 //        internal void Update(string name, float3 position)
 //        {
-//            if (_Tool.m_OverlaySystem.m_DebugFreeze) return;
+//            if (_MIT.m_OverlaySystem.m_DebugFreeze) return;
 
 //            if (!Has(name))
 //            {
@@ -78,7 +78,7 @@
 
 //        internal void Remove(string name)
 //        {
-//            if (_Tool.m_OverlaySystem.m_DebugFreeze) return;
+//            if (_MIT.m_OverlaySystem.m_DebugFreeze) return;
 
 //            if (!Has(name))
 //            {
@@ -90,7 +90,7 @@
 
 //        internal void Remove(Overlays.Widget widget)
 //        {
-//            if (_Tool.m_OverlaySystem.m_DebugFreeze) return;
+//            if (_MIT.m_OverlaySystem.m_DebugFreeze) return;
 //            if (!Has(widget.m_Name))
 //            {
 //                MIT.Log.Warning($"Removing '{widget.m_Name}' but key not found ({m_Widgets.Count} entries)");
@@ -101,7 +101,7 @@
 
 //        internal void RemoveAll()
 //        {
-//            if (_Tool.m_OverlaySystem.m_DebugFreeze) return;
+//            if (_MIT.m_OverlaySystem.m_DebugFreeze) return;
 
 //            foreach (Overlays.Widget w in m_Widgets)
 //            {
@@ -112,7 +112,7 @@
 
 //        internal void Clear()
 //        {
-//            if (_Tool.m_OverlaySystem.m_DebugFreeze) return;
+//            if (_MIT.m_OverlaySystem.m_DebugFreeze) return;
 
 //            foreach (var w in m_Widgets)
 //            {

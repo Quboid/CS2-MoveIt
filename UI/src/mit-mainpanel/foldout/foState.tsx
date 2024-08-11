@@ -1,13 +1,15 @@
 import { CheckboxState } from "mit-mainpanel/checkbox/cbState";
 
-export interface FoldoutCBState
+// Main Foldout menu
+
+export interface FoldoutState
 {
     IsOpen : boolean;
-    Title : FOTitleCBState;
-    Entries: FOEntryCBState[];
+    Title : FOTitleState;
+    Entries: FOMainEntryState[];
 }
 
-export interface FOTitleCBState
+export interface FOTitleState
 {
     Id : string;
     /// <summary>
@@ -18,10 +20,10 @@ export interface FOTitleCBState
     /// IsActive: is this widget ticked/open/etc?
     /// </summary>
     IsActive : boolean;
-    Checkbox : CheckboxState;
+    Checkbox? : CheckboxState;
 }
 
-export interface FOEntryCBState
+export interface FOEntryStateBase
 {
     Id : string;
     /// <summary>
@@ -32,5 +34,21 @@ export interface FOEntryCBState
     /// IsActive: is this widget ticked/open/etc?
     /// </summary>
     IsActive : boolean;
-    Checkbox : CheckboxState;
+    Checkbox? : CheckboxState;
 }
+
+export interface FOMainEntryState extends FOEntryStateBase
+{
+    Popout? : FOPopoutState;
+}
+
+// Popout submenu
+
+export interface FOPopoutState
+{
+    IsOpen : boolean;
+    Entries: FOPopoutEntryState[];
+}
+
+export interface FOPopoutEntryState extends FOEntryStateBase
+{ }

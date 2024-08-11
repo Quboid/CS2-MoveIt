@@ -7,7 +7,7 @@ namespace MoveIt.Selection
 {
     public class SelectionNormal : SelectionBase
     {
-        public override bool IsActive => !_Tool.IsManipulating;
+        public override bool IsActive => !_MIT.IsManipulating;
         public override bool Any => Count > 0;
 
         internal override string Name => "SelNormal";
@@ -18,7 +18,7 @@ namespace MoveIt.Selection
 
         public override void ProcessAdd(MVDefinition mvd, bool append)
         {
-            Moveable mv = _Tool.Moveables.GetOrCreate<Moveable>(mvd);
+            Moveable mv = _MIT.Moveables.GetOrCreate<Moveable>(mvd);
 
             if (mv.IsManipulatable)
             {
@@ -68,6 +68,7 @@ namespace MoveIt.Selection
                 }
             }
 
+            //MIT.DebugDumpDefinitions(definitions, "GetObjectsToTransformFull: ");
             return definitions.ToHashSet();
         }
     }

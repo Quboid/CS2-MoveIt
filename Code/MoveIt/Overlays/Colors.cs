@@ -12,7 +12,8 @@ namespace MoveIt.Overlays
             Hovering,
             Selected,
             Deselect,
-            ToolSelect,
+            ToolHover,
+            ToolParentHover,
             Shadow,
             Background,
             ManipParentHovering,
@@ -33,13 +34,14 @@ namespace MoveIt.Overlays
                 { (int)Contexts.Hovering,               new Color32(0, 181, 255, 250) },
                 { (int)Contexts.Selected,               new Color32(95, 166, 0, 244) },
                 { (int)Contexts.Deselect,               new Color32(255, 160, 47, 191) },
-                { (int)Contexts.ToolSelect,             new Color32(255, 0, 0, 220) },
+                { (int)Contexts.ToolHover,              new Color32(250, 250, 255, 200) },
+                { (int)Contexts.ToolParentHover,        new Color32(230, 230, 240, 150) },
                 { (int)Contexts.Shadow,                 new Color32(165, 165, 170, 50) },
                 { (int)Contexts.Background,             new Color32(165, 165, 180, 150) },
-                { (int)Contexts.ManipParentHovering,    new Color32(235, 120, 250, 135) },
-                { (int)Contexts.ManipParentSelected,    new Color32(235, 120, 250, 90) },
-                { (int)Contexts.ManipChildHovering,     new Color32(215, 185, 255, 230) },
-                { (int)Contexts.ManipChildSelected,     new Color32(200, 160, 240, 190) },
+                { (int)Contexts.ManipParentHovering,    new Color32(215, 100, 250, 175) },
+                { (int)Contexts.ManipParentSelected,    new Color32(215, 100, 250, 90) },
+                { (int)Contexts.ManipChildHovering,     new Color32(215, 200, 255, 240) },
+                { (int)Contexts.ManipChildSelected,     new Color32(215, 200, 255, 190) },
             };
         }
 
@@ -75,7 +77,9 @@ namespace MoveIt.Overlays
 
         public static ColorData.Contexts GetContext(MIO_Common common, ToolFlags toolFlags)
         {
-            if ((common.m_Flags & Tool.InteractionFlags.Static) != 0) return ColorData.Contexts.Other;
+            if ((common.m_Flags & Tool.InteractionFlags.Static) != 0)           return ColorData.Contexts.Other;
+            if ((common.m_Flags & Tool.InteractionFlags.ToolHover) != 0)        return ColorData.Contexts.ToolHover;
+            if ((common.m_Flags & Tool.InteractionFlags.ToolParentHover) != 0)  return ColorData.Contexts.ToolParentHover;
 
             if (((toolFlags & ToolFlags.HasShift) != 0) && ((toolFlags & ToolFlags.IsMarquee) == 0) && ((common.m_Flags & Tool.InteractionFlags.Hovering) != 0) && ((common.m_Flags & Tool.InteractionFlags.Selected) != 0))
             {
@@ -89,7 +93,8 @@ namespace MoveIt.Overlays
         {
             if (common.m_IsManipulatable) return ColorData.Contexts.None;
 
-            if ((common.m_Flags & Tool.InteractionFlags.Tool) != 0)             return ColorData.Contexts.ToolSelect;
+            if ((common.m_Flags & Tool.InteractionFlags.ToolHover) != 0)        return ColorData.Contexts.ToolHover;
+            if ((common.m_Flags & Tool.InteractionFlags.ToolParentHover) != 0)  return ColorData.Contexts.ToolParentHover;
             if ((common.m_Flags & Tool.InteractionFlags.Hovering) != 0)         return ColorData.Contexts.Hovering;
             if ((common.m_Flags & Tool.InteractionFlags.ParentHovering) != 0)   return ColorData.Contexts.Hovering;
             if ((common.m_Flags & Tool.InteractionFlags.Selected) != 0)         return ColorData.Contexts.Selected;
@@ -104,6 +109,8 @@ namespace MoveIt.Overlays
 
             if (common.m_IsManipChild)
             {
+                if ((common.m_Flags & Tool.InteractionFlags.ToolHover) != 0)            return ColorData.Contexts.ToolHover;
+                if ((common.m_Flags & Tool.InteractionFlags.ToolParentHover) != 0)      return ColorData.Contexts.ToolParentHover;
                 if ((common.m_Flags & Tool.InteractionFlags.Hovering) != 0)             return ColorData.Contexts.ManipChildHovering;
                 if ((common.m_Flags & Tool.InteractionFlags.Selected) != 0)             return ColorData.Contexts.ManipChildSelected;
                 if ((common.m_Flags & Tool.InteractionFlags.ParentHovering) != 0)       return ColorData.Contexts.ManipParentHovering;

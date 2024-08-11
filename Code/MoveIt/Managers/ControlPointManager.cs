@@ -13,16 +13,16 @@ namespace MoveIt.Managers
 {
     public class ControlPointManager
     {
-        protected static readonly MIT _Tool = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
 
         private EntityArchetype _ControlPointArchetype;
 
-        internal int Count => _Tool.Moveables.CountOf<MVControlPoint>();
+        internal int Count => _MIT.Moveables.CountOf<MVControlPoint>();
         internal bool Any => Count > 0;
 
         public ControlPointManager()
         {
-            _ControlPointArchetype = _Tool.EntityManager.CreateArchetype(new ComponentType[] {
+            _ControlPointArchetype = _MIT.EntityManager.CreateArchetype(new ComponentType[] {
                 ComponentType.ReadWrite<Game.Prefabs.PrefabRef>(),
                 ComponentType.ReadWrite<Game.Rendering.CullingInfo>(),
                 ComponentType.ReadWrite<MIT_ControlPoint>()
@@ -31,17 +31,17 @@ namespace MoveIt.Managers
 
         private Entity CreateEntity(MVDefinition mvd)
         {
-            if (_Tool.Moveables.Any<MVControlPoint>(cp => mvd.Equals(cp) && DoesMVControlPointHaveEntity(cp)))
+            if (_MIT.Moveables.Any<MVControlPoint>(cp => mvd.Equals(cp) && DoesMVControlPointHaveEntity(cp)))
             {
                 throw new Exception($"Trying to create ControlPoint entity but it already exists ({mvd})");
             }
 
-            Entity e = _Tool.EntityManager.CreateEntity(_ControlPointArchetype);
+            Entity e = _MIT.EntityManager.CreateEntity(_ControlPointArchetype);
 
-            Bezier4x3 curve = _Tool.EntityManager.GetComponentData<Game.Net.Curve>(mvd.m_Parent).m_Bezier;
+            Bezier4x3 curve = _MIT.EntityManager.GetComponentData<Game.Net.Curve>(mvd.m_Parent).m_Bezier;
             float3 position = curve.Get(mvd.m_ParentKey);
 
-            Game.Net.Edge edge = _Tool.EntityManager.GetComponentData<Game.Net.Edge>(mvd.m_Parent);
+            Game.Net.Edge edge = _MIT.EntityManager.GetComponentData<Game.Net.Edge>(mvd.m_Parent);
             MIT_ControlPoint cpData = new(e, mvd.m_Parent, mvd.m_ParentKey, (mvd.m_ParentKey.IsNodeA() ? edge.m_Start : edge.m_End), position, Overlays.Overlay.CP_RADIUS * 2 /*math.max(segmentWidth / 4,  2f)*/, mvd.m_IsManipulatable);
             Game.Prefabs.PrefabRef prefabRef = new(Entity.Null);
             Game.Rendering.CullingInfo culling = new()
@@ -50,19 +50,17 @@ namespace MoveIt.Managers
                 m_Radius = cpData.m_Diameter / 2
             };
 
-            _Tool.EntityManager.SetComponentData(e, cpData);
-            _Tool.EntityManager.SetComponentData(e, prefabRef);
-            _Tool.EntityManager.SetComponentData(e, culling);
+            _MIT.EntityManager.SetComponentData(e, cpData);
+            _MIT.EntityManager.SetComponentData(e, prefabRef);
+            _MIT.EntityManager.SetComponentData(e, culling);
 
             return e;
         }
 
         private static bool DoesMVControlPointHaveEntity(MVControlPoint cp)
         {
-            if (cp.m_Entity.Equals(Entity.Null)) MIT.Log.Debug($"CP {cp} has null entity");
-            if (!_Tool.EntityManager.Exists(cp.m_Entity)) MIT.Log.Debug($"CP {cp} has nonexistent entity");
             if (cp.m_Entity.Equals(Entity.Null)) return false;
-            if (!_Tool.EntityManager.Exists(cp.m_Entity)) return false;
+            if (!_MIT.EntityManager.Exists(cp.m_Entity)) return false;
             return true;
         }
 
@@ -80,12 +78,12 @@ namespace MoveIt.Managers
             if (!HasMoveable(mvd)) return;
 
             MVControlPoint cp = Get(mvd);
-            cp.RefreshComponent();
+            cp.UpdateComponent();
         }
 
         public bool HasMoveable(MVDefinition mvd)
         {
-            return _Tool.Moveables.Any<MVControlPoint>(cp => mvd.Equals(cp));
+            return _MIT.Moveables.Any<MVControlPoint>(cp => mvd.Equals(cp));
         }
 
         /// <summary>
@@ -99,7 +97,7 @@ namespace MoveIt.Managers
 
             Entity e = CreateEntity(mvd);
             mvd = new(Identity.ControlPoint, e, mvd.m_IsManipulatable, true, mvd.m_Parent, mvd.m_ParentKey);
-            MVControlPoint cp = _Tool.Moveables.Factory(mvd) as MVControlPoint;
+            MVControlPoint cp = _MIT.Moveables.Factory(mvd) as MVControlPoint;
             return cp;
         }
 
@@ -128,7 +126,7 @@ namespace MoveIt.Managers
         {
             if (!HasMoveable(mvd)) throw new Exception($"Attempted to get ControlPoint {mvd}, but doesn't exist");
 
-            return _Tool.Moveables.First<MVControlPoint>(cp => mvd.Equals(cp));
+            return _MIT.Moveables.First<MVControlPoint>(cp => mvd.Equals(cp));
         }
 
         public MIT_ControlPoint GetData(MVControlPoint mv)
@@ -147,7 +145,7 @@ namespace MoveIt.Managers
         public HashSet<MIT_ControlPoint> GetAllData(bool isManipulating)
         {
             HashSet<MIT_ControlPoint> result = new();
-            foreach (var cp in _Tool.Moveables.GetAllOf<MVControlPoint>())
+            foreach (var cp in _MIT.Moveables.GetAllOf<MVControlPoint>())
             {
                 if (cp.IsManipulatable == isManipulating)
                 {
@@ -160,10 +158,10 @@ namespace MoveIt.Managers
         public bool IsInUse(MVControlPoint cp)
         {
             MVDefinition mvd = cp.Definition;
-            if (_Tool.Hover.Is(mvd))        return true;
-            if (_Tool.Selection.Has(mvd))   return true;
-            if (_Tool.Selection.Has(cp.NodeDefinition))     return true;
-            if (_Tool.Selection.Has(cp.SegmentDefinition))  return true;
+            if (_MIT.Hover.Is(mvd))        return true;
+            if (_MIT.Selection.Has(mvd))   return true;
+            if (_MIT.Selection.Has(cp.NodeDefinition))     return true;
+            if (_MIT.Selection.Has(cp.ParentDefinition))   return true;
             return false;
         }
 
@@ -179,17 +177,17 @@ namespace MoveIt.Managers
                     if (cp.IsValid && IsInUse(cp)) continue;
                     //msg += $"X";
 
-                    _Tool.Moveables.RemoveDo(cp);
+                    _MIT.Moveables.RemoveDo(cp);
                 }
             }
-            //QLog.Debug(msg);
+            //QLog.XDebug(msg);
         }
 
         public void DestroyAll()
         {
-            int oldCount = _Tool.m_ControlPointQuery.CalculateEntityCount();
-            _Tool.EntityManager.DestroyEntity(_Tool.m_ControlPointQuery);
-            MIT.Log.Info($"Removing {oldCount} entities (new count:{_Tool.m_ControlPointQuery.CalculateEntityCount()})");
+            int oldCount = _MIT.m_ControlPointQuery.CalculateEntityCount();
+            _MIT.EntityManager.DestroyEntity(_MIT.m_ControlPointQuery);
+            MIT.Log.Info($"Removing {oldCount} entities (new count:{_MIT.m_ControlPointQuery.CalculateEntityCount()})");
         }
 
 
@@ -197,7 +195,7 @@ namespace MoveIt.Managers
         {
             StringBuilder sb = new();
             sb.AppendFormat("CPs:{0}", Count);
-            foreach (MVControlPoint cp in _Tool.Moveables.GetAllOf<MVControlPoint>())
+            foreach (MVControlPoint cp in _MIT.Moveables.GetAllOf<MVControlPoint>())
             {
                 sb.AppendFormat("\n    {0}", cp.Definition);
             }

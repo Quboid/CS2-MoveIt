@@ -9,6 +9,7 @@ namespace MoveIt.QAccessor
         internal enum ID
         {
             Generic,
+            Prop,
             Seg,
             Lane,
             CP,

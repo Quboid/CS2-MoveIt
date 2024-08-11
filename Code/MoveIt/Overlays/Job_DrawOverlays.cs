@@ -59,7 +59,7 @@ namespace MoveIt.Overlays
                     MIO_Common common = data_CommonData[idx];
 
                     // Remember to disable Burst!
-                    //QLog.Debug($"  DRAW  {data_Overlay[idx].m_Type}  owner:{common.m_Owner.DX()}, {common.m_Flags}/{common.m_Manipulation} Tool:{m_ToolFlags}");
+                    //MIT.Log.Debug($"  DRAW  {data_Overlay[idx].m_Type}  owner:{common.m_Owner.DX()}, {common.m_Flags}/{common.m_Manipulation} Tool:{m_ToolFlags}");
 
                     if (common.m_Flags == InteractionFlags.None) continue;
                     if ((m_ToolFlags & ToolFlags.ShowDebug) == 0 && chunk.Has(ref cth_Debug)) continue;
@@ -142,6 +142,7 @@ namespace MoveIt.Overlays
                         case OverlayTypes.MVManipSegment:
                             RenderMVManipSegment(
                                 common,
+                                data_Bezier[idx],
                                 data_Beziers[idx],
                                 data_DashedLines[idx]);
                             break;
@@ -237,20 +238,26 @@ namespace MoveIt.Overlays
 
             public readonly void RenderMVControlPoint(MIO_Common common, Circle3 circle)
             {
+                if (IsManipulating) return;
+
                 DrawCircle(common, circle, Projection.Fixed);
-                if (common.ShowShadow) DrawDashedCircle(common, circle, Projection.Ground, Colors.Get(ColorData.Contexts.Shadow), default, common.m_ShadowOpacity);
+                if (common.ShowShadow) DrawCircle(common, circle, Projection.Ground, Colors.Get(ColorData.Contexts.Shadow), common.m_ShadowOpacity);
             }
 
 
             public readonly void RenderMVManipControlPoint(MIO_Common common, Circle3 circle)
             {
                 DrawCircle(common, circle, Projection.Fixed);
-                if (common.ShowShadow) DrawDashedCircle(common, circle, Projection.Ground, Colors.Get(ColorData.Contexts.Shadow), default, common.m_ShadowOpacity);
+                if (common.ShowShadow) DrawCircle(common, circle, Projection.Ground, Colors.Get(ColorData.Contexts.Shadow), common.m_ShadowOpacity);
             }
 
-            public readonly void RenderMVManipSegment(MIO_Common common, DynamicBuffer<MIO_Beziers> curves, DynamicBuffer<MIO_DashedLines> dashed)
+            public readonly void RenderMVManipSegment(MIO_Common common, MIO_Bezier bezier, DynamicBuffer<MIO_Beziers> curves, DynamicBuffer<MIO_DashedLines> dashed)
             {
                 if (!IsManipulating) return;
+
+                if (common.ShowShadow) DrawCurve(common, bezier.Curve, Projection.Ground, Colors.Get(ColorData.Contexts.Shadow), bezier.Width, common.m_ShadowOpacity);
+
+                if ((common.m_Flags & InteractionFlags.ToolHover) != 0) return;
 
                 Color c = Colors.Get(common, m_ToolFlags);
 

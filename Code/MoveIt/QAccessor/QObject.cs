@@ -30,7 +30,7 @@ namespace MoveIt.QAccessor
             m_Manager       = manager;
             m_Entity        = e;
             m_Identity      = identity == Identity.None ? QTypes.GetEntityIdentity(manager, e) : identity;
-            m_Parent        = new(m_Manager, ref lookup, e, m_Identity);
+            m_Parent        = new(manager, ref lookup, e, m_Identity);
             m_Children      = new(0, Allocator.Persistent);
 
             using NativeArray<Entity> subEntities = GetSubEntities(e, m_Identity);
@@ -41,7 +41,7 @@ namespace MoveIt.QAccessor
                 {
                     if (subEntities[i] == Entity.Null) throw new NullReferenceException($"Creating child for {e.D()} with null entity");
 
-                    if (m_Manager.HasComponent<Game.Net.ConnectionLane>(subEntities[i]) && !m_Manager.HasComponent<Game.Net.AreaLane>(subEntities[i])) continue;
+                    if (m_Manager.HasComponent<Game.Net.ConnectionLane>(subEntities[i])) continue;// && !m_Manager.HasComponent<Game.Net.AreaLane>(subEntities[i])) continue;
 
                     Identity subType = QTypes.GetEntityIdentity(manager, subEntities[i]);
                     m_Children.Add(new(m_Manager, ref lookup, subEntities[i], subType, m_Entity));
@@ -92,13 +92,13 @@ namespace MoveIt.QAccessor
 
         public void MoveTo(State state, float3 newPosition)
         {
-            //QLog.Debug($"QObj.MoveTo ({state.m_Entity.D()})  {m_Entity.D()} parent:{m_Parent.m_Entity.DX()} children:{m_Children.Length} {newPosition.DX()}");
+            //QLog.XDebug($"QObj.MoveTo ({state.m_Entity.D()})  {m_Entity.D()} parent:{m_Parent.m_Entity.DX()} children:{m_Children.Length} {newPosition.DX()}");
             MoveBy(state, newPosition, newPosition - m_Parent.Position);
         }
 
         public void MoveBy(State state, float3 newPosition, float3 delta)
         {
-            //QLog.Debug($"QObj.MoveBy {m_Entity.D()} {delta.DX()}  CPs:{m_ChildCPs.Length}, nodes:{m_ChildNodes.Length}, other:{m_Children.Length}");
+            //QLog.XDebug($"QObj.MoveBy {m_Entity.D()} {delta.DX()}  CPs:{m_ChildCPs.Length}, nodes:{m_ChildNodes.Length}, other:{m_Children.Length}");
             m_Parent.MoveBy(state, newPosition, delta);
 
             for (int i = 0; i < m_Children.Length; i++)
@@ -123,23 +123,10 @@ namespace MoveIt.QAccessor
 
         public readonly int UpdateAll()
         {
-            //m_Manager.AddComponent<Game.Common.Updated>(m_Entity);
-            //m_Manager.AddComponent<Game.Common.BatchesUpdated>(m_Entity);
-
             foreach (var child in m_Children)
             {
                 m_Manager.AddComponent<Game.Common.Updated>(child.m_Entity);
                 m_Manager.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
-
-                //if (m_Manager.TryGetBuffer<Game.Net.ConnectedEdge>(child.m_Entity, true, out var edgeBuffer))
-                //{
-                //    QLog.Debug($"Child of {m_Parent.m_Entity.DX()} :: {child.m_Entity.DX()} :: {edgeBuffer.Length}");
-                //    for (int i = 0; i < edgeBuffer.Length; i++)
-                //    {
-                //        m_Manager.AddComponent<Game.Common.Updated>(edgeBuffer[i].m_Edge);
-                //        m_Manager.AddComponent<Game.Common.BatchesUpdated>(edgeBuffer[i].m_Edge);
-                //    }
-                //}
             }
 
             m_Parent.SetUpdated();
@@ -281,7 +268,7 @@ namespace MoveIt.QAccessor
         internal readonly void DebugDumpFullObject(NativeList<int> ids, bool forceAll = false, string prefix = "")
         { }
 
-        internal readonly string DebugFullObject() => ""; 
+        internal readonly string DebugFullObject() => "";
 #else
         internal readonly string DebugFullObject(NativeList<int> ids, bool forceAll = false)
         {
@@ -336,7 +323,7 @@ namespace MoveIt.QAccessor
 
         internal readonly void DebugDumpFullObject(NativeList<int> ids, bool forceAll = false, string prefix = "")
         {
-            QLog.Debug(prefix + DebugFullObject(ids, forceAll));
+            MIT.Log.Debug(prefix + DebugFullObject(ids, forceAll));
         }
 #endif
     }

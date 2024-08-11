@@ -16,7 +16,7 @@ namespace MoveIt.Searcher
 {
     internal class Searcher : IDisposable, INativeDisposable
     {
-        protected static readonly MIT _Tool = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
 
         protected QLookup _Lookup;
 
@@ -44,7 +44,7 @@ namespace MoveIt.Searcher
             _NetworkResults     = new NativeArray<RaycastResult>();
             _SurfaceResults     = new NativeArray<RaycastResult>();
 
-            QLookupFactory.Init(_Tool);
+            QLookupFactory.Init(_MIT);
             _Lookup = QLookupFactory.Get();
         }
 
@@ -147,9 +147,9 @@ namespace MoveIt.Searcher
                 netAreaTreeHandle.Complete();
 
                 _Entities = new NativeList<Entity>(0, Allocator.TempJob);
-                var controlPoints = new NativeArray<Components.MIT_ControlPoint>(_Tool.ControlPointManager.GetAllData(_IsManipulating).ToArray(), Allocator.TempJob);
+                var controlPoints = new NativeArray<Components.MIT_ControlPoint>(_MIT.ControlPointManager.GetAllData(_IsManipulating).ToArray(), Allocator.TempJob);
 
-                QLookupFactory.Init(_Tool);
+                QLookupFactory.Init(_MIT);
 
                 // Do the main search job
                 JobHandle searchHandle = JobHandle.CombineDependencies(objSearchTreeHandle, netSearchTreeHandle);
@@ -173,14 +173,15 @@ namespace MoveIt.Searcher
                 };
                 job.Run();
 
-                // Add valid vanilla network results
-                if (_Type == SearchTypes.Ray && (_Filters & Utils.FilterAllNetworks) != 0)
+                // Add valid vanilla network segment results
+                if (_Type == SearchTypes.Ray && (_Filters & Filters.Segments) != 0)
                 {
                     foreach (var result in _NetworkResults)
                     {
-                        if (ValidVanillaRaycast(_Tool.EntityManager, result))
+                        if (result.m_Owner.Equals(Entity.Null)) continue;
+                        if (TryGetValidVanillaRaycast(_MIT.EntityManager, result, out Entity entity))
                         {
-                            _Entities.Add(result.m_Owner);
+                            _Entities.Add(entity);
                         }
                     }
                 }
@@ -190,9 +191,9 @@ namespace MoveIt.Searcher
                 {
                     foreach (var result in _SurfaceResults)
                     {
-                        if (ValidVanillaRaycast(_Tool.EntityManager, result))
+                        if (TryGetValidVanillaRaycast(_MIT.EntityManager, result, out Entity entity))
                         {
-                            _Entities.Add(result.m_Owner);
+                            _Entities.Add(entity);
                         }
                     }
                 }
@@ -229,20 +230,25 @@ namespace MoveIt.Searcher
             }
         }
 
-        private bool ValidVanillaRaycast(EntityManager manager, RaycastResult result)
+        private bool TryGetValidVanillaRaycast(EntityManager manager, RaycastResult raycast, out Entity result)
         {
-            bool validType = QTypes.GetEntityIdentity(result.m_Owner) switch
+            bool found = false;
+            result = Entity.Null;
+            Entity e = raycast.m_Owner;
+
+            if (QTypes.GetEntityIdentity(e) switch
             {
                 Identity.NetLane => true,
                 Identity.Segment => true,
                 Identity.Surface => true,
                 _ => false,
-            };
-            if (!validType) return false;
+            })
+            {
+                result = e;
+                found = true;
+            }
 
-            if (manager.HasComponent<Owner>(result.m_Owner)) return false;
-
-            return true;
+            return found;
         }
 
         private bool HasSearchResults() =>
@@ -265,7 +271,7 @@ namespace MoveIt.Searcher
         {
             float distance = 0f;
 
-            QObjectSimple accessor = new(_Tool.EntityManager, ref _Lookup, e);
+            QObjectSimple accessor = new(_MIT.EntityManager, ref _Lookup, e);
             float3 position = accessor.m_Parent.Position;
             float2 pos2d = new(position.x, position.z);
 
@@ -325,8 +331,8 @@ namespace MoveIt.Searcher
 
         internal string DebugSearchResults(bool full = false)
         {
-            int netCount = _NetworkResults.Count(res => ValidVanillaRaycast(_Tool.EntityManager, res));
-            int surCount = _SurfaceResults.Count(res => ValidVanillaRaycast(_Tool.EntityManager, res));
+            int netCount = _NetworkResults.Count(res => TryGetValidVanillaRaycast(_MIT.EntityManager, res, out _));
+            int surCount = _SurfaceResults.Count(res => TryGetValidVanillaRaycast(_MIT.EntityManager, res, out _));
 
             StringBuilder sb = new();
             sb.AppendFormat("Search results: {0}; Network results: {1}/{2}; Surface results: {1}/{2}", Count, netCount, _NetworkResults.Length, surCount, _SurfaceResults.Length);
@@ -362,27 +368,16 @@ namespace MoveIt.Searcher
 
         internal void DebugDumpSearchResults(bool full = false, string prefix = "")
         {
-            QLog.Debug(prefix + DebugSearchResults(full));
+            MIT.Log.Debug(prefix + DebugSearchResults(full));
         }
 
         internal void DebugDumpSearchResultsBundle(string key, bool full = false, string prefix = "")
         {
             if (HasSearchResults())
             {
-                QLog.Bundle(key, prefix + DebugSearchResults(full));
+                MIT.Log.Bundle(key, prefix + DebugSearchResults(full));
             }
         }
-
-        //internal static void DebugDumpCalculateDistance((Entity e, float d)[] entities)
-        //{
-        //    StringBuilder sb = new();
-        //    sb.AppendFormat("Nearby entity distances: {0}", entities.Length);
-        //    foreach ((Entity e, float distance) in entities)
-        //    {
-        //        sb.AppendFormat("\n    {0:3.##}: {1}", distance, e.DX());
-        //    }
-        //    MIT.Log.Debug(sb.ToString());
-        //}
 
         #endregion
     }

@@ -2,6 +2,8 @@
 using Game.Net;
 using Game.Tools;
 using MoveIt.Actions;
+using MoveIt.Actions.Select;
+using MoveIt.Actions.Transform;
 using MoveIt.Overlays;
 using QCommonLib;
 using Unity.Mathematics;
@@ -14,13 +16,11 @@ namespace MoveIt.Tool
         {
             base.InitializeRaycast();
 
-            m_ToolRaycastSystem.collisionMask   = CollisionMask.OnGround | CollisionMask.Overground;
-            m_ToolRaycastSystem.areaTypeMask    = Game.Areas.AreaTypeMask.None;
-            m_ToolRaycastSystem.typeMask        = TypeMask.Net;
-            m_ToolRaycastSystem.raycastFlags    = 0f;
-            m_ToolRaycastSystem.netLayerMask    = Layer.Road | Layer.Fence | Layer.TrainTrack | Layer.TramTrack | Layer.SubwayTrack | Layer.Pathway | Layer.LaneEditor;
+            m_ToolRaycastSystem.collisionMask   = CollisionMask.OnGround | CollisionMask.Overground | CollisionMask.ExclusiveGround;
+            m_ToolRaycastSystem.typeMask        = TypeMask.StaticObjects | TypeMask.Lanes | TypeMask.Net | TypeMask.Areas;
+            m_ToolRaycastSystem.raycastFlags    = RaycastFlags.Decals | RaycastFlags.Markers;
+            m_ToolRaycastSystem.netLayerMask    = Layer.Road | Layer.TrainTrack | Layer.TramTrack | Layer.SubwayTrack | Layer.Pathway | Layer.Fence | Layer.LaneEditor;
             m_ToolRaycastSystem.iconLayerMask   = Game.Notifications.IconLayerMask.None;
-            m_ToolRaycastSystem.utilityTypeMask = UtilityTypes.None;
 
             m_RaycastTerrain = new RaycastTerrain(World);
             m_RaycastSurface = new RaycastSurface(World);
@@ -108,9 +108,9 @@ namespace MoveIt.Tool
 
         internal void MoveStart()
         {
-            if (ToolState == ToolStates.SecondaryButtonHeld) return;
+            if (MITState == MITStates.SecondaryButtonHeld) return;
             TransformAction action;
-            if (Selection.Has(Hover.OnPress))
+            if (Selection.Has(Hovered.OnPress))
             {
                 action = new TransformAction();
                 Queue.Push(action);
@@ -124,17 +124,17 @@ namespace MoveIt.Tool
                 action = new TransformAction();
                 Queue.Push(action);
             }
-            ToolState = ToolStates.ApplyButtonHeld;
+            MITState = MITStates.ApplyButtonHeld;
             TransformStart();
         }
 
         internal void RotationStart()
         {
-            if (ToolState == ToolStates.ApplyButtonHeld) return;
+            if (MITState == MITStates.ApplyButtonHeld) return;
             TransformAction action;
             action = new TransformAction();
             Queue.Push(action);
-            ToolState = ToolStates.SecondaryButtonHeld;
+            MITState = MITStates.SecondaryButtonHeld;
 
             TransformStart();
         }
@@ -157,7 +157,7 @@ namespace MoveIt.Tool
 
         internal void TransformEnd()
         {
-            if (Queue.Current is TransformAction action)
+            if (Queue.Current is TransformBase action)
             {
                 action.OnHoldEnd();
             }
@@ -165,7 +165,7 @@ namespace MoveIt.Tool
             {
                 throw new System.Exception($"In EndTransform, action is {Queue.Current.Name} not TransformAction");
             }
-            ToolState = ToolStates.Default;
+            MITState = MITStates.Default;
         }
 
         internal static float GetDistanceBetween2D(Moveables.Moveable a, Moveables.Moveable b)
@@ -173,6 +173,38 @@ namespace MoveIt.Tool
             float3 posA = a.Transform.m_Position;
             float3 posB = b.Transform.m_Position;
             return posA.DistanceXZ(posB);
+        }
+
+        internal void UpdateSensitivityMode()
+        {
+            if (QKeyboard.Control)
+            {
+                if (!_IsLowSensitivity)
+                {
+                    ProcessSensitivityMode(true);
+                }
+            }
+            else
+            {
+                if (_IsLowSensitivity)
+                {
+                    ProcessSensitivityMode(false);
+                }
+            }
+        }
+
+        internal void ProcessSensitivityMode(bool enable)
+        {
+            if (Queue is not null && Queue.Current is not null && Queue.Current.m_CanUseLowSensitivity)
+            {
+                if (enable)
+                {
+                    m_SensitivityTogglePosAbs = m_PointerPos;
+                    m_SensitivityTogglePosX = QCommon.MouseScreenPosition.x; //UnityEngine.InputSystem.Mouse.current.position.x.ReadValue();
+                }
+
+                _IsLowSensitivity = enable;
+            }
         }
 
         //internal void DejankNodes()
@@ -216,7 +248,7 @@ namespace MoveIt.Tool
         //        MathUtils.Distance(smooth, smooth.b, out float segATx);
         //        MathUtils.Distance(smooth, smooth.c, out float segBTx);
 
-        //        QLog.Debug($"Curve {segAT}, {segBT};   {segATx}, {segBTx}\n    {smooth3D.a.D()};  {smooth3D.b.D()};  {smooth3D.c.D()};  {smooth3D.d.D()}");
+        //        MIT.Log.Debug($"Curve {segAT}, {segBT};   {segATx}, {segBTx}\n    {smooth3D.a.D()};  {smooth3D.b.D()};  {smooth3D.c.D()};  {smooth3D.d.D()}");
 
         //        segATx -= segAT;
         //        segBTx -= segBT;
@@ -424,7 +456,7 @@ namespace MoveIt.Tool
         //    {
         //        m_Instance.AddDebugBounds(b, new Color(255, 0, 0, 200));
         //    }
-        //    QLog.Debug($"\nStart:{originalCount}\nInner:{innerList.Count}");
+        //    MIT.Log.Debug($"\nStart:{originalCount}\nInner:{innerList.Count}");
         //    return innerList;
         //}
 

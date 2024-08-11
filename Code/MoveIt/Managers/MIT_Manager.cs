@@ -4,6 +4,6 @@ namespace MoveIt.Managers
 {
     public abstract class MIT_Manager
     {
-        protected readonly MIT _Tool = MIT.m_Instance;
+        protected readonly MIT _MIT = MIT.m_Instance;
     }
 }

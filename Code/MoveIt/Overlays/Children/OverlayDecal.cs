@@ -4,7 +4,7 @@ namespace MoveIt.Overlays
 {
     internal class OverlayDecal : Overlay
     {
-        private static EntityArchetype _Archetype = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                 typeof(MIO_Type),
                 typeof(MIO_Common),
@@ -14,12 +14,12 @@ namespace MoveIt.Overlays
 
         public static Entity Factory(Entity owner)
         {
-            Entity e = _Tool.EntityManager.CreateEntity(_Archetype);
+            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new(owner);
 
-            _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVDecal));
-            _Tool.EntityManager.SetComponentData(e, common);
+            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVDecal));
+            _MIT.EntityManager.SetComponentData(e, common);
 
             return e;
         }

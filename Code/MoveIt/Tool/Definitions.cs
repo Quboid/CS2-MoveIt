@@ -1,5 +1,6 @@
 ﻿using Game.Tools;
 using MoveIt.Managers;
+using MoveIt.Searcher;
 using MoveIt.Selection;
 using MoveIt.Systems;
 using QCommonLib;
@@ -20,7 +21,7 @@ namespace MoveIt.Tool
         Finalize,
     }
 
-    public enum ToolStates
+    public enum MITStates
     {
         Default,
         ApplyButtonHeld,
@@ -29,7 +30,7 @@ namespace MoveIt.Tool
         ToolActive
     }
 
-    public enum ToolActions
+    public enum MITActions
     {
         None,
         Do,
@@ -44,11 +45,12 @@ namespace MoveIt.Tool
         Selected            = 2,
         Moving              = 4,
         Deselect            = 8,
-        Tool                = 16,
-        Static              = 32,
-        ParentHovering      = 64,
-        ParentSelected      = 128,
-        ParentManipulating  = 256,
+        ToolHover           = 16,
+        ToolParentHover     = 32,
+        Static              = 64,
+        ParentHovering      = 128,
+        ParentSelected      = 256,
+        ParentManipulating  = 512,
     }
 
     public partial class MIT : ObjectToolBaseSystem
@@ -58,8 +60,11 @@ namespace MoveIt.Tool
         internal ControlPointManager ControlPointManager;
         internal InputManager InputManager;
         internal HoverManager Hover;
+        internal HoverHolder Hovered => Hover.TopHovered;
         internal MoveablesManager Moveables;
         internal QueueManager Queue;
+        internal ToolboxManager ToolboxManager;
+        internal FilterManager Filtering;
 
         internal MIT_VanillaOverlaySystem m_VanillaOverlaySystem;
         internal MIT_RemoveOverriddenSystem m_RemoveOverriddenSystem;
@@ -100,7 +105,7 @@ namespace MoveIt.Tool
         /// Get the currently hovered entity, readonly. For other mods to access.
         /// Entity.Null if nothing hovered.
         /// </summary>
-        public Entity HoveredEntity => Hover.Definition.m_Entity;
+        public Entity HoveredEntity => Hover.Normal.Definition.m_Entity;
 
         /// <summary>
         /// Get a hashset of the currently selected entities, readonly. For other mods to access.
@@ -124,10 +129,17 @@ namespace MoveIt.Tool
             internal Entity m_Entity;
         }
 
-        public ToolStates ToolState         { get; set; }
-        public ToolActions ToolAction       { get; set; }
+        public MITStates MITState           { get; set; }
+        public MITActions MITAction         { get; set; }
         public CreationPhases CreationPhase { get; set; }
         public ApplyMode BaseApplyMode      { get => applyMode; set => applyMode = value; }
+
+        /// <summary>
+        /// Is Low Sensitivity mode active?
+        /// Slower mouse movement, no overlays
+        /// </summary>
+        internal bool IsLowSensitivity => _IsLowSensitivity;
+        private bool _IsLowSensitivity;
 
         /// <summary>
         /// Where the current drag started, relative to selection center
@@ -140,16 +152,20 @@ namespace MoveIt.Tool
         /// <summary>
         /// Where sensitivity was last toggled, absolute
         /// </summary>
-        // internal float3 m_sensitivityTogglePosAbs;
+        internal float3 m_SensitivityTogglePosAbs;
 
         /// <summary>
-        /// Screen position where rotation started
+        /// Screen position where rotation started, X-axis absolute
         /// </summary>
         internal float m_MouseStartX;
         /// <summary>
         /// The current mouse position on the terrain
         /// </summary>
         internal float3 m_PointerPos;
+        /// <summary>
+        /// Where sensitivity was last toggled, X-axis absolute
+        /// </summary>
+        internal float m_SensitivityTogglePosX;
 
         // Selection modes
         internal Input.Marquee m_Marquee;
@@ -159,7 +175,7 @@ namespace MoveIt.Tool
         /// <summary>
         /// Is Manipulation Mode active, including quick-selection (player holding Alt)?
         /// </summary>
-        public bool IsManipulating => m_IsManipulateMode || (QKeyboard.Alt && ToolState == ToolStates.Default);
+        public bool IsManipulating => m_IsManipulateMode || (QKeyboard.Alt && MITState == MITStates.Default);
         /// <summary>
         /// Is Manipulation Mode active, NOT including quick-selection?
         /// </summary>

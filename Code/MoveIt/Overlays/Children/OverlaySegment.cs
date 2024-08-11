@@ -1,4 +1,5 @@
 ﻿using Colossal.Mathematics;
+using Colossal.Win32;
 using MoveIt.Moveables;
 using QCommonLib;
 using Unity.Collections;
@@ -9,7 +10,7 @@ namespace MoveIt.Overlays
 {
     internal class OverlaySegment : Overlay
     {
-        private static EntityArchetype _Archetype = _Tool.EntityManager.CreateArchetype(
+        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Common),
@@ -19,18 +20,18 @@ namespace MoveIt.Overlays
                     typeof(MIO_DashedLines),
             });
 
-        public static Entity Factory(Entity owner, Bezier4x3 curve, float width)
+        public static Entity Factory(MVSegment seg)
         {
-            Entity e = _Tool.EntityManager.CreateEntity(_Archetype);
+            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new()
             {
-                m_Owner = owner,
+                m_Owner = seg.m_Entity,
             };
 
-            _Tool.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVSegment));
-            _Tool.EntityManager.SetComponentData(e, common);
-            _Tool.EntityManager.SetComponentData<MIO_Bezier>(e, new(curve, width));
+            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVSegment));
+            _MIT.EntityManager.SetComponentData(e, common);
+            _MIT.EntityManager.SetComponentData<MIO_Bezier>(e, new(seg.Curve, seg.Width));
             return e;
         }
 
@@ -42,12 +43,12 @@ namespace MoveIt.Overlays
             if (m_Moveable is not MVSegment seg) return false;
             if (!base.CreateOverlayEntity()) return false;
 
-            m_Entity = OverlaySegment.Factory(m_Moveable.m_Entity, seg.Curve, seg.Width);
+            m_Entity = OverlaySegment.Factory(seg);
             EnqueueUpdate();
 
             foreach (var cpd in seg.m_CPDefinitions)
             {
-                MVControlPoint cp = _Tool.ControlPointManager.GetOrCreate(cpd);
+                MVControlPoint cp = _MIT.ControlPointManager.GetOrCreate(cpd);
                 ((OverlayControlPoint)cp.m_Overlay).CreateOverlayEntityIfNoneExists();
             }
 
@@ -73,19 +74,19 @@ namespace MoveIt.Overlays
             if (!GetMoveable<MVSegment>().IsValid) return;
 
             Game.Net.Edge edge = GetMoveable<MVSegment>().Edge;
-            if (_Tool.Moveables.TryGet<MVNode>(new MVDefinition(Identity.Node, edge.m_Start, _Tool.IsManipulating), out var nodeA))
+            if (_MIT.Moveables.TryGet<MVNode>(new MVDefinition(Identity.Node, edge.m_Start, _MIT.IsManipulating), out var nodeA))
             {
-                _Tool.QueueOverlayUpdate(nodeA.m_Overlay);
+                _MIT.QueueOverlayUpdate(nodeA.m_Overlay);
             }
-            if (_Tool.Moveables.TryGet<MVNode>(new MVDefinition(Identity.Node, edge.m_End, _Tool.IsManipulating), out var nodeB))
+            if (_MIT.Moveables.TryGet<MVNode>(new MVDefinition(Identity.Node, edge.m_End, _MIT.IsManipulating), out var nodeB))
             {
-                _Tool.QueueOverlayUpdate(nodeB.m_Overlay);
+                _MIT.QueueOverlayUpdate(nodeB.m_Overlay);
             }
 
             foreach (var mvd in GetMoveable<MVSegment>().m_CPDefinitions)
             {
                 // It won't count as existing if the selection is being cleared and a selected node is cleaned up first
-                if (_Tool.ControlPointManager.GetIfExists(mvd, out var cp))
+                if (_MIT.ControlPointManager.GetIfExists(mvd, out var cp))
                 {
                     cp.m_Overlay.EnqueueUpdate();
                 }
@@ -97,17 +98,17 @@ namespace MoveIt.Overlays
             if (m_Moveable is not MVSegment seg) return false;
             if (m_Entity.Equals(Entity.Null)) return false;
 
-            MIO_Common common = _Tool.EntityManager.GetComponentData<MIO_Common>(m_Entity);
+            MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
             UpdateCommon(ref common);
-            _Tool.EntityManager.SetComponentData(m_Entity, common);
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
 
-            MIO_Bezier curve = _Tool.EntityManager.GetComponentData<MIO_Bezier>(m_Entity);
+            MIO_Bezier curve = _MIT.EntityManager.GetComponentData<MIO_Bezier>(m_Entity);
             curve.Curve = seg.Curve;
-            _Tool.EntityManager.SetComponentData(m_Entity, curve);
+            _MIT.EntityManager.SetComponentData(m_Entity, curve);
 
-            DynamicBuffer<MIO_Circles> cpPosBuffer = _Tool.EntityManager.GetBuffer<MIO_Circles>(m_Entity);
-            DynamicBuffer<MIO_Beziers> curvesBuffer = _Tool.EntityManager.GetBuffer<MIO_Beziers>(m_Entity);
-            DynamicBuffer<MIO_DashedLines> dashedBuffer = _Tool.EntityManager.GetBuffer<MIO_DashedLines>(m_Entity);
+            DynamicBuffer<MIO_Circles> cpPosBuffer = _MIT.EntityManager.GetBuffer<MIO_Circles>(m_Entity);
+            DynamicBuffer<MIO_Beziers> curvesBuffer = _MIT.EntityManager.GetBuffer<MIO_Beziers>(m_Entity);
+            DynamicBuffer<MIO_DashedLines> dashedBuffer = _MIT.EntityManager.GetBuffer<MIO_DashedLines>(m_Entity);
             cpPosBuffer.Clear();
             curvesBuffer.Clear();
             dashedBuffer.Clear();
@@ -128,9 +129,9 @@ namespace MoveIt.Overlays
             dashedBuffer.Add(new(DrawTools.CalculateProtrudedLine(cpPos[3], cpPos[2])));
 
             // Outline
-            var edgeGeo = _Tool.EntityManager.GetComponentData<Game.Net.EdgeGeometry>(m_Owner);
+            var edgeGeo = _MIT.EntityManager.GetComponentData<Game.Net.EdgeGeometry>(m_Owner);
             float3 offset = new(0f);
-            if (_Tool.EntityManager.HasComponent<Game.Net.Elevation>(m_Owner))
+            if (_MIT.EntityManager.HasComponent<Game.Net.Elevation>(m_Owner))
             {
                 offset.y = 0.5f;
             }

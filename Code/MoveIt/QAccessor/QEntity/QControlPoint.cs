@@ -27,6 +27,17 @@ namespace MoveIt.QAccessor
 
         private readonly quaternion ControlPoint_Rotation => default;
 
+        private readonly bool ControlPoint_TryGetElevation(out float elevation)
+        {
+            elevation = 0f;
+            return false;
+        }
+
+        private readonly bool ControlPoint_TrySetElevation(float elevation)
+        {
+            return false;
+        }
+
 
         private bool ControlPoint_SetUpdated()
         {

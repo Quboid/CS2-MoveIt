@@ -1,5 +1,7 @@
 ﻿using Colossal.Entities;
 using MoveIt.Moveables;
+using MoveIt.Tool;
+using QCommonLib;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -37,6 +39,9 @@ namespace MoveIt.QAccessor
 
             m_ID = identity switch
             {
+                Identity.Prop           => ID.Prop,
+                Identity.Decal          => ID.Prop,
+                Identity.Plant          => ID.Prop,
                 Identity.Segment        => parent == Entity.Null ? ID.Seg : ID.Lane,
                 Identity.NetLane        => ID.Lane,
                 Identity.Node           => ID.Node,
@@ -80,6 +85,33 @@ namespace MoveIt.QAccessor
             ID.Surface  => Surface_Rotation,
             _           => Generic_Rotation,
         };
+
+        internal readonly bool TryGetElevation(out float elevation)
+        {
+            elevation = 0f;
+            bool result = m_ID switch
+            {
+                ID.Prop     => PropPlant_TryGetElevation(out elevation),
+                ID.Seg      => Net_TryGetElevation(out elevation),
+                ID.Node     => Net_TryGetElevation(out elevation),
+                ID.CP       => Net_TryGetElevation(out elevation),
+                _           => Generic_TryGetElevation(out elevation),
+            };
+            return result;
+        }
+
+        internal readonly bool TrySetElevation(float elevation)
+        {
+            bool result = m_ID switch
+            {
+                ID.Prop     => PropPlant_TrySetElevation(elevation),
+                ID.Seg      => Net_TrySetElevation(elevation),
+                ID.Node     => Net_TrySetElevation(elevation),
+                ID.CP       => ControlPoint_TrySetElevation(elevation),
+                _           => Generic_TrySetElevation(elevation),
+            };
+            return result;
+        }
 
 
         internal bool SetUpdated()
@@ -172,5 +204,84 @@ namespace MoveIt.QAccessor
                 _           => Generic_RotateTo(state, newRotation, ref matrix, origin),
             };
         }
+
+        /// <summary>
+        /// Set the elevation component of the object, if it exists, and get the new position height value
+        /// </summary>
+        /// <param name="state">The state of the object to update</param>
+        /// <param name="delta">The positional change from the Transform action</param>
+        /// <returns>The new position height, adjusted for elevation component</returns>
+        private readonly void SetElevation(State state, float3 delta)
+        {
+            if (!TryGetElevation(out float elevation)) return;
+
+            if (!TrySetElevation(elevation + delta.y)) return;
+
+#if !USE_BURST && IS_DEBUG
+            MIT.Log.Debug($"SetElevation({state.m_Entity.DX()}) el:{elevation} -> {elevation + delta.y}");
+#endif
+        }
+
+        /// <summary>
+        /// Create and destroy the Objects.Elevated component as needed
+        /// </summary>
+        /// <param name="elevation">The new elevation</param>
+        /// <returns>Does an Elevated component now exist for this entity?</returns>
+        private readonly bool ManageStaticElevation(float elevation)
+        {
+            if (math.abs(elevation) < 0.0005f)
+            {
+                if (m_Lookup.goElevation.HasComponent(m_Entity))
+                {
+                    m_Manager.RemoveComponent<Game.Objects.Elevation>(m_Entity);
+                }
+                return false;
+            }
+
+            Game.Objects.ElevationFlags flag = elevation < 0f ? Game.Objects.ElevationFlags.Lowered : 0f;
+            Game.Objects.Elevation component = new(elevation, flag);
+
+            if (!m_Lookup.goElevation.HasComponent(m_Entity))
+            {
+                m_Manager.AddComponentData(m_Entity, component);
+            }
+            else
+            {
+                m_Lookup.goElevation.GetRefRW(m_Entity).ValueRW = component;
+            }
+
+            return true;
+        }
+
+
+        /// <summary>
+        /// Create and destroy the Net.Elevated component as needed
+        /// </summary>
+        /// <param name="elevation">The new elevation</param>
+        /// <returns>Does an Elevated component now exist for this entity?</returns>
+        //private readonly bool ManageNetworkElevation(float2 elevation)
+        //{
+        //    if (math.abs(elevation.x) < 0.0005f && math.abs(elevation.y) < 0.0005f)
+        //    {
+        //        if (m_Lookup.gnElevation.HasComponent(m_Entity))
+        //        {
+        //            m_Manager.RemoveComponent<Game.Net.Elevation>(m_Entity);
+        //        }
+        //        return false;
+        //    }
+
+        //    Game.Net.Elevation component = new(elevation);
+
+        //    if (!m_Lookup.gnElevation.HasComponent(m_Entity))
+        //    {
+        //        m_Manager.AddComponentData(m_Entity, component);
+        //    }
+        //    else
+        //    {
+        //        m_Lookup.gnElevation.GetRefRW(m_Entity).ValueRW = component;
+        //    }
+
+        //    return true;
+        //}
     }
 }

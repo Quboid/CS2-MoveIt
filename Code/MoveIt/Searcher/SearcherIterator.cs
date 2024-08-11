@@ -32,7 +32,6 @@ namespace MoveIt.Searcher
         /// </summary>
         /// <param name="bounds">The QuadTree bounds</param>
         /// <returns>Does bounds intersect search area?</returns>
-        /// <exception cref="NotImplementedException"></exception>
         public readonly bool Intersect(Game.Common.QuadTreeBoundsXZ bounds)
         {
             Bounds2 b = bounds.m_Bounds.xz;
@@ -44,9 +43,6 @@ namespace MoveIt.Searcher
                 SearchTypes.Ray     => QIntersect.DoesLineIntersectBounds3(m_SearchRay, bounds.m_Bounds, out _),
                 _ => throw new NotImplementedException(),
             };
-
-            //QIntersect.DoesLineIntersectBounds3(m_SearchRay, bounds.m_Bounds, out float2 xsect);
-            //QLog.Debug($"Xsect {b.min.D(),18}::{b.max.D(),-18} {bounds.m_Bounds.y.min,8}::{bounds.m_Bounds.y.max,-8} = {result,-5}  {xsect.D()}");
 
             return result;
         }
@@ -211,42 +207,6 @@ namespace MoveIt.Searcher
             }
 
 
-            //// Surfaces
-            //if (!m_IsManipulating && obj.m_Identity == Identity.Surface)
-            //{
-            //    switch (m_Type)
-            //    {
-            //        case SearchTypes.Marquee:
-            //            if (MathUtils.Intersect(objBounds, m_SearchQuad))
-            //            {
-            //                m_EntityList.Add(e);
-            //                return;
-            //            }
-            //            break;
-
-            //        case SearchTypes.Bounds:
-            //            if (MathUtils.Intersect(m_SearchOuterBounds, objBounds))
-            //            {
-            //                m_EntityList.Add(e);
-            //                return;
-            //            }
-            //            break;
-
-            //        case SearchTypes.Point:
-            //            // TODO Remember to implement if ever needed
-            //            return;
-
-            //        case SearchTypes.Ray:
-            //            // Handled by vanilla raycast results
-            //            return;
-
-            //        default:
-            //            break;
-            //    }
-            //    return;
-            //}
-
-
             // A circular object
             if (!m_IsManipulating && m_Manager.TryGetComponent<Game.Prefabs.ObjectGeometryData>(prefab, out var objGeoData))
             {
@@ -343,6 +303,7 @@ namespace MoveIt.Searcher
                 }
             }
         }
+
 
         /// <summary>
         /// Check if the <see cref="areaSearchItem">area search item's</see> <see cref="bounds">bounding box</see> intersects the search area

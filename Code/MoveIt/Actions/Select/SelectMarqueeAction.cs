@@ -4,9 +4,9 @@ using MoveIt.Selection;
 using System.Collections.Generic;
 using Unity.Entities;
 
-namespace MoveIt.Actions
+namespace MoveIt.Actions.Select
 {
-    internal class SelectMarqueeAction : Action
+    internal class SelectMarqueeAction : SelectBase
     {
         public override string Name => "SelectMarqueeAction";
 
@@ -14,8 +14,6 @@ namespace MoveIt.Actions
         /// The selected objects before any mid-marquee additions
         /// </summary>
         private readonly SelectionBase _MarqueeStart;
-
-        private readonly bool _IsAppend;
 
         /// <summary>
         /// Constructor for SelectMarqueeAction
@@ -25,11 +23,11 @@ namespace MoveIt.Actions
         {
             _IsAppend = append;
 
-            if (_Tool.UseMarquee)
+            if (_MIT.UseMarquee)
             {
-                if (_IsAppend && _Tool.Selection is not null)
+                if (_IsAppend && _MIT.Selection is not null)
                 {
-                    _MarqueeStart = new SelectionNormal(_Tool.Selection);
+                    _MarqueeStart = new SelectionNormal(_MIT.Selection);
                 }
                 else
                 {
@@ -44,8 +42,8 @@ namespace MoveIt.Actions
 
             if (!_IsAppend)
             {
-                _Tool.Selection.Clear();
-                _Tool.Moveables.Refresh();
+                _MIT.Selection.Clear();
+                _MIT.Moveables.Refresh();
             }
         }
 
@@ -61,11 +59,11 @@ namespace MoveIt.Actions
             //    string remove = "Remove: ";
             //    added.ForEach(e => add += $"{e.DX()}, ");
             //    removed.ForEach(e => remove += $"{e.DX()}, ");
-            //    QLog.Debug($"AddMarq ent:{marquee.m_Entities?.Count}, prev:{marquee.m_EntitiesPrev?.Count}{(removed.Count > 0 ? $"\n    {remove}" : "")}{(added.Count > 0 ? $"\n    {add}" : "")}");
+            //    MIT.Log.Debug($"AddMarq ent:{marquee.m_Entities?.Count}, prev:{marquee.m_EntitiesPrev?.Count}{(removed.Count > 0 ? $"\n    {remove}" : "")}{(added.Count > 0 ? $"\n    {add}" : "")}");
             //}
 
             HashSet<MVDefinition> initialSelection = new(_MarqueeStart.Definitions);
-            HashSet<MVDefinition> currentSelection = _Tool.Selection.Definitions;
+            HashSet<MVDefinition> currentSelection = _MIT.Selection.Definitions;
             HashSet<Entity> initialEntities = _MarqueeStart.Entities;
 
             HashSet<Entity> toRemove;
@@ -79,7 +77,7 @@ namespace MoveIt.Actions
                 {
                     HashSet<MVDefinition> toRemoveDefs = new();
                     toRemove.ForEach(e => toRemoveDefs.Add(new(QTypes.GetEntityIdentity(e), e, false)));
-                    _Tool.Selection.Remove(toRemoveDefs, true);
+                    _MIT.Selection.Remove(toRemoveDefs, true);
                 }
             }
 
@@ -94,36 +92,14 @@ namespace MoveIt.Actions
                 {
                     HashSet<MVDefinition> toAddDefs = new();
                     toAdd.ForEach(e => toAddDefs.Add(new(QTypes.GetEntityIdentity(e), e, false)));
-                    _Tool.Selection.Add(toAddDefs, true);
+                    _MIT.Selection.Add(toAddDefs, true);
                 }
             }
 
             if (!fast)
             {
-                _Tool.Selection.UpdateFull();
+                _MIT.Selection.UpdateFull();
             }
-        }
-
-        /// <summary>
-        /// Calculate what needs deselected, what needs reselected, save to live selection
-        /// </summary>
-        public override void Undo()
-        {
-            List<MVDefinition> fromSelection = _SelectionState.Definitions;
-            List<MVDefinition> toSelection = _Tool.Queue.PrevAction.GetSelectionStates();
-            ProcessSelectionChange(fromSelection, toSelection);
-            base.Undo();
-        }
-
-        /// <summary>
-        /// Calculate what needs deselected, what needs reselected, save to live selection
-        /// </summary>
-        public override void Redo()
-        {
-            List<MVDefinition> fromSelection = _Tool.Queue.PrevAction.GetSelectionStates();
-            List<MVDefinition> toSelection = _SelectionState.Definitions;
-            ProcessSelectionChange(fromSelection, toSelection);
-            base.Redo();
         }
     }
 }

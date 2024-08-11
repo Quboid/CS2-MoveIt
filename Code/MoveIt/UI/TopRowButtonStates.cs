@@ -1,32 +1,33 @@
 ﻿using Colossal.UI.Binding;
 using MoveIt.Tool;
+using QCommonLib;
 
-namespace MoveIt.Systems.UIElements
+namespace MoveIt.UI
 {
     public class TopRowButtonStates : IJsonWritable
     {
-        public readonly MIT _Tool = MIT.m_Instance;
+        public readonly MIT _MIT = MIT.m_Instance;
         public ButtonState[] m_Buttons;
 
         public TopRowButtonStates()
         {
             m_Buttons = new ButtonState[]
             {
-                new("undo",         _Tool.Queue is not null && _Tool.Queue.CanUndo(), true),
-                new("single",       true, !_Tool.m_IsManipulateMode && !_Tool.m_MarqueeSelect),
-                new("marquee",      true, !_Tool.m_IsManipulateMode && _Tool.m_MarqueeSelect),
-                new("manipulation", true, _Tool.m_IsManipulateMode),
-                new("redo",         _Tool.Queue is not null && _Tool.Queue.CanRedo(), true),
+                new("undo",         false, true),
+                new("single",       true, !_MIT.m_IsManipulateMode && !_MIT.m_MarqueeSelect),
+                new("marquee",      true, !_MIT.m_IsManipulateMode && _MIT.m_MarqueeSelect),
+                new("manipulation", true, _MIT.m_IsManipulateMode),
+                new("redo",         false, true),
             };
         }
 
         public void Update()
         {
-            m_Buttons[0].Update(_Tool.Queue is not null && _Tool.Queue.CanUndo(), false);
-            m_Buttons[1].Update(true, !_Tool.m_IsManipulateMode && !_Tool.m_MarqueeSelect);
-            m_Buttons[2].Update(true, !_Tool.m_IsManipulateMode && _Tool.m_MarqueeSelect);
-            m_Buttons[3].Update(true, _Tool.m_IsManipulateMode);
-            m_Buttons[4].Update(_Tool.Queue is not null && _Tool.Queue.CanRedo(), false);
+            m_Buttons[0].Update(_MIT.Queue is not null && _MIT.Queue.CanUndo(), false);
+            m_Buttons[1].Update(true, !_MIT.m_IsManipulateMode && !_MIT.m_MarqueeSelect);
+            m_Buttons[2].Update(true, !_MIT.m_IsManipulateMode && _MIT.m_MarqueeSelect);
+            m_Buttons[3].Update(true, _MIT.m_IsManipulateMode);
+            m_Buttons[4].Update(_MIT.Queue is not null && _MIT.Queue.CanRedo(), false);
         }
 
         public void Write(IJsonWriter writer)

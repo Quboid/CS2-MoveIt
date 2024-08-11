@@ -3,13 +3,12 @@ using MoveIt.Tool;
 using QCommonLib;
 using System.Diagnostics;
 using Unity.Mathematics;
-using UnityEngine.InputSystem;
 
 namespace MoveIt.Input
 {
     internal abstract class InputButton
     {
-        protected MIT _Tool = MIT.m_Instance;
+        protected MIT _MIT = MIT.m_Instance;
 
         protected readonly int DragThreshold = 250;
 
@@ -37,12 +36,12 @@ namespace MoveIt.Input
 
         internal void Update()
         {
-            if (_Tool.UIHasFocus) return;
+            if (_MIT.UIHasFocus) return;
 
             if (m_PressedTime == 0 && Action.WasPressedThisFrame())
             {
                 m_PressedTime = Stopwatch.GetTimestamp();
-                m_PressedPosition = Mouse.current.position.ReadValue();
+                m_PressedPosition = QCommon.MouseScreenPosition;
                 m_IsDragging = false;
                 OnPress();
             }
@@ -76,7 +75,7 @@ namespace MoveIt.Input
                 {
                     if (!m_IsDragging)
                     {
-                        if (math.distance(Mouse.current.position.ReadValue(), m_PressedPosition) > 4f)
+                        if (math.distance(QCommon.MouseScreenPosition, m_PressedPosition) > 4f)
                         {
                             m_IsDragging = true;
                             OnDragStart();

@@ -1,5 +1,5 @@
 ﻿using Colossal.Mathematics;
-using MoveIt.Actions;
+using MoveIt.Actions.Transform;
 using MoveIt.Moveables;
 using MoveIt.Tool;
 using QCommonLib;
@@ -96,19 +96,19 @@ namespace MoveIt.Snapper
     {
         public const float MAX_SNAP_DISTANCE = 6f;
 
-        protected readonly MIT _Tool = MIT.m_Instance;
-        protected readonly TransformAction _Action;
-        protected Selection.SelectionBase Selection => _Tool.Selection;
+        protected readonly MIT _MIT = MIT.m_Instance;
+        protected readonly TransformBase _Action;
+        protected Selection.SelectionBase Selection => _MIT.Selection;
         protected NativeList<SnapCandidate> _Candidates;
         protected SnapLookups _Lookups;
 
         internal SnapTypes m_SnapType;
         internal float3 m_SnapPosition;
 
-        internal Snapper(TransformAction action)
+        internal Snapper(TransformBase action)
         {
             _Action = action;
-            _Lookups = SnapLookups.Get(_Tool);
+            _Lookups = SnapLookups.Get(_MIT);
 
             using NativeArray<State> states = new(_Action.m_Active.m_States.ToArray(), Allocator.TempJob);
             _Candidates = new(states.Length * 2, Allocator.Persistent);
@@ -118,7 +118,7 @@ namespace MoveIt.Snapper
                 m_States = states,
                 m_Candidates = _Candidates.AsParallelWriter(),
                 m_Lookups = _Lookups,
-                m_IsManipulating = _Tool.IsManipulating,
+                m_IsManipulating = _MIT.IsManipulating,
             };
 
             JobHandle findCandidatesHandle = findCandidatesJob.Schedule(states.Length, new());
@@ -132,7 +132,7 @@ namespace MoveIt.Snapper
 
         internal bool Update(out SnapResult bestResult)
         {
-            _Lookups.Update(_Tool);
+            _Lookups.Update(_MIT);
             using NativeList<SnapResult> results = new(_Candidates.Length, Allocator.TempJob);
             using NativeArray<State> states = new(_Action.m_Old.m_States.ToArray(), Allocator.TempJob);
 
@@ -142,9 +142,9 @@ namespace MoveIt.Snapper
                 m_Candidates = _Candidates,
                 m_Lookups = _Lookups,
                 m_Results = results.AsParallelWriter(),
-                m_IsManipulating = _Tool.IsManipulating,
-                m_PointerPosition = _Tool.m_PointerPos,
-                m_OriginalPointerPosition = _Tool.m_ClickPositionAbs,
+                m_IsManipulating = _MIT.IsManipulating,
+                m_PointerPosition = _MIT.m_PointerPos,
+                m_OriginalPointerPosition = _MIT.m_ClickPositionAbs,
                 m_OriginalCenter = _Action.m_Center,
             };
 
@@ -192,7 +192,7 @@ namespace MoveIt.Snapper
             {
                 msg += $"\n    {item}";
             }
-            QLog.Debug(msg);
+            MIT.Log.Debug(msg);
         }
 
         internal void DebugDumpResults(NativeList<SnapResult> results)
@@ -202,7 +202,7 @@ namespace MoveIt.Snapper
             {
                 msg += $"\n    {item}";
             }
-            QLog.Bundle("SNAP", msg);
+            MIT.Log.Bundle("SNAP", msg);
         }
     }
 

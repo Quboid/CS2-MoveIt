@@ -3,14 +3,13 @@ import { Portal, Panel, PanelSection } from "cs2/ui";
 import { bindValue, trigger, useValue } from "cs2/api";
 import { MIT_ToolEnabled$, MIT_PanelState$ } from "bindings";
 import { PanelState } from "mit-mainpanel/panelState";
-import mod from "../../mod.json";
 
 import icon from "../img/MoveIt_Active.svg";
 import styles from "./panel.module.scss";
 
 import { ButtonRowTop } from "./buttonRow";
-import { CheckboxRow } from "./checkboxRow";
-import { FiltersDropdown } from "./filtersFoldout";
+import { FiltersFoldout } from "./filtersFoldout";
+import { ToolboxFoldout } from "./toolboxFoldout";
 
 export const MIT_MainPanel = () =>
 {
@@ -43,7 +42,8 @@ export const MIT_MainPanel = () =>
                             {ButtonRowTop(panelState.TopRow)}
                             {/* {CheckboxRow("Hello", "hello")}
                             {CheckboxRow("World", "world")} */}
-                            {FiltersDropdown(panelState.FilterSection)}
+                            {FiltersFoldout(panelState.FilterSection)}
+                            {ToolboxFoldout(panelState.ToolboxSection)}
                         </div>
                     </PanelSection>
                 </Panel>

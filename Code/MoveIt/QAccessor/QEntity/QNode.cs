@@ -29,7 +29,6 @@ namespace MoveIt.QAccessor
             get => m_Lookup.gnNode.GetRefRO(m_Entity).ValueRO.m_Rotation;
         }
 
-
         private readonly bool Node_SetUpdated()
         {
             TryAddUpdate(m_Entity);

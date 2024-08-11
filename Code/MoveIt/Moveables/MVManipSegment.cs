@@ -1,4 +1,4 @@
-﻿using MoveIt.Actions;
+﻿using MoveIt.Actions.Transform;
 using MoveIt.Overlays;
 using MoveIt.Tool;
 using QCommonLib;
@@ -10,7 +10,7 @@ namespace MoveIt.Moveables
     {
         public override bool IsManipulatable => true;
 
-        public MVManipSegment(Entity e) : base(e, Identity.Segment, ObjectType.Normal)
+        public MVManipSegment(Entity e) : base(e, Identity.Segment)
         {
             m_Overlay = Factory.Create<OverlayManipSegment>(this, OverlayTypes.MVManipSegment);
             Refresh();
@@ -21,11 +21,11 @@ namespace MoveIt.Moveables
             base.OnDeselect();
             foreach (var child in GetChildMoveablesForOverlays<MVManipControlPoint>())
             {
-                _Tool.Selection.RemoveIfExists(child.Definition);
+                _MIT.Selection.RemoveIfExists(child.Definition);
             }
         }
 
-        internal override void MoveIt(TransformAction action, State state, bool move, bool rotate)
+        internal override void MoveIt(TransformBase action, State state, bool move, bool rotate)
         {
             MIT.Log.Error($"Attempted to move ManipulateSegment {m_Entity.D()}");
         }

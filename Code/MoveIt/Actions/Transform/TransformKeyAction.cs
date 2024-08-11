@@ -1,11 +1,10 @@
 ﻿using MoveIt.Tool;
-using QCommonLib;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace MoveIt.Actions
+namespace MoveIt.Actions.Transform
 {
-    internal class TransformKeyAction : TransformAction
+    internal class TransformKeyAction : TransformBase
     {
         private readonly float3 _FACTOR = new(0.25f, 0.015625f, 0.25f); // y = 1/64
         public override string Name => "TransformKeyAction";
@@ -23,11 +22,17 @@ namespace MoveIt.Actions
                 direction = matrix.MultiplyVector(direction);
             }
 
-            m_HotkeyPressed = true;
             MoveDelta += direction;
 
-            _Tool.ToolAction = ToolActions.Do;
-            _Tool.CreationPhase = CreationPhases.Create;
+            _MIT.MITAction = MITActions.Do;
+            _MIT.CreationPhase = CreationPhases.Create;
+        }
+
+        protected override bool ToolDo()
+        {
+            m_UpdateMove = true;
+            DoFromAngleAndMoveDeltas();
+            return true;
         }
     }
 }

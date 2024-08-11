@@ -82,12 +82,13 @@ namespace MoveIt.Searcher
 
                 for (int i = 0; i < iterator.m_EntityList.Length; i++)
                 {
-                    if ((m_Filters & Filters.Nodes) == 0 && m_Manager.HasComponent<Game.Net.Node>(iterator.m_EntityList[i])) continue;
-                    if ((m_Filters & Filters.Segments) == 0 && m_Manager.HasComponent<Game.Net.Edge>(iterator.m_EntityList[i])) continue;
+                    Entity e = iterator.m_EntityList[i];
+                    if (((m_Filters & Filters.Nodes) == 0) && m_Manager.HasComponent<Game.Net.Node>(e)) continue;
+                    if (((m_Filters & Filters.Segments) == 0) && m_Manager.HasComponent<Game.Net.Edge>(e)) continue;
 
-                    if (!m_Results.Contains(iterator.m_EntityList[i]))
+                    if (!m_Results.Contains(e))
                     {
-                        m_Results.Add(iterator.m_EntityList[i]);
+                        m_Results.Add(e);
                     }
                 }
                 iterator.Dispose();
@@ -162,47 +163,76 @@ namespace MoveIt.Searcher
             if ((m_Filters & Utils.FilterAllStatics) == 0) return false; // Not looking for a static
             if ((m_Filters & Utils.FilterAllStatics) == Utils.FilterAllStatics) return true; // Looking for any static
 
-            if ((m_Filters & Filters.Buildings) != 0)
+            Identity identity = QTypes.GetEntityIdentity(m_Manager, e);
+
+            bool result = false;
+            switch (identity)
             {
-                if (HasOr<Game.Buildings.Building, Game.Buildings.Extension>(e))
-                {
-                    return true;
-                }
+                case Identity.Building:
+                case Identity.Extension:
+                    result = (m_Filters & Filters.Buildings) != 0;
+                    break;
+
+                case Identity.Plant:
+                    result = (m_Filters & Filters.Plants) != 0;
+                    break;
+
+                case Identity.Prop:
+                    result = (m_Filters & Filters.Props) != 0;
+                    break;
+
+                case Identity.Decal:
+                    result = (m_Filters & Filters.Decals) != 0;
+                    break;
+
+                case Identity.Surface:
+                    result = (m_Filters & Filters.Surfaces) != 0;
+                    break;
             }
 
-            if ((m_Filters & Filters.Plants) != 0)
-            {
-                if (Has<Game.Objects.Plant>(e))
-                {
-                    return true;
-                }
-            }
+            return result;
 
-            if ((m_Filters & Filters.Props) != 0)
-            {
-                if (HasOr<Game.Objects.ObjectGeometry, Game.Objects.Surface>(e))
-                {
-                    return true;
-                }
-            }
+            //if ((m_Filters & Filters.Buildings) != 0)
+            //{
+            //    if (HasOr<Game.Buildings.Building, Game.Buildings.Extension>(e))
+            //    {
+            //        return true;
+            //    }
+            //}
 
-            if ((m_Filters & Filters.Decals) != 0)
-            {
-                if (Has<Game.Objects.ObjectGeometry>(e) && !Has<Game.Objects.Surface>(e))
-                {
-                    return true;
-                }
-            }
+            //if ((m_Filters & Filters.Plants) != 0)
+            //{
+            //    if (Has<Game.Objects.Plant>(e))
+            //    {
+            //        return true;
+            //    }
+            //}
 
-            if ((m_Filters & Filters.Surfaces) != 0)
-            {
-                if (Has<Game.Areas.Area>(e) && Has<Game.Areas.Surface>(e))
-                {
-                    return true;
-                }
-            }
+            //if ((m_Filters & Filters.Props) != 0)
+            //{
+            //    if (HasOr<Game.Objects.ObjectGeometry, Game.Objects.Surface>(e))
+            //    {
+            //        return true;
+            //    }
+            //}
 
-            return false;
+            //if ((m_Filters & Filters.Decals) != 0)
+            //{
+            //    if (Has<Game.Objects.ObjectGeometry>(e) && !Has<Game.Objects.Surface>(e))
+            //    {
+            //        return true;
+            //    }
+            //}
+
+            //if ((m_Filters & Filters.Surfaces) != 0)
+            //{
+            //    if (Has<Game.Areas.Area>(e) && Has<Game.Areas.Surface>(e))
+            //    {
+            //        return true;
+            //    }
+            //}
+
+            //return false;
         }
 
         private readonly bool Has<T>(Entity e) where T : IComponentData

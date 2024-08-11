@@ -16,26 +16,74 @@ namespace MoveIt.Moveables
 {
     public struct State : IDisposable, INativeDisposable
     {
+        /// <summary>
+        /// The entity that this state represents
+        /// </summary>
         internal Entity m_Entity;
+        /// <summary>
+        /// The QAccessor struct for entity access
+        /// </summary>
         internal QObject m_Accessor;
+        /// <summary>
+        /// This entity's ultimate parent object
+        /// </summary>
         internal Entity m_Parent;
+        /// <summary>
+        /// How this object relates to the parent (optional)
+        /// </summary>
         internal short m_ParentKey;
+        /// <summary>
+        /// This object's prefab entity
+        /// </summary>
         internal Entity m_Prefab;
+        /// <summary>
+        /// This object's final position in the game world
+        /// </summary>
         internal float3 m_Position;
+        /// <summary>
+        /// This object's position at the start of the current action
+        /// </summary>
         internal float3 m_InitialPosition;
+        /// <summary>
+        /// This object's final rotation in the game world
+        /// </summary>
         internal quaternion m_Rotation;
+        /// <summary>
+        /// This object's rotation at the start of the current action
+        /// </summary>
         internal quaternion m_InitialRotation;
-        internal float m_YOffset;
-        internal float m_InitialYOffset;
+        /// <summary>
+        /// This object's identity (building/prop/plant/etc)
+        /// </summary>
         internal Identity m_Identity;
-        internal ObjectType m_ObjectType;
+        /// <summary>
+        /// Is this object manipulatable?
+        /// </summary>
         internal bool m_IsManipulatable;
+        /// <summary>
+        /// Is this object managed by Move It
+        /// </summary>
         internal bool m_IsManaged;
+        /// <summary>
+        /// How far the object has moved this action
+        /// </summary>
+        internal float3 m_MoveDelta;
+        /// <summary>
+        /// How much the object has rotated this action (degrees, Y-axis)
+        /// </summary>
+        internal float m_AngleDelta;
+        /// <summary>
+        /// The initial center-point of this action
+        /// </summary>
+        internal float3 m_InitialCenter;
+        /// <summary>
+        /// The object's curve at the start of the current action (optional)
+        /// </summary>
         internal Bezier4x3 m_InitialCurve;
 
         internal readonly MVDefinition Definition => new(m_Identity, m_Entity, m_IsManipulatable, m_IsManaged, m_Parent, m_ParentKey);
 
-        internal State(EntityManager manager, ref QLookup lookup, Moveable mv)
+        internal State(EntityManager manager, ref QLookup lookup, Moveable mv, float3 moveDelta, float angleDelta, float3 centerPoint)
         {
             if (!manager.Exists(mv.m_Entity))
             {
@@ -55,18 +103,48 @@ namespace MoveIt.Moveables
             m_InitialPosition   = m_Position;
             m_Rotation          = mv.Transform.m_Rotation;
             m_InitialRotation   = m_Rotation;
-            m_YOffset           = mv.m_YOffset;
-            m_InitialYOffset    = mv.m_YOffset;
             m_Identity          = mv.m_Identity;
-            m_ObjectType        = mv.m_ObjectType;
             m_IsManipulatable   = mv.IsManipulatable;
             m_IsManaged         = mv.IsManaged;
+            m_MoveDelta         = moveDelta;
+            m_AngleDelta        = angleDelta;
+            m_InitialCenter     = centerPoint;
             m_InitialCurve      = default;
 
             if (m_Identity == Identity.Segment || m_Identity == Identity.NetLane)
             {
                 m_InitialCurve = manager.GetComponentData<Game.Net.Curve>(m_Entity).m_Bezier;
             }
+        }
+
+        /// <summary>
+        /// Get a copy of this state with a new QAccessor
+        /// </summary>
+        /// <param name="manager">An EntityManager</param>
+        /// <param name="lookup">Ref to the lookup table</param>
+        /// <returns>The fresh copy</returns>
+        internal State GetCopy(EntityManager manager, ref QLookup lookup)
+        {
+            return new State()
+            {
+
+                m_Entity            = this.m_Entity,
+                m_Accessor          = new(manager, ref lookup, m_Entity, this.m_Identity),
+                m_Parent            = this.m_Parent,
+                m_ParentKey         = this.m_ParentKey,
+                m_Prefab            = this.m_Prefab,
+                m_Position          = this.m_Position,
+                m_InitialPosition   = this.m_Position,
+                m_Rotation          = this.m_Rotation,
+                m_InitialRotation   = this.m_Rotation,
+                m_Identity          = this.m_Identity,
+                m_IsManipulatable   = this.m_IsManipulatable,
+                m_IsManaged         = this.m_IsManaged,
+                m_MoveDelta         = this.m_MoveDelta,
+                m_AngleDelta        = this.m_AngleDelta,
+                m_InitialCenter     = this.m_InitialCenter,
+                m_InitialCurve      = this.m_InitialCurve,
+            };
         }
 
         internal void UpdateEntity(EntityManager manager, ref QLookup lookup, Entity e)
@@ -129,17 +207,17 @@ namespace MoveIt.Moveables
 
         public override readonly string ToString()
         {
-            return $"{m_Entity.D(),-9} {m_Identity,-12} {m_Position.DX(),22} / {m_Rotation.Y(),-6:0.##} Yoff:{m_YOffset,-5:0.##}";
+            return $"{m_Entity.D(),-9} {m_Identity,-12} {m_Position.DX(),22} / {m_Rotation.Y(),-6:0.##}";
         }
 
         public readonly string ToStringLong()
         {
-            return $"{m_Entity.D(),-9} {m_Identity,-12} {m_Position.DX(),22} / {m_Rotation.Y(),-6:0.##} Yoff:{m_YOffset,-5:0.##} Prefab:{m_Prefab.D(),-10}";
+            return $"{m_Entity.D(),-9} {m_Identity,-12} {m_Position.DX(),22} / {m_Rotation.Y(),-6:0.##} Prefab:{m_Prefab.D(),-10}";
         }
 
         public readonly void DebugDump()
         {
-            QLog.Debug(ToString());
+            MIT.Log.Debug(ToString());
         }
     }
 }

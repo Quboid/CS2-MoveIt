@@ -23,9 +23,9 @@ namespace MoveIt.Tool
             return sb.ToString();
         }
 
-        internal static void DebugDumpDefinitions(IEnumerable<MVDefinition> definitions, string prefix = "")
+        internal static void DebugDumpDefinitions(IEnumerable<MVDefinition> definitions, string prefix = "", bool stack = false)
         {
-            QLog.Debug(prefix + DebugDefinitions(definitions));
+            Log.Debug(prefix + DebugDefinitions(definitions) + (stack ? "\n" + QCommon.GetStackTrace() : ""));
         }
 
 
@@ -42,7 +42,7 @@ namespace MoveIt.Tool
 
         internal void DebugDumpMoveables(IEnumerable<Moveable> moveables, string prefix = "")
         {
-            QLog.Debug(prefix + DebugMoveables(moveables));
+            Log.Debug(prefix + DebugMoveables(moveables));
         }
 
 
@@ -59,7 +59,7 @@ namespace MoveIt.Tool
 
         internal void DebugDumpStateData(ref NativeArray<State> stateData, string prefix = "")
         {
-            QLog.Debug(prefix + DebugStateData(ref stateData));
+            Log.Debug(prefix + DebugStateData(ref stateData));
         }
 
 
@@ -140,7 +140,7 @@ namespace MoveIt.Tool
             EntityManager manager = World.DefaultGameObjectInjectionWorld.EntityManager;
 
             if (e.Equals(Entity.Null)) return $"E[null]";
-            if (!manager.Exists(e)) return $"E[!{e.Index}.{e.Version}]";
+            if (!manager.Exists(e)) return $"E![{e.Index}.{e.Version}]";
 
             Identity id = QTypes.GetEntityIdentity(e);
             string idCode = QTypes.GetIdentityCode(id);
@@ -154,13 +154,13 @@ namespace MoveIt.Tool
         {
             StringBuilder sb = new();
             sb.AppendFormat("Entity: {0}", e.D());
-            EntityManager EM = World.DefaultGameObjectInjectionWorld.EntityManager;
-            if (EM.TryGetComponent<Game.Objects.Transform>(e, out var transform))
+            EntityManager manager = World.DefaultGameObjectInjectionWorld.EntityManager;
+            if (manager.TryGetComponent<Game.Objects.Transform>(e, out var transform))
             {
                 sb.AppendFormat(" ({0})", transform.D());
             }
 
-            var compTypes = EM.GetComponentTypes(e);
+            var compTypes = manager.GetComponentTypes(e);
             int sharCount = compTypes.Where(c => IsSharedComponent(c)).Count();
             int compCount = compTypes.Where(c => IsNormalComponent(c)).Count();
             int buffCount = compTypes.Where(c => IsBufferComponent(c)).Count();
@@ -208,7 +208,7 @@ namespace MoveIt.Tool
             sb.AppendFormat("\n Components:{0} - {1}", compCount, compStr);
             sb.AppendFormat("\n    Buffers:{0} - {1}", buffCount, buffStr);
             sb.AppendFormat("\n       Tags:{0} - {1}", tagsCount, tagsStr);
-            if (EM.TryGetComponent<Temp>(e, out var temp))
+            if (manager.TryGetComponent<Temp>(e, out var temp))
             {
                 sb.AppendFormat("\n      <Temp> orig:{0}, flags:{1}", temp.m_Original.D(), temp.m_Flags);
             }

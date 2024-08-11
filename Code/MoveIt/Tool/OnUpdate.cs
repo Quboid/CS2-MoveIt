@@ -1,5 +1,5 @@
 ﻿using Game.Prefabs;
-using MoveIt.Actions;
+using MoveIt.Actions.Select;
 using MoveIt.Managers;
 using QCommonLib;
 using System;
@@ -42,23 +42,24 @@ namespace MoveIt.Tool
             }
 
             m_PointerPos = m_RaycastTerrain.HitPosition;
-
             Hover.Process(m_ToolRaycastSystem);
-
             InputManager.Process();
 
-            switch (ToolState)
+            switch (MITState)
             {
-                case ToolStates.Default:
-                case ToolStates.ToolActive:
+                case MITStates.Default:
                     break;
 
-                case ToolStates.ApplyButtonHeld:
-                case ToolStates.SecondaryButtonHeld:
-                    ToolAction = ToolActions.Do;
+                case MITStates.ToolActive:
+                    ToolboxManager.Update();
                     break;
 
-                case ToolStates.DrawingSelection:
+                case MITStates.ApplyButtonHeld:
+                case MITStates.SecondaryButtonHeld:
+                    MITAction = MITActions.Do;
+                    break;
+
+                case MITStates.DrawingSelection:
                     if (m_Marquee is null)
                     {
                         Log.Warning($"Drawing selection but m_Marquee is null");

@@ -36,9 +36,9 @@ namespace MoveIt.Managers
                 {
                     if (mvd.IsChild)
                     {
-                        e = _Tool.ControlPointManager.RecreateEntity(mvd);
+                        e = _MIT.ControlPointManager.RecreateEntity(mvd);
                     }
-                    result = QTypes.GetEntityIdentity(mvd.m_Entity) switch
+                    result = QTypes.GetEntityIdentity(e) switch
                     {
                         Identity.Segment        => new MVManipSegment(e),
                         Identity.NetLane        => new MVManipSegment(e),
@@ -60,7 +60,7 @@ namespace MoveIt.Managers
                         Identity.Prop           => new MVProp(e),
                         Identity.Decal          => new MVDecal(e),
                         Identity.Surface        => new MVSurface(e),
-                        Identity.Node           => _Tool.EntityManager.HasComponent<Game.Net.NodeGeometry>(e) ?
+                        Identity.Node           => _MIT.EntityManager.HasComponent<Game.Net.NodeGeometry>(e) ?
                                                     new MVNode(e) :
                                                     new MVLaneNode(e),
                         _ => new MVOther(e),
@@ -84,8 +84,8 @@ namespace MoveIt.Managers
 
         public void Clear()
         {
-            _Tool.Selection.Clear();
-            _Tool.Hover.Clear();
+            _MIT.Selection.Clear();
+            _MIT.Hover.Clear();
 
             MIT.Log.Debug($"Moveables.Clear Removing all (Manager has {Count} entries before removal)");
             _Moveables.Clear();
@@ -93,7 +93,7 @@ namespace MoveIt.Managers
 
         public void Refresh()
         {
-            _Tool.ControlPointManager.Refresh();
+            _MIT.ControlPointManager.Refresh();
 
             // Clear up Control Points first
             HashSet<Moveable> buffer = new(_Moveables);
@@ -101,7 +101,7 @@ namespace MoveIt.Managers
             {
                 if (mv is not MVControlPoint cp) continue;
                 if (!cp.Refresh()) RemoveDo(cp);
-                if (cp.IsManipulatable == _Tool.m_IsManipulateMode && !IsInUse(cp.Definition) && !IsInUse(cp.SegmentDefinition)) RemoveDo(cp);
+                if (cp.IsManipulatable == _MIT.m_IsManipulateMode && !IsInUse(cp.Definition) && !IsInUse(cp.ParentDefinition)) RemoveDo(cp);
             }
 
             // Clear everything else
@@ -115,13 +115,13 @@ namespace MoveIt.Managers
                 }
             }
 
-            _Tool.Hover.Refresh();
+            _MIT.Hover.Refresh();
         }
 
         public bool IsInUse(MVDefinition mvd)
         {
-            if (_Tool.Hover.Is(mvd))        return true;
-            if (_Tool.Selection.Has(mvd))   return true;
+            if (_MIT.Hover.Is(mvd))        return true;
+            if (_MIT.Selection.Has(mvd))   return true;
             return false;
         }
 
@@ -130,7 +130,7 @@ namespace MoveIt.Managers
             foreach (Moveable mv in _Moveables)
             {
                 if (mv is not MVControlPoint cp) continue;
-                cp.RefreshComponent();
+                cp.UpdateComponent();
             }
         }
 
@@ -260,7 +260,7 @@ namespace MoveIt.Managers
 
         public void DebugDumpFull(string prefix = "")
         {
-            QLog.Debug(prefix + DebugFull());
+            MIT.Log.Debug(prefix + DebugFull());
         }
         #endregion
     }
