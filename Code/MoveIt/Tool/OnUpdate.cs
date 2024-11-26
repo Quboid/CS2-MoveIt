@@ -1,9 +1,9 @@
 ﻿using Game.Prefabs;
 using MoveIt.Actions.Select;
 using MoveIt.Managers;
+using MoveIt.Systems;
 using QCommonLib;
 using System;
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 
@@ -13,19 +13,6 @@ namespace MoveIt.Tool
     {
         protected override JobHandle OnUpdate(JobHandle inputDeps)
         {
-            //NativeArray<Game.Common.RaycastResult> vanillaRaycastResults = m_RaycastSystem.GetResult(m_ToolRaycastSystem);
-
-            //int surfaces = m_SurfacesQuery.CalculateEntityCount();
-            //try
-            //{
-            //    MIT_ToolTipSystem.instance.Set($"{surfaces} - {vanillaRaycastResults.Length}:{vanillaRaycastResults[0].m_Hit.m_HitEntity}");
-            //}
-            //catch (Exception ex)
-            //{
-            //    MIT_ToolTipSystem.instance.Set($"{surfaces} - Nope {ex.GetType()}");
-            //}
-
-
             m_InputDeps = base.OnUpdate(inputDeps);
             //ClearDebugOverlays();
 
@@ -56,7 +43,7 @@ namespace MoveIt.Tool
 
                 case MITStates.ApplyButtonHeld:
                 case MITStates.SecondaryButtonHeld:
-                    MITAction = MITActions.Do;
+                    Actions.Action.Phase = Actions.Phases.Do;
                     break;
 
                 case MITStates.DrawingSelection:
@@ -84,9 +71,14 @@ namespace MoveIt.Tool
             }
 
             Queue.FireAction();
-            ManageCreation(Queue.CreationAction);
 
             //DebugDumpSelections();
+
+            //MIT_ToolTipSystem.instance.Set(
+            //    $"Hov:{Hovered.Definition.m_Entity.DX()}/Norm:{Hover.Normal.Definition.m_Entity.DX()}/Child:{Hover.Child.Definition.m_Entity.DX()}/ChildPar:{Hover.Child.Definition.m_Parent.DX()}, " +
+            //    $"Press:{Hover.TopPressed.m_Entity.DX()}/{Hover.Normal.OnPress.m_Entity.DX()}/{Hover.Child.OnPress.m_Entity.DX()}");
+
+            //Moveables.DebugDumpFullBundle("ONUPDATE");
 
             return m_InputDeps;
         }

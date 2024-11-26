@@ -1,6 +1,5 @@
 ﻿using Colossal.Entities;
 using Colossal.Mathematics;
-using Colossal.UI;
 using Game.Common;
 using Game.Tools;
 using MoveIt.QAccessor;
@@ -28,6 +27,10 @@ namespace MoveIt.Moveables
         /// This entity's ultimate parent object
         /// </summary>
         internal Entity m_Parent;
+        /// <summary>
+        /// What sort of object is the parent? (optional)
+        /// </summary>
+        internal readonly Identity m_ParentId;
         /// <summary>
         /// How this object relates to the parent (optional)
         /// </summary>
@@ -64,6 +67,16 @@ namespace MoveIt.Moveables
         /// Is this object managed by Move It
         /// </summary>
         internal bool m_IsManaged;
+
+        /// <summary>
+        /// The object's final curve (optional)
+        /// </summary>
+        internal Bezier4x3 m_Curve;
+        /// <summary>
+        /// The object's curve at the start of the current action (optional)
+        /// </summary>
+        internal Bezier4x3 m_InitialCurve;
+
         /// <summary>
         /// How far the object has moved this action
         /// </summary>
@@ -76,12 +89,8 @@ namespace MoveIt.Moveables
         /// The initial center-point of this action
         /// </summary>
         internal float3 m_InitialCenter;
-        /// <summary>
-        /// The object's curve at the start of the current action (optional)
-        /// </summary>
-        internal Bezier4x3 m_InitialCurve;
 
-        internal readonly MVDefinition Definition => new(m_Identity, m_Entity, m_IsManipulatable, m_IsManaged, m_Parent, m_ParentKey);
+        internal readonly MVDefinition Definition => new(m_Identity, m_Entity, m_IsManipulatable, m_IsManaged, m_Parent, m_ParentId, m_ParentKey);
 
         internal State(EntityManager manager, ref QLookup lookup, Moveable mv, float3 moveDelta, float angleDelta, float3 centerPoint)
         {
@@ -97,6 +106,7 @@ namespace MoveIt.Moveables
             m_Entity            = mv.m_Entity;
             m_Accessor          = new(manager, ref lookup, m_Entity, mv.m_Identity);
             m_Parent            = mv.m_Parent;
+            m_ParentId          = mv.m_ParentId;
             m_ParentKey         = mv.m_ParentKey;
             m_Prefab            = manager.GetComponentData<Game.Prefabs.PrefabRef>(m_Entity).m_Prefab;
             m_Position          = mv.Transform.m_Position;
@@ -106,14 +116,16 @@ namespace MoveIt.Moveables
             m_Identity          = mv.m_Identity;
             m_IsManipulatable   = mv.IsManipulatable;
             m_IsManaged         = mv.IsManaged;
+            m_Curve             = default;
+            m_InitialCurve      = default;
             m_MoveDelta         = moveDelta;
             m_AngleDelta        = angleDelta;
             m_InitialCenter     = centerPoint;
-            m_InitialCurve      = default;
 
             if (m_Identity == Identity.Segment || m_Identity == Identity.NetLane)
             {
                 m_InitialCurve = manager.GetComponentData<Game.Net.Curve>(m_Entity).m_Bezier;
+                m_Curve = m_InitialCurve;
             }
         }
 
@@ -125,9 +137,12 @@ namespace MoveIt.Moveables
         /// <returns>The fresh copy</returns>
         internal State GetCopy(EntityManager manager, ref QLookup lookup)
         {
+            if (!m_Entity.Exists(manager))
+            {
+                throw new Exception($"State.GetCopy manager:{manager}, lookup:{lookup}, entity:{m_Entity}, id:{m_Identity}");
+            }
             return new State()
             {
-
                 m_Entity            = this.m_Entity,
                 m_Accessor          = new(manager, ref lookup, m_Entity, this.m_Identity),
                 m_Parent            = this.m_Parent,
@@ -140,10 +155,11 @@ namespace MoveIt.Moveables
                 m_Identity          = this.m_Identity,
                 m_IsManipulatable   = this.m_IsManipulatable,
                 m_IsManaged         = this.m_IsManaged,
+                m_Curve             = this.m_Curve,
+                m_InitialCurve      = this.m_InitialCurve,
                 m_MoveDelta         = this.m_MoveDelta,
                 m_AngleDelta        = this.m_AngleDelta,
                 m_InitialCenter     = this.m_InitialCenter,
-                m_InitialCurve      = this.m_InitialCurve,
             };
         }
 
@@ -162,6 +178,11 @@ namespace MoveIt.Moveables
         public void TransformEnd(NativeArray<Entity> all)
         {
             m_Accessor.TransformEnd(all);
+        }
+
+        public void UpdateCurve()
+        {
+            m_Accessor.UpdateCurve(this);
         }
 
         /// <summary>
@@ -205,14 +226,14 @@ namespace MoveIt.Moveables
             return m_Accessor.Dispose(handle);
         }
 
-        public override readonly string ToString()
-        {
-            return $"{m_Entity.D(),-9} {m_Identity,-12} {m_Position.DX(),22} / {m_Rotation.Y(),-6:0.##}";
-        }
+        //public override readonly string ToString()
+        //{
+        //    return $"{m_Entity.D(),-9} {m_Identity,-12} {m_Position.DX(),22} / {m_Rotation.Y(),-6:0.##}";
+        //}
 
-        public readonly string ToStringLong()
+        public readonly override string ToString()
         {
-            return $"{m_Entity.D(),-9} {m_Identity,-12} {m_Position.DX(),22} / {m_Rotation.Y(),-6:0.##} Prefab:{m_Prefab.D(),-10}";
+            return $"{m_Entity.DX()} {m_Identity} {m_Position.DX()} / {m_Rotation.Y():0.##}";
         }
 
         public readonly void DebugDump()

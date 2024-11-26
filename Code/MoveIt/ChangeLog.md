@@ -1,12 +1,4 @@
-﻿0.5.0
-- Selection filters (Alt+F to enable/disable filtering)
-- Toolbox!
-- Align to terrain height (Control+G) - does not apply to buildings or on-ground roads!
-- Align to to object height (Control+H)
-- Rotate At Centre (Alt+A)
-- Rotate In-Place (Shift+A)
-- Precision mode: hold Control while moving to hide overlays and reduce mouse sensitivity
-- Improved logging performance and detail
-- Fixed occasional crash on Undo
-- Fixed occasional crash when dragging buildings over other buildings
-- Fixed props dropping to ground height
+﻿0.5.1
+- Updated for 1.1.12f
+- Numerous minor tweaks
+

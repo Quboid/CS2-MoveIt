@@ -1,4 +1,4 @@
-﻿using MoveIt.Overlays;
+﻿using MoveIt.Overlays.Children;
 using Unity.Entities;
 
 namespace MoveIt.Moveables
@@ -11,25 +11,25 @@ namespace MoveIt.Moveables
         {
             if (_MIT.EntityManager.HasComponent<Game.Common.Owner>(e))
             {
-                m_Overlay = Factory.Create<OverlayNone>(this, OverlayTypes.None);
+                m_Overlay = new OverlayNone(this);
             }
             else
             {
-                m_Overlay = Factory.Create<OverlayBuilding>(this, OverlayTypes.MVBuilding);
+                m_Overlay = new OverlayBuilding(this);
             }
-            Refresh();
+            RefreshFromAbstract();
         }
 
-        internal override bool Refresh()
-        {
-            if (!IsValid) return false;
-            if (!IsOverlayValid) return false;
+        //internal override bool Refresh()
+        //{
+        //    if (!IsValid) return false;
+        //    if (!IsOverlayValid) return false;
 
-            //m_Overlay.EnqueueUpdate();
-            return true;
-        }
+        //    //m_Overlay.EnqueueUpdate();
+        //    return true;
+        //}
 
-        public override void Dispose()
-        { }
+        //public override void Dispose()
+        //{ }
     }
 }

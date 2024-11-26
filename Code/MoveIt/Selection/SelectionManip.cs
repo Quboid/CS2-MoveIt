@@ -27,7 +27,7 @@ namespace MoveIt.Selection
 
             if (append)
             {
-                if (Has(mvd))
+                if (Has(mvd, false))
                 {
                     Remove(mvd);
                 }
@@ -37,7 +37,7 @@ namespace MoveIt.Selection
                     Add(mv.ParentDefinition);
                 }
             }
-            else if (!_MIT.Selection.Has(mvd))
+            else if (!_MIT.Selection.Has(mvd, false))
             {
                 if (mv.IsManipChild)
                 {
@@ -65,9 +65,9 @@ namespace MoveIt.Selection
             }
         }
 
-        internal override HashSet<MVDefinition> GetObjectsToTransform()
+        protected override HashSet<MVDefinition> GetObjectsToTransform()
         {
-            IEnumerable<MVDefinition> candidates = _Buffer.Where(mvd => mvd.m_IsManipulatable && Has(mvd));
+            IEnumerable<MVDefinition> candidates = _Buffer.Where(mvd => mvd.m_IsManipulatable && Has(mvd, false));
 
             HashSet<MVDefinition> result = new();
             foreach (MVDefinition mvd in candidates)
@@ -81,9 +81,13 @@ namespace MoveIt.Selection
             return result;
         }
 
+        /// <summary>
+        /// Get the objects that actually transform from the Buffer - actively selected manipulatable objects
+        /// </summary>
         internal override HashSet<MVDefinition> GetObjectsToTransformFull()
         {
-            IEnumerable<MVDefinition> candidates = _BufferFull.Where(mvd => mvd.m_IsManipulatable && Has(mvd));
+            // If Has() includes parent, all CPs will be picked. Only use _Buffer?
+            IEnumerable<MVDefinition> candidates = _Buffer.Where(mvd => mvd.m_IsManipulatable && Has(mvd, false));
 
             HashSet<MVDefinition> result = new();
             foreach (MVDefinition mvd in candidates)

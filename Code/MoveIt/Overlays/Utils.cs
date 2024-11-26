@@ -1,44 +1,11 @@
-﻿using Colossal.Mathematics;
-using MoveIt.Moveables;
+﻿using System;
+using Colossal.Mathematics;
 using MoveIt.Tool;
-using QCommonLib;
 using Unity.Entities;
 using Unity.Mathematics;
 
 namespace MoveIt.Overlays
 {
-    public sealed class Factory
-    {
-        private static readonly MIT _MIT = MIT.m_Instance;
-
-        /// <summary>
-        /// Create an Overlay subclass
-        /// </summary>
-        /// <typeparam name="T">The subclass to make</typeparam>
-        /// <param name="mv">The Moveable this overlay is for</param>
-        /// <param name="type">The type of overlay</param>
-        /// <returns>The Overlay subclass</returns>
-        public static T Create<T>(Moveable mv, OverlayTypes type) where T : Overlay, new()
-        {
-            T overlay = new()
-            {
-                m_Type = type,
-                m_Moveable = mv,
-                m_Owner = mv.m_Entity,
-            };
-
-            return overlay;
-        }
-
-        //public static bool RemoveOverlay(Overlay overlay)
-        //{
-        //    if (!_MIT.EntityManager.Exists(overlay.m_Entity)) return false;
-
-        //    return _MIT.EntityManager.AddComponent<Game.Common.Deleted>(overlay.m_Entity);
-        //}
-    }
-
-
     public enum OverlayTypes
     {
         None,
@@ -48,7 +15,7 @@ namespace MoveIt.Overlays
         Line,
         Quad,
         Marquee,
-        SelectionCenter,
+        SelectionCentralPoint,
         MVBuilding,
         MVCircle,
         MVControlPoint,
@@ -60,6 +27,7 @@ namespace MoveIt.Overlays
         MVSurface,
     }
 
+    [Flags]
     public enum ToolFlags
     {
         None                = 0,
@@ -78,7 +46,7 @@ namespace MoveIt.Overlays
 
     public struct MIO_Type : IComponentData
     {
-        public OverlayTypes m_Type;
+        public readonly OverlayTypes m_Type;
 
         public MIO_Type(OverlayTypes type)
         {
@@ -208,21 +176,52 @@ namespace MoveIt.Overlays
 
     public struct MIO_Common : IComponentData
     {
+        /// <summary>
+        /// The main colour of this overlay
+        /// </summary>
         public UnityEngine.Color m_OutlineColor     = default;
+        /// <summary>
+        /// The secondary colour used to accent the m_OutlineColor (optional)
+        /// </summary>
         public UnityEngine.Color m_BackgroundColor  = default;
+        /// <summary>
+        /// How this overlay is being used
+        /// </summary>
         public InteractionFlags m_Flags             = InteractionFlags.None;
         public bool m_IsManipulatable               = false;
         public bool m_IsManipChild                  = false;
+        /// <summary>
+        /// The object that this overlay is rendered for, for selection/hover/tool-hover/etc
+        /// </summary>
         public Entity m_Owner                       = Entity.Null;
+        /// <summary>
+        /// The prefab of the object that this overlay is rendered for (unused at this time)
+        /// </summary>
         public Entity m_Prefab                      = Entity.Null;
+        /// <summary>
+        /// This overlay's position and rotation
+        /// </summary>
         public Game.Objects.Transform m_Transform   = default;
+        /// <summary>
+        /// The width of this overlay's lines at ground level
+        /// </summary>
         public float m_OutlineWidthGround           = Overlay.LINE_DEFAULT_WIDTH;
+        /// <summary>
+        /// The width of this overlay's lines at the object's position
+        /// </summary>
         public float m_OutlineWidthFixed            = Overlay.LINE_DEFAULT_WIDTH;
+        /// <summary>
+        /// The terrain height where this overlay is being rendered
+        /// </summary>
         public float m_TerrainHeight                = 0f;
-        public float m_ElevationN                   = 0f;
-        public float m_ElevationO                   = 0f;
+        /// <summary>
+        /// The opacity of the shadow overlay, 0f if none
+        /// </summary>
         public float m_ShadowOpacity                = 0f;
 
+        /// <summary>
+        /// Is there a shadow overlay for this object?
+        /// </summary>
         public readonly bool ShowShadow => m_ShadowOpacity > 0.0001f;
 
         public MIO_Common()
@@ -233,6 +232,11 @@ namespace MoveIt.Overlays
             m_Owner = owner;
         }
 
+        /// <summary>
+        /// Get the line width for a line's actual draw call
+        /// </summary>
+        /// <param name="projection">The type of projection this line uses</param>
+        /// <returns></returns>
         public readonly float GetWidth(Projection projection)
         {
             if (projection == Projection.Unset) return 0f;

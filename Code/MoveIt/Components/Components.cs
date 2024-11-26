@@ -22,16 +22,18 @@ namespace MoveIt.Components
         public Entity m_Node;
         public float3 m_Position;
         public float m_Diameter;
+        public Identity m_ParentId;
         public short m_ParentKey;
         public bool m_IsManipulatable;
         public readonly float2 Position2D => m_Position.XZ();
 
-        public readonly MVDefinition Definition => new(Identity.ControlPoint, m_Entity, m_IsManipulatable, true, m_Parent, m_ParentKey);
+        public readonly MVDefinition Definition => new(Identity.ControlPoint, m_Entity, m_IsManipulatable, true, m_Parent, m_ParentId, m_ParentKey);
 
         public MIT_ControlPoint(Entity e, Entity segment, short parentKey, Entity node, float3 pos, float diameter, bool isManipulatable)
         {
             m_Entity = e;
             m_Parent = segment;
+            m_ParentId = Identity.Segment;
             m_Node = node;
             m_Position = pos;
             m_Diameter = diameter;

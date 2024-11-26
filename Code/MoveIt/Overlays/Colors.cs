@@ -24,11 +24,12 @@ namespace MoveIt.Overlays
         }
 
         public static readonly SharedStatic<NativeHashMap<int, Color>> s_Lookup = SharedStatic<NativeHashMap<int, Color>>.GetOrCreate<ColorData, LookupKey>();
+        // ReSharper disable once ClassNeverInstantiated.Local
         private class LookupKey { }
 
         public static void Init()
         {
-            s_Lookup.Data = new(6, Allocator.Persistent)
+            s_Lookup.Data = new(12, Allocator.Persistent)
             {
                 { (int)Contexts.None,                   new Color32(0, 0, 0, 0) },
                 { (int)Contexts.Hovering,               new Color32(0, 181, 255, 250) },
@@ -38,10 +39,10 @@ namespace MoveIt.Overlays
                 { (int)Contexts.ToolParentHover,        new Color32(230, 230, 240, 150) },
                 { (int)Contexts.Shadow,                 new Color32(165, 165, 170, 50) },
                 { (int)Contexts.Background,             new Color32(165, 165, 180, 150) },
-                { (int)Contexts.ManipParentHovering,    new Color32(215, 100, 250, 175) },
-                { (int)Contexts.ManipParentSelected,    new Color32(215, 100, 250, 90) },
-                { (int)Contexts.ManipChildHovering,     new Color32(215, 200, 255, 240) },
-                { (int)Contexts.ManipChildSelected,     new Color32(215, 200, 255, 190) },
+                { (int)Contexts.ManipParentHovering,    new Color32(215, 100, 250, 220) },
+                { (int)Contexts.ManipParentSelected,    new Color32(215, 100, 250, 145) },
+                { (int)Contexts.ManipChildHovering,     new Color32(200, 200, 255, 255) },
+                { (int)Contexts.ManipChildSelected,     new Color32(200, 210, 255, 200) },
             };
         }
 

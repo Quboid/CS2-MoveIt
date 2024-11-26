@@ -1,5 +1,5 @@
 ﻿using MoveIt.Actions.Transform;
-using MoveIt.Overlays;
+using MoveIt.Overlays.Children;
 using MoveIt.Tool;
 using QCommonLib;
 using Unity.Entities;
@@ -12,17 +12,18 @@ namespace MoveIt.Moveables
 
         public MVManipSegment(Entity e) : base(e, Identity.Segment)
         {
-            m_Overlay = Factory.Create<OverlayManipSegment>(this, OverlayTypes.MVManipSegment);
-            Refresh();
-        }
-
-        public override void OnDeselect()
-        {
-            base.OnDeselect();
-            foreach (var child in GetChildMoveablesForOverlays<MVManipControlPoint>())
+            m_CPDefinitions = new();
+            for (short i = 0; i < CURVE_CPS; i++)
             {
-                _MIT.Selection.RemoveIfExists(child.Definition);
+                MVDefinition mvd = new(Identity.ControlPoint, Entity.Null, IsManipulatable, true, m_Entity, m_Identity, i);
+                //QLog.Debug($"{i} MVMSeg.ctor1 cp:{mvd}");
+                MVControlPoint cp = _MIT.ControlPointManager.GetOrCreateMoveable(mvd);
+                m_CPDefinitions.Add(cp.Definition);
+                //QLog.Debug($"{i} MVMSeg.ctor2 cp:{mvd}");
             }
+
+            m_Overlay = new OverlayManipSegment(this);
+            RefreshFromAbstract();
         }
 
         internal override void MoveIt(TransformBase action, State state, bool move, bool rotate)

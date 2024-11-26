@@ -2,31 +2,24 @@
 using Colossal.Mathematics;
 using Game.Areas;
 using MoveIt.Moveables;
-using MoveIt.Tool;
 using QCommonLib;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace MoveIt.QAccessor
+namespace MoveIt.QAccessor.QEntity
 {
     internal partial struct QEntity
     {
-        private readonly float3 Surface_Position
-        {
-            get
-            {
-                return GetSurfaceCircle(m_Manager, m_Entity).position;
-            }
-        }
+        private readonly float3 Surface_Position => GetSurfaceCircle(_Manager, m_Entity).position;
 
-        private readonly float Surface_Angle => Rotation.Y();
+        private float Surface_Angle => Rotation.Y();
 
-        private readonly quaternion Surface_Rotation => GetSurfaceRotation(m_Manager, m_Entity);
+        private readonly quaternion Surface_Rotation => GetSurfaceRotation(_Manager, m_Entity);
 
 
-        private readonly bool Surface_SetUpdated()
+        private bool Surface_SetUpdated()
         {
             TryAddUpdate(m_Entity);
             return true;
@@ -36,27 +29,27 @@ namespace MoveIt.QAccessor
         { }
 
 
-        private readonly bool Surface_MoveBy(State state, float3 newPosition, float3 delta)
+        private bool Surface_MoveBy(State state, float3 newPosition, float3 delta)
         {
             return Surface_MoveTo(state, newPosition, delta);
         }
 
-        private readonly bool Surface_MoveTo(State state, float3 newPosition, float3 delta)
+        private bool Surface_MoveTo(State state, float3 newPosition, float3 delta)
         {
-            if (m_Lookup.gaGeometry.HasComponent(m_Entity))
+            if (_Lookup.gaGeometry.HasComponent(m_Entity))
             {
-                m_Lookup.gaGeometry.GetRefRW(m_Entity).ValueRW.m_CenterPosition = newPosition;
-                m_Lookup.gaGeometry.GetRefRW(m_Entity).ValueRW.m_Bounds = MoveBounds3(m_Lookup.gaGeometry.GetRefRO(m_Entity).ValueRO.m_Bounds, delta);
+                _Lookup.gaGeometry.GetRefRW(m_Entity).ValueRW.m_CenterPosition = newPosition;
+                _Lookup.gaGeometry.GetRefRW(m_Entity).ValueRW.m_Bounds = MoveBounds3(_Lookup.gaGeometry.GetRefRO(m_Entity).ValueRO.m_Bounds, delta);
             }
 
             //string msg = $"Surface_MoveTo {m_Entity.DX(true)} {newPosition.DX()}, delta:{delta.DX()}";
-            if (m_Lookup.gaNode.TryGetBuffer(m_Entity, out var gaNodes))
+            if (_Lookup.gaNode.TryGetBuffer(m_Entity, out var gaNodes))
             {
                 //msg += $" gaNodes:{gaNodes.Length}";
                 for (int i = 0; i < gaNodes.Length; i++)
                 {
                     //float3 old = gaNodes[i].m_Position;
-                    var b = gaNodes[i];
+                    Node b = gaNodes[i];
                     b.m_Position += delta;
                     gaNodes[i] = b;
                     //msg += $"\n   {i,2}: {old.DX()} -> {gaNodes[i].m_Position.DX()}";
@@ -69,20 +62,20 @@ namespace MoveIt.QAccessor
             return true;
         }
 
-        private readonly bool Surface_RotateBy(State state, float delta, ref Matrix4x4 matrix, float3 origin)
+        private bool Surface_RotateBy(State state, float delta, ref Matrix4x4 matrix, float3 origin)
         {
             return Surface_RotateTo(state, quaternion.identity, ref matrix, origin);
         }
 
-        private readonly bool Surface_RotateTo(State state, quaternion newRotation, ref Matrix4x4 matrix, float3 origin)
+        private bool Surface_RotateTo(State state, quaternion newRotation, ref Matrix4x4 matrix, float3 origin)
         {
-            if (m_Lookup.gaGeometry.HasComponent(m_Entity))
+            if (_Lookup.gaGeometry.HasComponent(m_Entity))
             {
-                float3 centre = m_Lookup.gaGeometry.GetRefRO(m_Entity).ValueRO.m_CenterPosition;
-                m_Lookup.gaGeometry.GetRefRW(m_Entity).ValueRW.m_CenterPosition = matrix.MultiplyPoint(centre - origin);
+                float3 centre = _Lookup.gaGeometry.GetRefRO(m_Entity).ValueRO.m_CenterPosition;
+                _Lookup.gaGeometry.GetRefRW(m_Entity).ValueRW.m_CenterPosition = matrix.MultiplyPoint(centre - origin);
             }
 
-            if (m_Lookup.gaNode.TryGetBuffer(m_Entity, out var buffer))
+            if (_Lookup.gaNode.TryGetBuffer(m_Entity, out var buffer))
             {
                 for (int i = 0; i < buffer.Length; i++)
                 {

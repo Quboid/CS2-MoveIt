@@ -7,7 +7,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace MoveIt.QAccessor
+namespace MoveIt.QAccessor.QEntity
 {
     internal partial struct QEntity
     {
@@ -24,20 +24,20 @@ namespace MoveIt.QAccessor
         /// </summary>
         internal Entity m_Owner;
         internal Identity m_Identity;
-        internal ID m_ID;
-        internal QLookup m_Lookup;
-        internal EntityManager m_Manager;
+        private readonly ID _ID;
+        private QLookup _Lookup;
+        private EntityManager _Manager;
 
         internal QEntity(EntityManager manager, ref QLookup lookup, Entity e, Identity identity, Entity parent = default)
         {
-            m_Lookup    = lookup;
+            _Lookup    = lookup;
             m_Entity    = e;
             m_Identity  = identity;
             m_Parent    = parent;
             m_Owner     = default;
-            m_Manager   = manager;
+            _Manager   = manager;
 
-            m_ID = identity switch
+            _ID = identity switch
             {
                 Identity.Prop           => ID.Prop,
                 Identity.Decal          => ID.Prop,
@@ -50,13 +50,13 @@ namespace MoveIt.QAccessor
                 _ => ID.Generic,
             };
 
-            if (m_Manager.TryGetComponent<Game.Common.Owner>(e, out var owner))
+            if (_Manager.TryGetComponent<Game.Common.Owner>(e, out var owner))
             {
                 m_Owner = owner.m_Owner;
             }
         }
 
-        internal readonly float3 Position => m_ID switch
+        internal float3 Position => _ID switch
         {
             ID.Seg      => Segment_Position,
             ID.Lane     => Lane_Position,
@@ -66,7 +66,7 @@ namespace MoveIt.QAccessor
             _           => Generic_Position,
         };
 
-        internal readonly float Angle => m_ID switch
+        internal float Angle => _ID switch
         {
             ID.Seg      => Segment_Angle,
             ID.Lane     => Lane_Angle,
@@ -76,7 +76,7 @@ namespace MoveIt.QAccessor
             _           => Generic_Angle,
         };
 
-        internal readonly quaternion Rotation => m_ID switch
+        internal quaternion Rotation => _ID switch
         {
             ID.Seg      => Segment_Rotation,
             ID.Lane     => Lane_Rotation,
@@ -86,27 +86,29 @@ namespace MoveIt.QAccessor
             _           => Generic_Rotation,
         };
 
-        internal readonly bool TryGetElevation(out float elevation)
+        private bool TryGetElevation(out float elevation)
         {
             elevation = 0f;
-            bool result = m_ID switch
+            bool result = _ID switch
             {
                 ID.Prop     => PropPlant_TryGetElevation(out elevation),
                 ID.Seg      => Net_TryGetElevation(out elevation),
                 ID.Node     => Net_TryGetElevation(out elevation),
-                ID.CP       => Net_TryGetElevation(out elevation),
+                ID.Lane     => Net_TryGetElevation(out elevation),
+                ID.CP       => ControlPoint_TryGetElevation(out elevation),
                 _           => Generic_TryGetElevation(out elevation),
             };
             return result;
         }
 
-        internal readonly bool TrySetElevation(float elevation)
+        private bool TrySetElevation(float elevation)
         {
-            bool result = m_ID switch
+            bool result = _ID switch
             {
                 ID.Prop     => PropPlant_TrySetElevation(elevation),
                 ID.Seg      => Net_TrySetElevation(elevation),
                 ID.Node     => Net_TrySetElevation(elevation),
+                ID.Lane     => Net_TrySetElevation(elevation),
                 ID.CP       => ControlPoint_TrySetElevation(elevation),
                 _           => Generic_TrySetElevation(elevation),
             };
@@ -116,7 +118,7 @@ namespace MoveIt.QAccessor
 
         internal bool SetUpdated()
         {
-            return m_ID switch
+            return _ID switch
             {
                 ID.Seg      => Segment_SetUpdated(),
                 ID.Lane     => Lane_SetUpdated(),
@@ -127,9 +129,9 @@ namespace MoveIt.QAccessor
             };
         }
 
-        internal readonly void TransformEnd(NativeArray<Entity> allEntities)
+        internal void TransformEnd(NativeArray<Entity> allEntities)
         {
-            switch (m_ID)
+            switch (_ID)
             {
                 case ID.Seg:
                     Segment_TransformEnd();
@@ -155,7 +157,7 @@ namespace MoveIt.QAccessor
 
         internal bool MoveBy(State state, float3 newPosition, float3 delta)
         {
-            return m_ID switch
+            return _ID switch
             {
                 ID.Seg      => Segment_MoveBy(state, newPosition, delta),
                 ID.Lane     => Lane_MoveBy(state, newPosition, delta),
@@ -168,7 +170,7 @@ namespace MoveIt.QAccessor
 
         internal bool MoveTo(State state, float3 newPosition, float3 delta)
         {
-            return m_ID switch
+            return _ID switch
             {
                 ID.Seg      => Segment_MoveTo(state, newPosition, delta),
                 ID.Lane     => Lane_MoveTo(state, newPosition, delta),
@@ -181,7 +183,7 @@ namespace MoveIt.QAccessor
 
         internal bool RotateBy(State state, float delta, ref Matrix4x4 matrix, float3 origin)
         {
-            return m_ID switch
+            return _ID switch
             {
                 ID.Seg      => Segment_RotateBy(state, delta, ref matrix, origin),
                 ID.Lane     => Lane_RotateBy(state, delta, ref matrix, origin),
@@ -194,7 +196,7 @@ namespace MoveIt.QAccessor
 
         internal bool RotateTo(State state, quaternion newRotation, ref Matrix4x4 matrix, float3 origin)
         {
-            return m_ID switch
+            return _ID switch
             {
                 ID.Seg      => Segment_RotateTo(state, newRotation, ref matrix, origin),
                 ID.Lane     => Lane_RotateTo(state, newRotation, ref matrix, origin),
@@ -205,13 +207,22 @@ namespace MoveIt.QAccessor
             };
         }
 
+        internal bool UpdateCurve(State state)
+        {
+            return _ID switch
+            {
+                ID.Seg      => Segment_UpdateCurve(state),
+                _           => Generic_UpdateCurve(state),
+            };
+        }
+
         /// <summary>
         /// Set the elevation component of the object, if it exists, and get the new position height value
         /// </summary>
         /// <param name="state">The state of the object to update</param>
         /// <param name="delta">The positional change from the Transform action</param>
         /// <returns>The new position height, adjusted for elevation component</returns>
-        private readonly void SetElevation(State state, float3 delta)
+        private void SetElevation(State state, float3 delta)
         {
             if (!TryGetElevation(out float elevation)) return;
 
@@ -227,13 +238,13 @@ namespace MoveIt.QAccessor
         /// </summary>
         /// <param name="elevation">The new elevation</param>
         /// <returns>Does an Elevated component now exist for this entity?</returns>
-        private readonly bool ManageStaticElevation(float elevation)
+        private bool ManageStaticElevation(float elevation)
         {
             if (math.abs(elevation) < 0.0005f)
             {
-                if (m_Lookup.goElevation.HasComponent(m_Entity))
+                if (_Lookup.goElevation.HasComponent(m_Entity))
                 {
-                    m_Manager.RemoveComponent<Game.Objects.Elevation>(m_Entity);
+                    _Manager.RemoveComponent<Game.Objects.Elevation>(m_Entity);
                 }
                 return false;
             }
@@ -241,13 +252,13 @@ namespace MoveIt.QAccessor
             Game.Objects.ElevationFlags flag = elevation < 0f ? Game.Objects.ElevationFlags.Lowered : 0f;
             Game.Objects.Elevation component = new(elevation, flag);
 
-            if (!m_Lookup.goElevation.HasComponent(m_Entity))
+            if (!_Lookup.goElevation.HasComponent(m_Entity))
             {
-                m_Manager.AddComponentData(m_Entity, component);
+                _Manager.AddComponentData(m_Entity, component);
             }
             else
             {
-                m_Lookup.goElevation.GetRefRW(m_Entity).ValueRW = component;
+                _Lookup.goElevation.GetRefRW(m_Entity).ValueRW = component;
             }
 
             return true;
@@ -259,29 +270,29 @@ namespace MoveIt.QAccessor
         /// </summary>
         /// <param name="elevation">The new elevation</param>
         /// <returns>Does an Elevated component now exist for this entity?</returns>
-        //private readonly bool ManageNetworkElevation(float2 elevation)
-        //{
-        //    if (math.abs(elevation.x) < 0.0005f && math.abs(elevation.y) < 0.0005f)
-        //    {
-        //        if (m_Lookup.gnElevation.HasComponent(m_Entity))
-        //        {
-        //            m_Manager.RemoveComponent<Game.Net.Elevation>(m_Entity);
-        //        }
-        //        return false;
-        //    }
+        private bool ManageNetworkElevation(float2 elevation)
+        {
+            if (math.abs(elevation.x) < 0.0005f && math.abs(elevation.y) < 0.0005f)
+            {
+                if (_Lookup.gnElevation.HasComponent(m_Entity))
+                {
+                    _Manager.RemoveComponent<Game.Net.Elevation>(m_Entity);
+                }
+                return false;
+            }
 
-        //    Game.Net.Elevation component = new(elevation);
+            Game.Net.Elevation component = new(elevation);
 
-        //    if (!m_Lookup.gnElevation.HasComponent(m_Entity))
-        //    {
-        //        m_Manager.AddComponentData(m_Entity, component);
-        //    }
-        //    else
-        //    {
-        //        m_Lookup.gnElevation.GetRefRW(m_Entity).ValueRW = component;
-        //    }
+            if (!_Lookup.gnElevation.HasComponent(m_Entity))
+            {
+                _Manager.AddComponentData(m_Entity, component);
+            }
+            else
+            {
+                _Lookup.gnElevation.GetRefRW(m_Entity).ValueRW = component;
+            }
 
-        //    return true;
-        //}
+            return true;
+        }
     }
 }

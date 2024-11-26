@@ -98,19 +98,18 @@ namespace MoveIt.Snapper
             {
 
                 #region Straight Segment
-                if (state.m_Identity == Identity.Segment || state.m_Identity == Identity.NetLane)
+                if (state.m_Identity != Identity.Segment && state.m_Identity != Identity.NetLane) return;
+                
+                SnapCandidate candidate = new()
                 {
-                    SnapCandidate candidate = new()
-                    {
-                        m_Entity = state.m_Entity,
-                        m_Type = SnapTypes.Point,
-                        m_Flags = SnapFlags.SameStraight,
-                        m_Point = math.lerp(state.m_InitialCurve.a, state.m_InitialCurve.d, 0.5f),
-                        m_Weight = 2,
-                    };
+                    m_Entity = state.m_Entity,
+                    m_Type = SnapTypes.Point,
+                    m_Flags = SnapFlags.SameStraight,
+                    m_Point = math.lerp(state.m_InitialCurve.a, state.m_InitialCurve.d, 0.5f),
+                    m_Weight = 2,
+                };
 
-                    m_Candidates.AddNoResize(candidate);
-                }
+                m_Candidates.AddNoResize(candidate);
                 #endregion
 
             }

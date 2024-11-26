@@ -5,6 +5,7 @@ using MoveIt.Tool;
 using QCommonLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -15,9 +16,9 @@ namespace MoveIt.Managers
     {
         protected static readonly MIT _MIT = MIT.m_Instance;
 
-        private EntityArchetype _ControlPointArchetype;
+        private static EntityArchetype _ControlPointArchetype;
 
-        internal int Count => _MIT.Moveables.CountOf<MVControlPoint>();
+        internal static int Count => _MIT.Moveables.CountOf<MVControlPoint>();
         internal bool Any => Count > 0;
 
         public ControlPointManager()
@@ -29,11 +30,19 @@ namespace MoveIt.Managers
             });
         }
 
-        private Entity CreateEntity(MVDefinition mvd)
+        internal static Entity CreateEntity(MVDefinition mvd)
         {
             if (_MIT.Moveables.Any<MVControlPoint>(cp => mvd.Equals(cp) && DoesMVControlPointHaveEntity(cp)))
             {
                 throw new Exception($"Trying to create ControlPoint entity but it already exists ({mvd})");
+            }
+            if (!mvd.m_Parent.Exists(_MIT.EntityManager))
+            {
+                throw new Exception($"Trying to create ControlPoint entity but parent doesn't exist ({mvd})");
+            }
+            if (mvd.m_ParentKey < 0 || mvd.m_ParentKey > 3)
+            {
+                throw new Exception($"Trying to create ControlPoint entity but parent key is invalid ({mvd})");
             }
 
             Entity e = _MIT.EntityManager.CreateEntity(_ControlPointArchetype);
@@ -47,22 +56,20 @@ namespace MoveIt.Managers
             Game.Rendering.CullingInfo culling = new()
             {
                 m_Bounds = new(cpData.m_Position - cpData.m_Diameter / 2, cpData.m_Position + cpData.m_Diameter / 2),
-                m_Radius = cpData.m_Diameter / 2
+                m_Radius = cpData.m_Diameter / 2,
             };
 
             _MIT.EntityManager.SetComponentData(e, cpData);
             _MIT.EntityManager.SetComponentData(e, prefabRef);
             _MIT.EntityManager.SetComponentData(e, culling);
 
+            //QLog.Debug($"CPM.CreateEntity2 {e.D()} ({mvd})");
+
             return e;
         }
 
         private static bool DoesMVControlPointHaveEntity(MVControlPoint cp)
-        {
-            if (cp.m_Entity.Equals(Entity.Null)) return false;
-            if (!_MIT.EntityManager.Exists(cp.m_Entity)) return false;
-            return true;
-        }
+            => cp.m_Entity.Exists(_MIT.EntityManager);
 
         /// <summary>
         /// Refresh CP map when the tool is activated, to ensure the Moveables exist and are up to date
@@ -81,23 +88,31 @@ namespace MoveIt.Managers
             cp.UpdateComponent();
         }
 
-        public bool HasMoveable(MVDefinition mvd)
+        public static void UpdateAllExisting()
         {
-            return _MIT.Moveables.Any<MVControlPoint>(cp => mvd.Equals(cp));
+            foreach (MVControlPoint cp in _MIT.Moveables.GetAllOf<MVControlPoint>())
+            {
+                cp.UpdateComponent();
+            }
+        }
+
+        public static bool HasMoveable(MVDefinition mvd)
+        {
+            return _MIT.Moveables.Any<MVControlPoint>(mvd.Equals);
         }
 
         /// <summary>
         /// Get the MVControlPoint object from a MVDefinition struct
         /// </summary>
         /// <param name="mvd">The MVDefinition struct</param>
-        /// <returns>The Control Point</returns>
-        public MVControlPoint GetOrCreate(MVDefinition mvd)
+        /// <returns>The Control Point moveable</returns>
+        public MVControlPoint GetOrCreateMoveable(MVDefinition mvd)
         {
+            QLog.Debug($"CPM.GetOrCreMV {mvd} exists:{HasMoveable(mvd)} {QCommon.GetCallerDebug()}");
             if (HasMoveable(mvd)) return Get(mvd);
 
-            Entity e = CreateEntity(mvd);
-            mvd = new(Identity.ControlPoint, e, mvd.m_IsManipulatable, true, mvd.m_Parent, mvd.m_ParentKey);
-            MVControlPoint cp = _MIT.Moveables.Factory(mvd) as MVControlPoint;
+            mvd = new(Identity.ControlPoint, Entity.Null, mvd.m_IsManipulatable, true, mvd.m_Parent, mvd.m_ParentId, mvd.m_ParentKey);
+            var cp = _MIT.Moveables.Factory(mvd, Identity.ControlPoint) as MVControlPoint;
             return cp;
         }
 
@@ -117,11 +132,6 @@ namespace MoveIt.Managers
             return false;
         }
 
-        internal Entity RecreateEntity(MVDefinition mvd)
-        {
-            return CreateEntity(mvd);
-        }
-
         public MVControlPoint Get(MVDefinition mvd)
         {
             if (!HasMoveable(mvd)) throw new Exception($"Attempted to get ControlPoint {mvd}, but doesn't exist");
@@ -129,7 +139,7 @@ namespace MoveIt.Managers
             return _MIT.Moveables.First<MVControlPoint>(cp => mvd.Equals(cp));
         }
 
-        public MIT_ControlPoint GetData(MVControlPoint mv)
+        public static MIT_ControlPoint GetData(MVControlPoint mv)
         {
             try
             {
@@ -145,17 +155,14 @@ namespace MoveIt.Managers
         public HashSet<MIT_ControlPoint> GetAllData(bool isManipulating)
         {
             HashSet<MIT_ControlPoint> result = new();
-            foreach (var cp in _MIT.Moveables.GetAllOf<MVControlPoint>())
+            foreach (MVControlPoint cp in _MIT.Moveables.GetAllOf<MVControlPoint>().Where(cp => cp.IsManipulatable == isManipulating))
             {
-                if (cp.IsManipulatable == isManipulating)
-                {
-                    result.Add(GetData(cp));
-                }
+                result.Add(GetData(cp));
             }
             return result;
         }
 
-        public bool IsInUse(MVControlPoint cp)
+        public static bool IsInUse(MVControlPoint cp)
         {
             MVDefinition mvd = cp.Definition;
             if (_MIT.Hover.Is(mvd))        return true;
@@ -168,19 +175,17 @@ namespace MoveIt.Managers
         public void RemoveIfUnused(List<MVDefinition> mvds)
         {
             //string msg = $"CPM.RemoveIfUnused {mvds.Count}";
-            foreach (var mvd in mvds)
+            foreach (MVDefinition mvd in mvds)
             {
                 //msg += $"\n    {mvd}";
-                if (GetIfExists(mvd, out var cp))
-                {
-                    //msg += $"-E";
-                    if (cp.IsValid && IsInUse(cp)) continue;
-                    //msg += $"X";
+                if (!GetIfExists(mvd, out MVControlPoint cp)) continue;
+                //msg += $"-E";
+                if (cp.IsValid && IsInUse(cp)) continue;
+                //msg += $"X";
 
-                    _MIT.Moveables.RemoveDo(cp);
-                }
+                _MIT.Moveables.RemoveDo(cp);
             }
-            //QLog.XDebug(msg);
+            //QLog.Debug(msg);
         }
 
         public void DestroyAll()
@@ -191,7 +196,7 @@ namespace MoveIt.Managers
         }
 
 
-        internal string DebugControlPoints()
+        internal static string DebugControlPoints()
         {
             StringBuilder sb = new();
             sb.AppendFormat("CPs:{0}", Count);
@@ -204,7 +209,7 @@ namespace MoveIt.Managers
 
         internal void DebugDumpControlPoints(string prefix = "")
         {
-            QLog.Bundle("CPM", prefix + DebugControlPoints());
+            MIT.Log.Bundle("CPM", prefix + DebugControlPoints());
         }
     }
 }

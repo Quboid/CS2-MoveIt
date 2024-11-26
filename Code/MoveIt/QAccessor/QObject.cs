@@ -17,17 +17,17 @@ namespace MoveIt.QAccessor
     /// </summary>
     public struct QObject : IDisposable, INativeDisposable
     {
-        internal static EntityManager m_Manager;
+        private static EntityManager _Manager;
         internal Entity m_Entity;
-        internal QEntity m_Parent;
-        internal NativeList<QEntity> m_Children;
-        internal Identity m_Identity;
+        internal QEntity.QEntity m_Parent;
+        internal NativeList<QEntity.QEntity> m_Children;
+        internal readonly Identity m_Identity;
 
         internal QObject(EntityManager manager, ref QLookup lookup, Entity e, Identity identity = Identity.None)
         {
-            if (e == Entity.Null) throw new ArgumentNullException("Creating QObject with null entity");
+            if (e == Entity.Null) throw new ArgumentNullException(nameof(e), "Creating QObject with null entity");
 
-            m_Manager       = manager;
+            _Manager       = manager;
             m_Entity        = e;
             m_Identity      = identity == Identity.None ? QTypes.GetEntityIdentity(manager, e) : identity;
             m_Parent        = new(manager, ref lookup, e, m_Identity);
@@ -35,17 +35,15 @@ namespace MoveIt.QAccessor
 
             using NativeArray<Entity> subEntities = GetSubEntities(e, m_Identity);
 
-            if (subEntities.Length > 0)
+            if (subEntities.Length <= 0) return;
+            for (var i = 0; i < subEntities.Length; i++)
             {
-                for (int i = 0; i < subEntities.Length; i++)
-                {
-                    if (subEntities[i] == Entity.Null) throw new NullReferenceException($"Creating child for {e.D()} with null entity");
+                if (subEntities[i].Equals(Entity.Null)) throw new NullReferenceException($"Creating child for {e.D()} with null entity");
 
-                    if (m_Manager.HasComponent<Game.Net.ConnectionLane>(subEntities[i])) continue;// && !m_Manager.HasComponent<Game.Net.AreaLane>(subEntities[i])) continue;
+                if (_Manager.HasComponent<Game.Net.ConnectionLane>(subEntities[i])) continue;// && !m_Manager.HasComponent<Game.Net.AreaLane>(subEntities[i])) continue;
 
-                    Identity subType = QTypes.GetEntityIdentity(manager, subEntities[i]);
-                    m_Children.Add(new(m_Manager, ref lookup, subEntities[i], subType, m_Entity));
-                }
+                Identity subType = QTypes.GetEntityIdentity(manager, subEntities[i]);
+                m_Children.Add(new(_Manager, ref lookup, subEntities[i], subType, m_Entity));
             }
 
             //DebugDumpFullObject(new(Allocator.Temp) { (int)Identity.Node, (int)Identity.Segment, (int)Identity.NetLane }, true, $"QObject.Ctor {m_Entity.D()}: ");
@@ -56,7 +54,7 @@ namespace MoveIt.QAccessor
         {
             NativeArray<Entity> all = new(m_Children.Length + 1, Allocator.Temp);
             all[0] = m_Entity;
-            for (int i = 0; i < m_Children.Length; i++)
+            for (var i = 0; i < m_Children.Length; i++)
             {
                 all[i + 1] = m_Children[i].m_Entity;
             }
@@ -90,24 +88,24 @@ namespace MoveIt.QAccessor
             if (rotate) RotateTo(state, rotation);
         }
 
-        public void MoveTo(State state, float3 newPosition)
+        private void MoveTo(State state, float3 newPosition)
         {
             //QLog.XDebug($"QObj.MoveTo ({state.m_Entity.D()})  {m_Entity.D()} parent:{m_Parent.m_Entity.DX()} children:{m_Children.Length} {newPosition.DX()}");
             MoveBy(state, newPosition, newPosition - m_Parent.Position);
         }
 
-        public void MoveBy(State state, float3 newPosition, float3 delta)
+        private void MoveBy(State state, float3 newPosition, float3 delta)
         {
             //QLog.XDebug($"QObj.MoveBy {m_Entity.D()} {delta.DX()}  CPs:{m_ChildCPs.Length}, nodes:{m_ChildNodes.Length}, other:{m_Children.Length}");
             m_Parent.MoveBy(state, newPosition, delta);
 
-            for (int i = 0; i < m_Children.Length; i++)
+            for (var i = 0; i < m_Children.Length; i++)
             {
                 m_Children[i].MoveBy(state, newPosition, delta);
             }
         }
 
-        public void RotateTo(State state, quaternion newRotation)
+        private void RotateTo(State state, quaternion newRotation)
         {
             float delta = newRotation.Y() - m_Parent.Angle;
             float3 origin = m_Parent.Position;
@@ -115,18 +113,23 @@ namespace MoveIt.QAccessor
 
             m_Parent.RotateTo(state, newRotation, ref matrix, origin);
 
-            for (int i = 0; i < m_Children.Length; i++)
+            for (var i = 0; i < m_Children.Length; i++)
             {
                 m_Children[i].RotateBy(state, delta, ref matrix, origin);
             }
         }
 
+        public void UpdateCurve(State state)
+        {
+            m_Parent.UpdateCurve(state);
+        }
+
         public readonly int UpdateAll()
         {
-            foreach (var child in m_Children)
+            foreach (QEntity.QEntity child in m_Children)
             {
-                m_Manager.AddComponent<Game.Common.Updated>(child.m_Entity);
-                m_Manager.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
+                _Manager.AddComponent<Game.Common.Updated>(child.m_Entity);
+                _Manager.AddComponent<Game.Common.BatchesUpdated>(child.m_Entity);
             }
 
             m_Parent.SetUpdated();
@@ -134,7 +137,7 @@ namespace MoveIt.QAccessor
             return m_Children.Length + 1;
         }
 
-        private readonly void GetMatrix(float delta, float3 origin, out Matrix4x4 matrix)
+        private static void GetMatrix(float delta, float3 origin, out Matrix4x4 matrix)
         {
             matrix = default;
             matrix.SetTRS(origin, Quaternion.Euler(0f, delta, 0f), Vector3.one);
@@ -165,7 +168,7 @@ namespace MoveIt.QAccessor
             // Handle Nodes
             else if (identity == Identity.Node)
             {
-                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Objects.SubObject> subObjects))
+                if (_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Objects.SubObject> subObjects))
                 {
                     for (int i = 0; i < subObjects.Length; i++)
                     {
@@ -182,13 +185,13 @@ namespace MoveIt.QAccessor
             // Handle everything else
             else
             {
-                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Objects.SubObject> subObjects))
+                if (_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Objects.SubObject> subObjects))
                 {
                     // Add pillars so elevated metro stations can be moved
                     for (int i = 0; i < subObjects.Length; i++)
                     {
                         Entity sub = subObjects[i].m_SubObject;
-                        if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub) && m_Manager.HasComponent<Game.Objects.Pillar>(sub))
+                        if (!entities.Contains(sub) && IsValidChild(parentIdentity, sub) && _Manager.HasComponent<Game.Objects.Pillar>(sub))
                         {
                             entities.Add(sub);
                             entities.AddRange(IterateSubEntities(top, sub, depth, Identity.None, parentIdentity));
@@ -196,7 +199,7 @@ namespace MoveIt.QAccessor
                     }
                 }
 
-                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Areas.SubArea> subAreas))
+                if (_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Areas.SubArea> subAreas))
                 {
                     for (int i = 0; i < subAreas.Length; i++)
                     {
@@ -209,7 +212,7 @@ namespace MoveIt.QAccessor
                     }
                 }
 
-                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Net.SubNet> subNets))
+                if (_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Net.SubNet> subNets))
                 {
                     for (int i = 0; i < subNets.Length; i++)
                     {
@@ -222,7 +225,7 @@ namespace MoveIt.QAccessor
                     }
                 }
 
-                if (m_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Net.SubLane> subLanes))
+                if (_Manager.TryGetBuffer(e, true, out DynamicBuffer<Game.Net.SubLane> subLanes))
                 {
                     for (int i = 0; i < subLanes.Length; i++)
                     {
@@ -265,10 +268,10 @@ namespace MoveIt.QAccessor
 #if USE_BURST
         // Do nothing if in burst mode
 
+        internal readonly string DebugFullObject() => "";
+
         internal readonly void DebugDumpFullObject(NativeList<int> ids, bool forceAll = false, string prefix = "")
         { }
-
-        internal readonly string DebugFullObject() => "";
 #else
         internal readonly string DebugFullObject(NativeList<int> ids, bool forceAll = false)
         {

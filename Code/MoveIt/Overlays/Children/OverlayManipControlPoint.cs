@@ -4,55 +4,44 @@ using QCommonLib;
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace MoveIt.Overlays
+namespace MoveIt.Overlays.Children
 {
     internal class OverlayManipControlPoint : Overlay
     {
-        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
+        private static readonly EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Common),
                     typeof(MIO_Circle),
             });
 
-        public static Entity Factory(MVManipControlPoint mcp)
+
+        public OverlayManipControlPoint(Moveable mv) : base(OverlayTypes.MVManipControlPoint, mv)
+        { }
+
+        protected override bool CreateOverlayEntity()
         {
-            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
+            if (_Moveable is not MVManipControlPoint mcp) throw new System.Exception($"CP ManipOverlay is not for ManipControlPoint! (mv:{_Moveable.m_Entity.DX(true)}-{_Moveable.Name})");
+            if (mcp.m_Overlay is not null)
+            {
+                if (mcp.m_Overlay != this) throw new System.Exception($"CP ManipOverlay is not own Moveable's overlay! (mv:{mcp.m_Entity.DX()}, mv.cp:{mcp.m_Overlay.E()}, this:{E()})");
+                if (!mcp.m_Overlay.m_Entity.Equals(Entity.Null)) { MIT.Log.Debug($"CP ManipOverlay creating but already exists {m_Entity.D()}/{mcp.m_Overlay.m_Entity.D()}\n{QCommon.GetStackTrace()}"); return true; }
+            }
+
+            m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new()
             {
-                m_Owner             = mcp.m_Entity,
-                m_IsManipulatable   = mcp.IsManipulatable,
-                m_IsManipChild      = mcp.IsManipChild,
+                m_Owner = mcp.m_Entity,
+                m_IsManipulatable = mcp.IsManipulatable,
+                m_IsManipChild = mcp.IsManipChild,
             };
 
-            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVManipControlPoint));
-            _MIT.EntityManager.SetComponentData(e, common);
-            _MIT.EntityManager.SetComponentData<MIO_Circle>(e, new(new(CP_RADIUS, mcp.Transform.m_Position, quaternion.identity)));
-            return e;
-        }
+            _MIT.EntityManager.SetComponentData<MIO_Type>(m_Entity, new(OverlayTypes.MVManipControlPoint));
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
+            _MIT.EntityManager.SetComponentData<MIO_Circle>(m_Entity, new(new(CP_RADIUS, mcp.Transform.m_Position, quaternion.identity)));
 
-        public OverlayManipControlPoint() : base(OverlayTypes.MVControlPoint) { }
-
-        public bool CreateOverlayEntityIfNoneExists()
-        {
-            if (m_Moveable.m_Overlay != this) throw new System.Exception($"CP ManipOverlay is not own Moveable's overlay! (mv:{m_Moveable.m_Entity.DX(true)})");
-            if (m_Moveable is not MVManipControlPoint mcp) throw new System.Exception($"CP ManipOverlay is not for ControlPoint! (mv:{m_Moveable.m_Entity.DX(true)}-{m_Moveable.Name})");
-            if (!m_Entity.Equals(Entity.Null)) return false;
-
-            m_Entity = OverlayManipControlPoint.Factory(mcp);
-            EnqueueUpdate();
-
-            return true;
-        }
-
-        public override bool CreateOverlayEntity()
-        {
-            if (m_Moveable.m_Overlay != this) throw new System.Exception($"CP ManipOverlay is not own Moveable's overlay! (mv:{m_Moveable.m_Entity.DX(true)})");
-            if (m_Moveable is not MVManipControlPoint mcp) throw new System.Exception($"CP ManipOverlay is not for ControlPoint! (mv:{m_Moveable.m_Entity.DX(true)}-{m_Moveable.Name})");
-            if (!mcp.m_Overlay.m_Entity.Equals(Entity.Null)) { MIT.Log.Debug($"CP ManipOverlay creating but already exists {m_Entity.D()}/{mcp.m_Overlay.m_Entity.D()}\n{QCommon.GetStackTrace()}"); return true; }
-
-            m_Entity = OverlayManipControlPoint.Factory(mcp);
+            //QLog.Debug($"OlayMCP-CreateOlayEnt {GetType().Name}.{System.Reflection.MethodBase.GetCurrentMethod().Name} {E()}");
             EnqueueUpdate();
 
             return true;
@@ -60,9 +49,15 @@ namespace MoveIt.Overlays
 
         public override void EnqueueUpdate()
         {
-            if (m_Moveable is not MVManipControlPoint cp) throw new System.Exception($"CP ManipOverlay is not for ControlPoint! (mv:{m_Moveable.m_Entity.DX(true)}-{m_Moveable.Name})");
+#if IS_DEBUG
+            m_Caller = QCommon.GetStackTrace(15);
+#endif
+            if (_Moveable is not MVManipControlPoint cp) throw new System.Exception($"CP ManipOverlay is not for ControlPoint! (mv:{_Moveable.m_Entity.DX(true)}-{_Moveable.Name})");
 
-            _MIT.QueueOverlayUpdate(this);
+            if (m_Owner.Exists(_MIT.EntityManager))
+            {
+                _MIT.QueueOverlayUpdate(this);
+            }
             if (_MIT.Moveables.TryGet(cp.ParentDefinition, out MVManipSegment seg)) seg.UpdateOverlayDeferred();
         }
     }

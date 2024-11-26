@@ -81,7 +81,7 @@ namespace MoveIt.Overlays
 
         protected override void OnUpdate()
         {
-            if (_MIT.IsLowSensitivity) return;
+            if (_MIT.UsingPrecisionMode) return;
 
             //string msg = $"\nOverlays:{_DrawQuery.CalculateEntityCount()}";
             //var all = _DrawQuery.ToEntityArray(Allocator.Temp);
@@ -108,6 +108,8 @@ namespace MoveIt.Overlays
             JobHandle updateOverlaysHandle = Dependency;
             try
             {
+                if (Camera.main is null) throw new NullReferenceException("Camera.main is null");
+                
                 UpdateOverlaysJob updateOverlays = new()
                 {
                     m_ToolFlags                 = toolFlags,
@@ -138,6 +140,8 @@ namespace MoveIt.Overlays
 
             try
             {
+                if (Camera.main is null) throw new NullReferenceException("Camera.main is null");
+                
                 OverlayRenderSystem.Buffer buffer = _OverlayRenderSystem.GetBuffer(out JobHandle overlayRenderBufferHandle);
 
                 DrawOverlaysJob drawOverlays = new()
@@ -181,10 +185,10 @@ namespace MoveIt.Overlays
             EntityManager.AddComponent<Game.Common.Deleted>(_CleanupQuery);
 
             NativeArray<Entity> ttlEntities = _TTLTickQuery.ToEntityArray(Allocator.Temp);
-            for (int i = 0; i < ttlEntities.Length; i++)
+            for (var i = 0; i < ttlEntities.Length; i++)
             {
                 Entity e = ttlEntities[i];
-                MIO_TTL ttl = EntityManager.GetComponentData<MIO_TTL>(e);
+                var ttl = EntityManager.GetComponentData<MIO_TTL>(e);
                 ttl.m_TTL--;
                 if (ttl.m_TTL > 0)
                 {
@@ -206,11 +210,11 @@ namespace MoveIt.Overlays
         internal string DebugDrawQuery()
         {
             _DrawQuery.CompleteDependency();
-            string msg = $"Overlays:{_DrawQuery.CalculateEntityCount()}\n";
-            var all = _DrawQuery.ToEntityArray(Allocator.Temp);
+            var msg = $"Overlays:{_DrawQuery.CalculateEntityCount()}\n";
+            NativeArray<Entity> all = _DrawQuery.ToEntityArray(Allocator.Temp);
             foreach (Entity olay in all)
             {
-                var t = _MIT.EntityManager.GetComponentData<MIO_Type>(olay).m_Type;
+                OverlayTypes t = _MIT.EntityManager.GetComponentData<MIO_Type>(olay).m_Type;
                 msg += $"  [{olay.D()}-{t}]";
             }
             return msg + $"\n{_MIT.Moveables.DebugFull()}";

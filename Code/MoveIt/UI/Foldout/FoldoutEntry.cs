@@ -22,7 +22,7 @@ namespace MoveIt.UI.Foldout
             set => m_UIEntry.Changed = value;
         }
 
-        internal string m_Id;
+        internal readonly string m_Id;
         internal FOEntryStateBase m_UIEntry;
 
         internal FoldoutEntry(string id)

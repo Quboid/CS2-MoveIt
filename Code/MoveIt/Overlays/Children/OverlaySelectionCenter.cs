@@ -1,10 +1,10 @@
 ﻿using Unity.Entities;
 
-namespace MoveIt.Overlays
+namespace MoveIt.Overlays.Children
 {
     public class OverlaySelectionCenter : Overlay
     {
-        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
+        private static readonly EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                 typeof(MIO_Type),
                 typeof(MIO_Common),
@@ -13,27 +13,21 @@ namespace MoveIt.Overlays
                 typeof(MIO_SelectionData)
             });
 
-        public static Entity Factory(Entity owner)
-        {
-            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
 
-            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.SelectionCenter));
-            _MIT.EntityManager.SetComponentData<MIO_Common>(e, new(owner));
-            return e;
-        }
+        public readonly int m_Index;
 
-
-        public int m_Index;
-
-        public OverlaySelectionCenter(int index) : base(OverlayTypes.SelectionCenter)
+        public OverlaySelectionCenter(int index) : base(OverlayTypes.SelectionCentralPoint, null)
         {
             m_Index = index;
         }
 
-        public override bool CreateOverlayEntity()
+        protected override bool CreateOverlayEntity()
         {
             Entity owner = new() { Index = m_Index, Version = 1 };
-            m_Entity = OverlaySelectionCenter.Factory(owner);
+            m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
+
+            _MIT.EntityManager.SetComponentData<MIO_Type>(m_Entity, new(OverlayTypes.SelectionCentralPoint));
+            _MIT.EntityManager.SetComponentData<MIO_Common>(m_Entity, new(owner));
             return true;
         }
 

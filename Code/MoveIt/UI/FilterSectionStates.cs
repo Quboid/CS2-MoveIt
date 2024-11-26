@@ -121,6 +121,7 @@ namespace MoveIt.UI
                 new Filter("surfaces",  Filters.Surfaces,   true),
                 new Filter("nodes",     Filters.Nodes,      true),
                 new Filter("segments",  Filters.Segments,   true),
+                new Filter("netlanes",  Filters.Netlanes,   true),
             };
         }
 

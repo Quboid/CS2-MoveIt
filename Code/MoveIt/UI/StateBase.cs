@@ -1,11 +1,10 @@
 ﻿using Colossal.UI.Binding;
-using QCommonLib;
 
 namespace MoveIt.UI
 {
     public abstract class StateBase : IJsonWritable
     {
-        public string m_Id;
+        public readonly string m_Id;
         public bool m_Enabled;
         public bool m_Active;
 
@@ -16,7 +15,7 @@ namespace MoveIt.UI
         }
         protected bool _Changed;
 
-        public StateBase(string id, bool enabled, bool active)
+        protected StateBase(string id, bool enabled, bool active)
         {
             m_Id = id;
             m_Enabled = enabled;
@@ -49,7 +48,7 @@ namespace MoveIt.UI
             writer.TypeEnd();
         }
 
-        public virtual void WriteExtend(IJsonWriter writer)
+        protected virtual void WriteExtend(IJsonWriter writer)
         { }
 
         public override string ToString()
@@ -59,7 +58,8 @@ namespace MoveIt.UI
 
         public override bool Equals(object obj)
         {
-            if (!obj.GetType().Equals(GetType())) return false;
+            if (obj is null) return false;
+            if (obj.GetType() != GetType()) return false;
 
             if (_Changed)
             {
@@ -70,6 +70,7 @@ namespace MoveIt.UI
             return true;
         }
 
+        // ReSharper disable once BaseObjectGetHashCodeCallInGetHashCode
         public override int GetHashCode() => base.GetHashCode();
     }
 }

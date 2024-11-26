@@ -1,8 +1,7 @@
 ﻿using Game.Tools;
 using Game.UI.Tooltip;
-using QCommonLib;
 
-namespace MoveIt
+namespace MoveIt.Systems
 {
     public partial class MIT_ToolTipSystem : TooltipSystemBase
     {

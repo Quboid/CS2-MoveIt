@@ -1,4 +1,4 @@
-﻿using MoveIt.Overlays;
+﻿using MoveIt.Overlays.Children;
 using Unity.Entities;
 
 namespace MoveIt.Moveables
@@ -7,8 +7,8 @@ namespace MoveIt.Moveables
     {
         public MVDecal(Entity e) : base(e, Identity.Decal)
         {
-            m_Overlay = Factory.Create<OverlayDecal>(this, OverlayTypes.MVDecal);
-            Refresh();
+            m_Overlay = new OverlayDecal(this);
+            RefreshFromAbstract();
         }
     }
 }

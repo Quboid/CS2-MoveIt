@@ -1,9 +1,10 @@
 ﻿using Colossal.Mathematics;
 using MoveIt.Components;
-using MoveIt.Overlays;
+using MoveIt.Overlays.Children;
 using MoveIt.Tool;
 using QCommonLib;
 using System;
+using System.Text;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
@@ -19,7 +20,7 @@ namespace MoveIt.Moveables
         internal float m_Diameter;
         internal Entity m_Node;
 
-        internal MVDefinition NodeDefinition => new(Identity.Node, m_Node, IsManipulatable, false, Entity.Null, -1);
+        internal MVDefinition NodeDefinition => new(Identity.Node, m_Node, IsManipulatable, false, Entity.Null, Identity.None, -1);
 
         public override Game.Objects.Transform Transform
         {
@@ -27,7 +28,7 @@ namespace MoveIt.Moveables
             {
                 if (!_MIT.EntityManager.Exists(m_Entity))
                 {
-                    m_Entity = _MIT.ControlPointManager.GetOrCreate(new(m_Identity, m_Entity, IsManipulatable, IsManaged, m_Parent, m_ParentKey)).m_Entity;
+                    m_Entity = _MIT.ControlPointManager.GetOrCreateMoveable(new(m_Identity, m_Entity, IsManipulatable, IsManaged, m_Parent, m_ParentId, m_ParentKey)).m_Entity;
                 }
                 return new(_MIT.EntityManager.GetComponentData<MIT_ControlPoint>(m_Entity).m_Position, quaternion.identity);
             }
@@ -35,13 +36,16 @@ namespace MoveIt.Moveables
 
         internal Bezier4x3 Curve => _MIT.EntityManager.GetComponentData<Game.Net.Curve>(m_Parent).m_Bezier;
 
-        public MVControlPoint(Entity e) : base(e, Identity.ControlPoint)
+        public MVControlPoint(MVDefinition mvd) : base(mvd.m_Entity, Identity.ControlPoint)
         {
-            m_Overlay = Factory.Create<OverlayControlPoint>(this, OverlayTypes.MVControlPoint);
-            Refresh();
+            m_Parent = mvd.m_Parent;
+            m_ParentKey = mvd.m_ParentKey;
+            m_Entity = Managers.ControlPointManager.CreateEntity(mvd);
+            m_Overlay = new OverlayControlPoint(this);
+            RefreshFromAbstract();
         }
 
-        public MVControlPoint(Entity e, Identity identity) : base(e, identity)
+        protected MVControlPoint(Entity e, Identity identity) : base(e, identity)
         { } // Pass-thru for children
 
         internal void UpdateComponent()
@@ -50,7 +54,7 @@ namespace MoveIt.Moveables
             Bezier4x3 curve = _MIT.EntityManager.GetComponentData<Game.Net.Curve>(oldData.m_Parent).m_Bezier;
             float3 position = curve.Get(oldData.m_ParentKey);
 
-            MIT_ControlPoint cpData = new(oldData.m_Entity, oldData.m_Parent, oldData.m_ParentKey, oldData.m_Node, position, Overlay.CP_RADIUS * 2, IsManipulatable);
+            MIT_ControlPoint cpData = new(oldData.m_Entity, oldData.m_Parent, oldData.m_ParentKey, oldData.m_Node, position, Overlays.Overlay.CP_RADIUS * 2, IsManipulatable);
             _MIT.EntityManager.SetComponentData(m_Entity, cpData);
 
             Refresh();
@@ -58,37 +62,93 @@ namespace MoveIt.Moveables
 
         internal override bool Refresh()
         {
-            if (!_MIT.EntityManager.Exists(m_Entity))
+            bool valid = true;
+            StringBuilder sb = new();
+            //sb.AppendFormat("MVCP.Refresh {0} caller:{1}", m_Entity.DX(), QCommon.GetCallingMethodName());
+            if (!m_Entity.Exists(_MIT.EntityManager))
             {
-                m_Entity = _MIT.ControlPointManager.RecreateEntity(new(m_Identity, Entity.Null, IsManipulatable, IsManaged, m_Parent, m_ParentKey));
+                sb.AppendFormat(" NoCPEntity!");
+                MIT.Log.Warning($"ERROR no CP entity ({m_Entity.D()}) with parent {m_Parent.DX()}~{m_ParentKey}");
+                valid = false;
             }
 
-            if (!IsValid) return false;
-            if (!IsOverlayValid) return false;
+            if (valid)
+            {
+                if (!IsValid)
+                {
+                    valid = false;
+                    sb.AppendFormat(" Invalid!");
+                }
+                else
+                {
+                    sb.AppendFormat(" Valid");
+                }
+            }
 
-            MIT_ControlPoint cpData = _MIT.EntityManager.GetComponentData<MIT_ControlPoint>(m_Entity);
-            m_Diameter              = cpData.m_Diameter;
-            m_Parent                = cpData.m_Parent;
-            m_Node                  = cpData.m_Node;
-            m_ParentKey             = cpData.m_ParentKey;
+            if (valid)
+            {
+                if (!IsOverlayValid)
+                {
+                    valid = false;
+                    sb.AppendFormat(" OlayInvalid!");
+                }
+                else
+                {
+                    sb.AppendFormat(" OlayValid");
+                }
+            }
 
-            if (!_MIT.EntityManager.Exists(m_Node)) return false;
-            if (!_MIT.EntityManager.Exists(m_Parent)) return false;
+            if (valid)
+            {
+                MIT_ControlPoint cpData     = _MIT.EntityManager.GetComponentData<MIT_ControlPoint>(m_Entity);
+                m_Diameter                  = cpData.m_Diameter;
+                m_Parent                    = cpData.m_Parent;
+                m_Node                      = cpData.m_Node;
+                m_ParentKey                 = cpData.m_ParentKey;
 
-            m_Overlay.EnqueueUpdate();
-            return true;
+                if (!_MIT.EntityManager.Exists(m_Node))
+                {
+                    valid = false;
+                    sb.AppendFormat(" NodeDoesNotExists!");
+                }
+                else
+                {
+                    sb.AppendFormat(" NodeExists");
+                }
+            }
+
+            if (valid)
+            {
+                if (!_MIT.EntityManager.Exists(m_Parent))
+                {
+                    valid = false;
+                    sb.AppendFormat(" SegDoesNotExists!");
+                }
+                else
+                {
+                    sb.AppendFormat(" SegExists");
+                }
+            }
+
+            if (valid)
+            {
+                //m_Overlay.EnqueueUpdate();
+            }
+            //sb.AppendFormat(" Parent:{0}-{1} - {2}", m_Parent.DX(), m_ParentKey, valid);
+            //QLog.Debug(sb.ToString());
+            return valid;
         }
 
         public override void OnUnhover()
         {
-            //MIT.Log.Debug($"OnUnhover {ToString()}");
+            MIT.Log.Debug($"OnUnhover {ToString()} {QCommon.GetCallerDebug()}");
             m_Overlay.RemoveFlag(InteractionFlags.Hovering | InteractionFlags.ToolHover);
             DisposeIfUnused();
         }
 
         public override void OnDeselect()
         {
-            //MIT.Log.Debug($"OnDeselect {ToString()}");
+            MIT.Log.Debug($"OnDeselect {ToString()}");
             m_Overlay.RemoveFlag(InteractionFlags.Selected);
             DisposeIfUnused();
         }
@@ -111,6 +171,7 @@ namespace MoveIt.Moveables
 
         public override void Dispose()
         {
+            //QLog.Debug($"Disposing of CP {E()} ({(m_Overlay is null ? "null overlay" : m_Overlay.m_Entity.DX())}) caller:{QCommon.GetCallingMethodName()}");
             m_Overlay?.Dispose();
             _MIT.EntityManager.DestroyEntity(m_Entity);
             //base.Dispose(); Don't call parent

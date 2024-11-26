@@ -1,7 +1,6 @@
 ﻿using Colossal.Mathematics;
 using MoveIt.Actions.Transform;
-using MoveIt.Overlays;
-using MoveIt.QAccessor;
+using MoveIt.Overlays.Children;
 using MoveIt.Tool;
 using QCommonLib;
 using System;
@@ -16,11 +15,14 @@ namespace MoveIt.Moveables
     {
         private const float RADIUS = 2f;
 
-        public MVLaneNode(Entity e) : base(e, Identity.Node)
-        {
-            m_Overlay = Factory.Create<OverlayNode>(this, OverlayTypes.MVNode);
-            Refresh();
-        }
+        public MVLaneNode(Entity e) : base(e)
+        { }
+
+        //public MVLaneNode(Entity e) : base(e, Identity.Node)
+        //{
+        //    m_Overlay = new OverlayNode(this);
+        //    Refresh();
+        //}
 
         internal override float GetRadius()
         {
@@ -34,8 +36,8 @@ namespace MoveIt.Moveables
         /// The segments (edges) attached to this segment; Entity -> IsStart
         /// IsStart = true when this node is that edge's m_Start node, false for m_End
         /// </summary>
-        internal Dictionary<Entity, bool> m_Segments;
-        internal List<MVDefinition> m_CPDefinitions;
+        internal readonly Dictionary<Entity, bool> m_Segments;
+        internal readonly List<MVDefinition> m_CPDefinitions;
 
         public override Game.Objects.Transform Transform
         {
@@ -52,8 +54,29 @@ namespace MoveIt.Moveables
 
         public MVNode(Entity e) : base(e, Identity.Node)
         {
-            m_Overlay = Factory.Create<OverlayNode>(this, OverlayTypes.MVNode);
-            Refresh();
+            m_Segments = new();
+            m_CPDefinitions = new();
+
+            if (TryGetBuffer<Game.Net.ConnectedEdge>(out var buffer, true))
+            {
+                for (var i = 0; i < buffer.Length; i++)
+                {
+                    Entity edge = buffer[i].m_Edge;
+                    bool isStart = _MIT.EntityManager.GetComponentData<Game.Net.Edge>(edge).m_Start.Equals(m_Entity);
+                    m_Segments.Add(edge, isStart);
+
+                    MVDefinition mvd = new(Identity.ControlPoint, Entity.Null, false, IsManaged, edge, Identity.Segment, (short)(isStart ? 0 : 3));
+                    MVControlPoint cp = _MIT.ControlPointManager.GetOrCreateMoveable(mvd);
+                    m_CPDefinitions.Add(cp.Definition);
+
+                    mvd = new(Identity.ControlPoint, Entity.Null, false, IsManaged, edge, Identity.Segment, (short)(isStart ? 1 : 2));
+                    cp = _MIT.ControlPointManager.GetOrCreateMoveable(mvd);
+                    m_CPDefinitions.Add(cp.Definition);
+                }
+            }
+
+            m_Overlay = new OverlayNode(this);
+            RefreshFromAbstract();
         }
 
         public MVNode(Entity e, Identity identity) : base(e, identity)
@@ -64,26 +87,7 @@ namespace MoveIt.Moveables
             if (!IsValid) return false;
             if (!IsOverlayValid) return false;
 
-            m_Segments = new();
-            m_CPDefinitions = new();
-
-            if (TryGetBuffer<Game.Net.ConnectedEdge>(out var buffer, true))
-            {
-                for (int i = 0; i < buffer.Length; i++)
-                {
-                    var edge = buffer[i].m_Edge;
-                    bool isStart = _MIT.EntityManager.GetComponentData<Game.Net.Edge>(edge).m_Start.Equals(m_Entity);
-                    m_Segments.Add(edge, isStart);
-
-                    MVDefinition mvd = new(Identity.ControlPoint, Entity.Null, false, IsManaged, edge, (short)(isStart ? 0 : 3));
-                    MVControlPoint cp = _MIT.ControlPointManager.GetOrCreate(mvd);
-                    m_CPDefinitions.Add(cp.Definition);
-
-                    mvd = new(Identity.ControlPoint, Entity.Null, false, IsManaged, edge, (short)(isStart ? 1 : 2));
-                    cp = _MIT.ControlPointManager.GetOrCreate(mvd);
-                    m_CPDefinitions.Add(cp.Definition);
-                }
-            }
+            //QLog.Debug($"Olay-EnqueueUpdate {GetType().Name}.{System.Reflection.MethodBase.GetCurrentMethod().Name} {E()} caller:{QCommon.GetCallingMethodName()}");
             m_Overlay.EnqueueUpdate();
 
             return true;
@@ -96,21 +100,6 @@ namespace MoveIt.Moveables
         internal override void MoveIt(TransformBase action, State nodeState, bool move, bool rotate)
         {
             if (!move && !rotate) return;
-
-            //Matrix4x4 matrix = default;
-            //matrix.SetTRS(nodeState.m_InitialCenter + nodeState.m_MoveDelta, Quaternion.Euler(0f, nodeState.m_AngleDelta, 0f), Vector3.one);
-
-            //for (int i = 0; i < m_CPDefinitions.Count; i++)
-            //{
-            //    MVControlPoint cp = _MIT.ControlPointManager.GetOrCreate(m_CPDefinitions[i]);
-            //    State cpState = action.GetState(m_CPDefinitions[i]);// new(_MIT.EntityManager, ref QLookupFactory.Get(), cp);
-
-            //    cpState.m_Position = (float3)matrix.MultiplyPoint(cpState.m_InitialPosition - nodeState.m_InitialCenter);
-            //    float3 oldAngles = cpState.m_InitialRotation.ToEulerDegrees();
-            //    cpState.m_Rotation = Quaternion.Euler(oldAngles.x, oldAngles.y + nodeState.m_AngleDelta, oldAngles.z);
-
-            //    cp.MoveIt(action, cpState, move, rotate);
-            //}
 
             nodeState.Transform(move, rotate);
         }

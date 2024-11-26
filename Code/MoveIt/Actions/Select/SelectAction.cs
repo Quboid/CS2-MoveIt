@@ -47,7 +47,7 @@ namespace MoveIt.Actions.Select
                 {
                     // New Manip selection, selecting child object so keep existing parents
                     HashSet<MVDefinition> toRemove = new();
-                    toRemove = _MIT.Selection.Definitions.Where(mvd => _MIT.Moveables.GetOrCreate(mvd).IsManipChild).ToHashSet();
+                    toRemove = _MIT.Selection.Definitions.Where(mvd => _MIT.Moveables.GetOrCreate<Moveable>(mvd).IsManipChild).ToHashSet();
                     _MIT.Selection.Remove(toRemove, false);
                     Deselect(toRemove);
                 }
@@ -58,6 +58,8 @@ namespace MoveIt.Actions.Select
                     _MIT.Moveables.Refresh();
                 }
             }
+
+            Phase = Phases.Complete;
         }
 
         public void AddHovered(bool append)

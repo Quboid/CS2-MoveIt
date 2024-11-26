@@ -1,4 +1,5 @@
-﻿using Game.Tools;
+﻿using System;
+using Game.Tools;
 using MoveIt.Managers;
 using MoveIt.Searcher;
 using MoveIt.Selection;
@@ -12,32 +13,16 @@ using Unity.Mathematics;
 
 namespace MoveIt.Tool
 {
-    public enum CreationPhases
-    {
-        None,
-        Cleanup,
-        Positioning,
-        Create,
-        Finalize,
-    }
-
     public enum MITStates
     {
         Default,
         ApplyButtonHeld,
         SecondaryButtonHeld,
         DrawingSelection,
-        ToolActive
+        ToolActive,
     }
 
-    public enum MITActions
-    {
-        None,
-        Do,
-        Undo,
-        Redo
-    }
-
+    [Flags]
     public enum InteractionFlags
     {
         None                = 0,
@@ -77,8 +62,8 @@ namespace MoveIt.Tool
 
         internal Game.Common.RaycastSystem m_RaycastSystem;
 
-        public static QLoggerCO Log { get => _Log; }
-        private readonly static QLoggerCO _Log = new(false, "", true);
+        public static QLoggerCO Log => _Log;
+        private static readonly QLoggerCO _Log = new(false, "", true, Mod.IS_BETA);
 
         private ToolBaseSystem _PreviousTool = null;
 
@@ -130,15 +115,13 @@ namespace MoveIt.Tool
         }
 
         public MITStates MITState           { get; set; }
-        public MITActions MITAction         { get; set; }
-        public CreationPhases CreationPhase { get; set; }
         public ApplyMode BaseApplyMode      { get => applyMode; set => applyMode = value; }
 
         /// <summary>
         /// Is Low Sensitivity mode active?
         /// Slower mouse movement, no overlays
         /// </summary>
-        internal bool IsLowSensitivity => _IsLowSensitivity;
+        internal bool UsingPrecisionMode => _IsLowSensitivity;
         private bool _IsLowSensitivity;
 
         /// <summary>

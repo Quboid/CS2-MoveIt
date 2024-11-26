@@ -10,12 +10,14 @@ namespace MoveIt.Input
         internal ApplyButton(ProxyAction action) : base(action) { }
         internal ApplyButton(string mapName, string actionName) : base(mapName, actionName) { }
 
-        internal override void OnPress()
+        protected override void OnPress()
         {
             m_Status = ButtonStatus.Down;
             if (_MIT.MITState == MITStates.Default || _MIT.MITState == MITStates.ToolActive)
             {
-                _MIT.Hovered.OnPress = _MIT.Hovered.Definition;
+                _MIT.Hover.Normal.OnPress = _MIT.Hover.Normal.Definition;
+                _MIT.Hover.Child.OnPress = _MIT.Hover.Child.Definition;
+                //QLog.Debug($"ONPRESS {_MIT.Hovered.OnPress} :: {_MIT.Hover.Normal.OnPress}/{_MIT.Hover.Child.OnPress} click:{(!_MIT.Hovered.IsNull && !_MIT.UseMarquee ? "true" : "false")}");
                 _MIT.m_ClickPositionAbs = _MIT.m_PointerPos;
 
                 if (!_MIT.Hovered.IsNull && !_MIT.UseMarquee)
@@ -25,7 +27,7 @@ namespace MoveIt.Input
             }
         }
 
-        internal override void OnClick()
+        protected override void OnClick()
         {
             if (_MIT.UseMarquee)
             {
@@ -35,6 +37,7 @@ namespace MoveIt.Input
 
         private void ObjectClicked()
         {
+            QLog.Debug($"OBJCLICKED Hov:{_MIT.Hovered.Definition.E()} HovManip:{_MIT.Hovered.IsManipulatable} HovSel:{_MIT.Hovered.IsSelected} Press:{_MIT.Hovered.OnPress.E()} HovChild:{_MIT.Hovered.Definition.IsChild} ToolManip:{_MIT.m_IsManipulateMode}");
             if (_MIT.MITState == MITStates.ToolActive)
             {
                 if (_MIT.Hovered.IsNull) return;
@@ -44,13 +47,14 @@ namespace MoveIt.Input
 
             if (_MIT.MITState != MITStates.Default) return;
             if (_MIT.Hovered.IsNull) return;
+            if (_MIT.Hovered.MV is null) return;
 
             _MIT.MITState = MITStates.Default;
-            _MIT.Hovered.MV?.OnClick();
+            _MIT.Hovered.MV.OnClick();
 
             if (_MIT.m_IsManipulateMode && !_MIT.Hovered.IsManipulatable)
             {
-                MIT_ToolTipSystem.instance.Set($"Right-Click to exit Manipulation Mode", 1.5f);
+                Systems.MIT_ToolTipSystem.instance.Set($"Right-Click to exit Manipulation Mode", 1.5f);
                 return;
             }
 
@@ -78,7 +82,7 @@ namespace MoveIt.Input
             }
         }
 
-        internal override void OnDragStart()
+        protected override void OnDragStart()
         {
             if (_MIT.UseMarquee)
             {
@@ -90,24 +94,25 @@ namespace MoveIt.Input
             }
         }
 
-        internal override void OnDragEnd()
+        protected override void OnDragEnd()
         {
-            if (_MIT.MITState == MITStates.DrawingSelection)
+            if (_MIT.MITState != MITStates.DrawingSelection) return;
+            
+            if (_MIT.Queue.Current is SelectMarqueeAction sma)
             {
-                if (_MIT.Queue.Current is SelectMarqueeAction sma)
-                {
-                    sma.AddMarqueeSelection(_MIT.m_Marquee, false);
-                }
-                else
-                {
-                    MIT.Log.Debug($"Update DrawingSelection but current action is {_MIT.Queue.Current.Name}");
-                }
+                sma.AddMarqueeSelection(_MIT.m_Marquee, false);
+            }
+            else
+            {
+                MIT.Log.Debug($"Update DrawingSelection but current action is {_MIT.Queue.Current.Name}");
             }
         }
 
-        internal override void OnHold()
+        protected override void OnHold()
         {
-            if (m_Status == ButtonStatus.Down && _MIT.MITState == MITStates.Default && !_MIT.Hovered.OnPress.IsNull)
+            //QLog.Bundle("ONHOLD", $"OnPress:{_MIT.Hover.TopPressed.E()}-Null:{_MIT.Hover.TopPressed.IsNull} :: {_MIT.Hover.Normal.OnPress.E()}/{_MIT.Hover.Child.OnPress.E()} status:{m_Status}, MITState:{_MIT.MITState}");
+
+            if (m_Status == ButtonStatus.Down && _MIT.MITState == MITStates.Default && !_MIT.Hover.TopPressed.IsNull)
             {
                 _MIT.MoveStart();
             }
@@ -117,7 +122,7 @@ namespace MoveIt.Input
             }
         }
 
-        internal override void OnHoldEnd()
+        protected override void OnHoldEnd()
         {
             if (m_Status == ButtonStatus.Down && _MIT.MITState == MITStates.ApplyButtonHeld)
             {
@@ -126,7 +131,7 @@ namespace MoveIt.Input
             _MIT.ProcessSensitivityMode(false);
         }
 
-        internal override void OnRelease()
+        protected override void OnRelease()
         {
             m_Status = ButtonStatus.None;
             _MIT.Hovered.OnPress = new();

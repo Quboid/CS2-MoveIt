@@ -2,7 +2,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace MoveIt.QAccessor
+namespace MoveIt.QAccessor.QEntity
 {
     internal partial struct QEntity
     {
@@ -18,17 +18,17 @@ namespace MoveIt.QAccessor
         }
 
 
-        private readonly Bezier4x3 Curve => m_Lookup.gnCurve.GetRefRO(m_Entity).ValueRO.m_Bezier;
+        private Bezier4x3 Curve => _Lookup.gnCurve.GetRefRO(m_Entity).ValueRO.m_Bezier;
 
-        private readonly void TryAddUpdate(Entity e)
+        private void TryAddUpdate(Entity e)
         {
-            if (!m_Manager.HasComponent<Game.Common.Updated>(e))
+            if (!_Manager.HasComponent<Game.Common.Updated>(e))
             {
-                m_Manager.AddComponent<Game.Common.Updated>(e);
+                _Manager.AddComponent<Game.Common.Updated>(e);
             }
-            if (!m_Manager.HasComponent<Game.Common.BatchesUpdated>(e))
+            if (!_Manager.HasComponent<Game.Common.BatchesUpdated>(e))
             {
-                m_Manager.AddComponent<Game.Common.BatchesUpdated>(e);
+                _Manager.AddComponent<Game.Common.BatchesUpdated>(e);
             }
         }
 
@@ -49,27 +49,27 @@ namespace MoveIt.QAccessor
 
         #region Simple entity access
 
-        public readonly bool TryGetComponent<T>(out T component) where T : unmanaged, IComponentData
+        public bool TryGetComponent<T>(out T component) where T : unmanaged, IComponentData
         {
-            if (!m_Manager.HasComponent<T>(m_Entity))
+            if (!_Manager.HasComponent<T>(m_Entity))
             {
                 component = default;
                 return false;
             }
 
-            component = m_Manager.GetComponentData<T>(m_Entity);
+            component = _Manager.GetComponentData<T>(m_Entity);
             return true;
         }
 
-        public readonly bool TryGetBuffer<T>(out DynamicBuffer<T> buffer, bool isReadOnly = false) where T : unmanaged, IBufferElementData
+        public bool TryGetBuffer<T>(out DynamicBuffer<T> buffer, bool isReadOnly = false) where T : unmanaged, IBufferElementData
         {
-            if (!m_Manager.HasBuffer<T>(m_Entity))
+            if (!_Manager.HasBuffer<T>(m_Entity))
             {
                 buffer = default;
                 return false;
             }
 
-            buffer = m_Manager.GetBuffer<T>(m_Entity, isReadOnly);
+            buffer = _Manager.GetBuffer<T>(m_Entity, isReadOnly);
             return true;
         }
 

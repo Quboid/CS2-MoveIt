@@ -2,12 +2,13 @@
 using MoveIt.Moveables;
 using MoveIt.Selection;
 using MoveIt.Tool;
+using QCommonLib;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace MoveIt.Actions.Select
 {
-    internal class SelectBase : Action
+    internal abstract class SelectBase : Action
     {
         public override string Name => "SelectBase";
 
@@ -45,7 +46,7 @@ namespace MoveIt.Actions.Select
 
             SelectionState newSelectionStates = new(_MIT.m_IsManipulateMode, toSelection);
 
-            MIT.Log.Debug($"{Name}.ProcessSelectionChange" +
+            MIT.Log.Debug($"SB-{Name}.ProcessSelectionChange {QCommon.GetCallerDebug()}" +
                 $"\n FromSelection: {MIT.DebugDefinitions(fromSelection)}" +
                 $"\n   ToSelection: {MIT.DebugDefinitions(toSelection)}" +
                 $"\n      Deselect: {MIT.DebugDefinitions(deselected)}" +
@@ -57,8 +58,8 @@ namespace MoveIt.Actions.Select
                 new SelectionNormal(newSelectionStates);
             _MIT.Selection.Refresh();
 
-            deselected.ForEach(mvd => _MIT.Moveables.GetOrCreate(mvd).OnDeselect());
-            reselected.ForEach(mvd => _MIT.Moveables.GetOrCreate(mvd).OnSelect());
+            deselected.ForEach(mvd => _MIT.Moveables.GetIfExists<Moveable>(mvd)?.OnDeselect());
+            reselected.ForEach(mvd => _MIT.Moveables.GetOrCreate<Moveable>(mvd).OnSelect());
         }
     }
 }

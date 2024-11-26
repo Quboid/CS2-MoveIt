@@ -18,5 +18,6 @@ const FiltersData : FoldoutData = new FoldoutData(
         new FOMainEntryData("filters", "surfaces",      "Surfaces",         "Select Surfaces",          new CheckboxData("surfaces",        "Surfaces")),
         new FOMainEntryData("filters", "nodes",         "Nodes",            "Select Nodes",             new CheckboxData("nodes",           "Nodes")),
         new FOMainEntryData("filters", "segments",      "Segments",         "Select Segments",          new CheckboxData("segments",        "Segments")),
+        new FOMainEntryData("filters", "netlanes",      "Netlanes",         "Select Netlanes",          new CheckboxData("netlanes",        "Netlanes")),
     ],
 );

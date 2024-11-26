@@ -65,9 +65,8 @@ namespace MoveIt.Tool
             ToolboxManager = new();
             Filtering = new();
 
-            CreationPhase = CreationPhases.None;
             MITState = MITStates.Default;
-            MITAction = MITActions.None;
+            Actions.Action.Phase = Actions.Phases.None;
 
             m_MarqueeSelect = false;
             m_IsManipulateMode = false;
@@ -84,7 +83,7 @@ namespace MoveIt.Tool
             Log.Info("Tool.OnStartRunning()");
             base.OnStartRunning();
 
-            MIT_ToolTipSystem.instance.EnableIfPopulated();
+            Systems.MIT_ToolTipSystem.instance.EnableIfPopulated();
             //m_HoverSystem.Start();
             m_InputSystem.OnToolEnable();
             m_RemoveOverriddenSystem.Start();
@@ -113,7 +112,7 @@ namespace MoveIt.Tool
             m_RemoveOverriddenSystem.End();
             m_InputSystem.OnToolDisable();
             //m_HoverSystem.End();
-            MIT_ToolTipSystem.instance.Enabled = false;
+            Systems.MIT_ToolTipSystem.instance.Enabled = false;
 
             QLog.FlushBundle();
         }
@@ -138,11 +137,6 @@ namespace MoveIt.Tool
             }
         }
 
-        public void RequestDisable()
-        {
-            m_ToolSystem.activeTool = _PreviousTool ?? m_DefaultToolSystem;
-        }
-
         public void RequestToggle()
         {
             if (m_ToolSystem.activeTool == this)
@@ -153,6 +147,11 @@ namespace MoveIt.Tool
             {
                 RequestEnable();
             }
+        }
+
+        private void RequestDisable()
+        {
+            m_ToolSystem.activeTool = _PreviousTool ?? m_DefaultToolSystem;
         }
     }
 }

@@ -98,42 +98,42 @@ namespace MoveIt.Input
         /// <summary>
         /// Input button has been pressed, fired immediately
         /// </summary>
-        internal abstract void OnPress();
+        protected abstract void OnPress();
 
         /// <summary>
         /// Input button has been released, fired for every press regardless of length (fires after OnClick and OnHoldEnd)
         /// </summary>
-        internal abstract void OnRelease();
+        protected abstract void OnRelease();
 
         /// <summary>
         /// Input button is pressed for less than 250ms, fired after release within this time-frame (after OnDragEnd, instead of OnHoldEnd, before OnRelease)
         /// </summary>
-        internal abstract void OnClick();
+        protected abstract void OnClick();
 
         /// <summary>
         /// Input button is being held and has moved since press, fired once (before OnHold)
         /// </summary>
-        internal virtual void OnDragStart() { }
+        protected virtual void OnDragStart() { }
 
         /// <summary>
         /// Input button is being held and has moved since press, fired every frame (before OnHold)
         /// </summary>
-        internal virtual void OnDrag() { }
+        protected virtual void OnDrag() { }
 
         /// <summary>
         /// Input button was being held and had moved since press, has now been released, fired once (before OnClick, OnHoldEnd, and OnRelease)
         /// </summary>
-        internal virtual void OnDragEnd() { }
+        protected virtual void OnDragEnd() { }
 
         /// <summary>
         /// Input button has been held for at least 250ms, fired every frame (after OnDrag)
         /// </summary>
-        internal abstract void OnHold();
+        protected abstract void OnHold();
 
         /// <summary>
         /// Input button was held for at least 250ms, fired upon release (after OnDragEnd, instead of OnClick, before OnRelease)
         /// </summary>
-        internal abstract void OnHoldEnd();
+        protected abstract void OnHoldEnd();
 
         protected enum ButtonStatus
         {

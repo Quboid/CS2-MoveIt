@@ -6,7 +6,13 @@
   <!--Short description of the mod-->
   <ShortDescription Value="Move Things" />
   <!--Long description of the mod. Single line or multi line. Supports minimal markdown subset-->
-  <LongDescription># Move It for Cities Skylines 2
+  <LongDescription># Move It Beta for Cities Skylines 2.
+
+This is the unstable beta version and may have unexpected issues. Please report any in the forum or on Discord. Do not use more than one version of Move It.
+
+Stable version:
+https://mods.paradoxplaza.com/mods/74324/Windows
+
 
 You can move trees, props, decals, buildings, surfaces, nodes, and segment curves.
 
@@ -59,12 +65,13 @@ Manipulating segments - you can move the control points in all three axis; the 2
 
 Hotkeys: view and change any keyboard settings here.
 
+This is an beta version of Move It. Save often, save different.
+
 
 ## Known Issues
 * Align to terrain height does yet not work with objects that affect terrain, e.g. buildings and on-ground roads.
 * Page Up/Down do not work in the editor. Use Numpad 9 and 3 instead, or rebind the move up/down keys.
 * Some players experience an occasional crash the first time they use Move It after using Undo. If you get this, please send me your log files.
-
 
 ## Credits:
 
@@ -82,26 +89,17 @@ Icons from SVG Repo, and from WishForge.Games under CC Attribution License.</Lon
   <!--Tag, can be set multiple-->
   <Tag Value="Code Mod" />
   <!--Link to the forum post where the mod can be discussed-->
-  <ForumLink Value="https://forum.paradoxplaza.com/forum/threads/move-it.1699016/" />
+  <ForumLink Value="https://forum.paradoxplaza.com/forum/threads/move-it.1684140/" />
   <!--Version of the mod-->
-  <ModVersion Value="0.5.0.0" />
+  <ModVersion Value="0.5.1.0" />
   <!--Recommended version of the base game to use the mod-->
   <GameVersion Value="1.*" />
   <!--Dependency for the mod, can be set multiple-->
   <Dependency Id="" DisplayName="" Version="" />
   <!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-  <ChangeLog>0.5.0
-- Selection filters (Alt+F to enable/disable filtering)
-- Toolbox!
-- Align to terrain height (Control+G) - does not apply to buildings or on-ground roads!
-- Align to to object height (Control+H)
-- Rotate At Centre (Alt+A)
-- Rotate In-Place (Shift+A)
-- Precision mode: hold Control while moving to hide overlays and reduce mouse sensitivity
-- Improved logging performance and detail
-- Fixed occasional crash on Undo
-- Fixed occasional crash when dragging buildings over other buildings
-- Fixed props dropping to ground height</ChangeLog>
+  <ChangeLog>0.5.1
+- Updated for 1.1.12f
+- Numerous minor tweaks</ChangeLog>
   <!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
   <ExternalLink Type="discord" Url="https://discord.gg/nURB9MQ" />
   <ExternalLink Type="patreon" Url="https://www.patreon.com/Quboid" />

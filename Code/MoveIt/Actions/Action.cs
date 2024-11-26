@@ -5,9 +5,31 @@ using MoveIt.Tool;
 using QCommonLib;
 using System;
 using System.Collections.Generic;
+using Unity.Entities;
 
 namespace MoveIt.Actions
 {
+    public enum Phases
+    {
+        None,
+        Initialise,
+        Do,
+        Undo,
+        Redo,
+        Finalise,
+        Cleanup,
+        Complete,
+    }
+
+    public record struct Neighbour
+    {
+        internal Entity m_Entity;
+        internal Identity m_Identity;
+        internal Bezier4x3 m_InitialCurve;
+
+        internal readonly MVDefinition Definition => new(m_Identity, m_Entity, false);
+    }
+
     internal class ActionState : IDisposable
     {
         protected readonly MIT _MIT = MIT.m_Instance;
@@ -32,6 +54,12 @@ namespace MoveIt.Actions
 
     internal abstract class Action
     {
+        /// <summary>
+        /// The Action.Phases phase the current action is in
+        /// </summary>
+        public static Phases Phase { get => _Phase; set => _Phase = value; }
+        protected static Phases _Phase = Phases.None;
+
         protected static readonly MIT _MIT = MIT.m_Instance;
 
         public abstract string Name { get; }
@@ -46,11 +74,6 @@ namespace MoveIt.Actions
         /// Outer bounds of rectangle that this action affects on completion (e.g. for network updates)
         /// </summary>
         internal Bounds3 m_FinalBounds;
-
-        /// <summary>
-        /// Area for terrain to be updated each frame
-        /// </summary>
-        internal Bounds3 m_TerrainUpdateBounds;
 
         /// <summary>
         /// Was the player in Manipulation Mode when action was created?
@@ -81,6 +104,7 @@ namespace MoveIt.Actions
         {
             m_IsManipulationMode = _MIT.m_IsManipulateMode;
             m_InitialFrame = UnityEngine.Time.frameCount;
+            Phase = Phases.Initialise;
         }
 
         //public virtual HashSet<Overlays.Overlay> GetOverlays(Overlays.ToolFlags toolFlags)
@@ -90,9 +114,30 @@ namespace MoveIt.Actions
 
         public virtual ActionState GetActionState() => new();
 
+        /// <summary>
+        /// Initialise the action, runs immediately after action's ctor
+        /// </summary>
+        public virtual void Initialise() { }
+        /// <summary>
+        /// Run the action, called once per frame as long as needed
+        /// </summary>
         public virtual void Do() { }
-        public virtual void Undo() { }
-        public virtual void Redo() { }
+        /// <summary>
+        /// Undo the action
+        /// </summary>
+        public virtual void Undo() { Phase = Phases.Complete; }
+        /// <summary>
+        /// Redo the action
+        /// </summary>
+        public virtual void Redo() { Phase = Phases.Complete; }
+        /// <summary>
+        /// Finish the action, runs the frame after when the action defines it, if at all
+        /// </summary>
+        public virtual void Finalise() { Phase = Phases.Cleanup; }
+        /// <summary>
+        /// Cleanup the action, runs the frame after Finalise(), if at all
+        /// </summary>
+        public virtual void Cleanup() { Phase = Phases.Complete; }
 
         /// <summary>
         /// This action is no longer the current one
@@ -100,15 +145,15 @@ namespace MoveIt.Actions
         /// </summary>
         /// <param name="toolState">The tool action at the time of archiving</param>
         /// <param name="idx">This action's queue index</param>
-        public void Archive(MITActions toolAction, int idx)
+        public virtual void Archive(Phases phase, int idx)
         {
-            string oldSelection = _SelectionState is null ? "<null>" : _SelectionState.Debug();
+            string oldSelState = _SelectionState is null ? "<null>" : _SelectionState.Debug();
             int old = _MIT.Selection.Count;
             int oldFull = _MIT.Selection.CountFull;
             string moveables = _MIT.Selection.DebugSelection();
             _SelectionState = SelectionState.SelectionToState(_MIT.m_IsManipulateMode, _MIT.Selection.Definitions);
             string newSelection = _SelectionState.Debug();
-            MIT.Log.Debug($"ARCHIVE {idx}:{_MIT.Queue.Current.Name} ToolAction:{toolAction} Definitions:{old}/{oldFull}->{_SelectionState.Count}\nOld: {oldSelection}\nNew: {newSelection}\nAll Moveables: {moveables}");
+            MIT.Log.Debug($"ARCHIVE {idx}:{_MIT.Queue.Current.Name} OldPhase:{phase} Definitions:{old}/{oldFull}->{_SelectionState.Count}\nOld: {oldSelState}\nNew: {newSelection}\nAll Moveables: {moveables}");
         }
 
         /// <summary>
@@ -117,14 +162,14 @@ namespace MoveIt.Actions
         /// </summary>
         /// <param name="toolAction">The tool action at the time of unarchiving</param>
         /// <param name="idx">This action's queue index</param>
-        public virtual void Unarchive(MITActions toolAction, int idx)
+        public virtual void Unarchive(Phases phase, int idx)
         {
-            string oldSelection = _SelectionState is null ? "<null>" : _SelectionState.Debug();
-            int old = _SelectionState.Count;
+            string oldSelState = _SelectionState is null ? "<null>" : _SelectionState.Debug();
+            int oldSelStateC = _SelectionState.Count;
             string moveables = _MIT.Selection.DebugSelection();
             _SelectionState = _SelectionState.CleanDefinitions();
             string newSelection = _SelectionState.Debug();
-            MIT.Log.Debug($"UNARCHIVE {idx}:{_MIT.Queue.Current.Name} ToolAction:{toolAction} Definitions:{old}->{_SelectionState.Count}\nOld: {oldSelection}\nNew: {newSelection}\nAll Moveables: {moveables}");
+            MIT.Log.Debug($"UNARCHIVE {idx}:{_MIT.Queue.Current.Name} OldPhase:{phase} Definitions:{oldSelStateC}->{_SelectionState.Count}\nOld: {oldSelState}\nNew: {newSelection}\nAll Moveables: {moveables}");
         }
 
         /// <summary>
@@ -132,8 +177,13 @@ namespace MoveIt.Actions
         /// </summary>
         public virtual List<MVDefinition> GetSelectionStates() => SelectionState.CleanDefinitions(_SelectionState);
 
-        internal virtual void OnHold() { }
-        internal virtual void OnHoldEnd() { }
+        /// <summary>
+        /// Does this action use the defined object? (Excluding used in selection or hover)
+        /// </summary>
+        /// <param name="mvd">The object to check</param>
+        /// <returns>Is this object used?</returns>
+        internal virtual bool Uses(MVDefinition mvd)
+            => false;
 
         /// <summary>
         /// Clean up unselected Moveables. Must be run AFTER removing from actual Selection or unneeded Moveables will be kept
@@ -141,10 +191,6 @@ namespace MoveIt.Actions
         /// <param name="definitions"></param>
         protected void Deselect(IEnumerable<MVDefinition> definitions)
         {
-            MIT.Log.Debug($"Action.Deselect {MIT.DebugDefinitions(definitions)}" +
-                $"\n{_MIT.Moveables.DebugFull()}" +
-                $"\n{QCommon.GetStackTrace(3)}");
-
             foreach (var mvd in definitions)
             {
                 if (_MIT.Moveables.TryGet(mvd, out Moveable mv))

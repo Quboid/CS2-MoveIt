@@ -1,16 +1,20 @@
-﻿using Colossal.UI.Binding;
+﻿using System.Collections.Generic;
+using Colossal.UI.Binding;
 
 namespace MoveIt.UI.Foldout
 {
     public abstract class FOSectionContainerState : FOSectionContainerStateBase
     {
-        public FOTitleState m_FOTitleState;
+        protected FOTitleState m_FOTitleState;
 
-        public FOSectionContainerState()
+        protected FOSectionContainerState()
         {
             _Changed = true;
-            m_Entries = GetEntries();
+            m_Entries = GetEntriesFromAbstract();
         }
+
+        private List<FoldoutEntry> GetEntriesFromAbstract()
+            => GetEntries();
 
         internal override bool Changed
         {

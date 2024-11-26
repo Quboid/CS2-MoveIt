@@ -1,6 +1,5 @@
 ﻿using Colossal.UI.Binding;
 using MoveIt.Tool;
-using QCommonLib;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -22,7 +21,7 @@ namespace MoveIt.UI.Foldout
                 _IsPanelOpen = value;
             }
         }
-        protected bool _IsPanelOpen = false;
+        private bool _IsPanelOpen = false;
 
         internal virtual bool Changed
         {
@@ -67,9 +66,9 @@ namespace MoveIt.UI.Foldout
 
             writer.PropertyName("Entries");
             writer.ArrayBegin(m_Entries.Count);
-            for (int i = 0; i < m_Entries.Count; i++)
+            foreach (FoldoutEntry entry in m_Entries)
             {
-                writer.Write(m_Entries[i].m_UIEntry);
+                writer.Write(entry.m_UIEntry);
             }
             writer.ArrayEnd();
 
@@ -86,15 +85,13 @@ namespace MoveIt.UI.Foldout
 
         public override bool Equals(object obj)
         {
-            if (!obj.GetType().Equals(GetType())) return false;
+            if (obj is null) return false;
+            if (obj.GetType() != GetType()) return false;
 
-            if (_Changed)
-            {
-                _Changed = false;
-                return false;
-            }
+            if (!_Changed) return true;
+            _Changed = false;
+            return false;
 
-            return true;
         }
 
         public override int GetHashCode() => base.GetHashCode();

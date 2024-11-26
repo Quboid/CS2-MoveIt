@@ -1,5 +1,6 @@
 ﻿using Game;
 using MoveIt.Systems;
+using QCommonLib;
 using System.Reflection;
 
 namespace MoveIt
@@ -10,10 +11,10 @@ namespace MoveIt
         public const string MOD_UI = "MoveIt";
 
 #if IS_DEBUG
-        public const bool ISDEBUG = true;
+        public const bool IS_BETA = true;
         public static string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString(4);
 #else
-        public const bool ISDEBUG = false;
+        public const bool IS_BETA = false;
         public static string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
 #endif
 
@@ -21,7 +22,7 @@ namespace MoveIt
 
         public void OnLoad(UpdateSystem updateSystem)
         {
-            if (ISDEBUG) QCommonLib.QLog.Init(true);
+            if (IS_BETA) QLog.Init(true);
 
             Settings = new Settings.Settings(this);
             Settings.RegisterKeyBindings();

@@ -17,15 +17,15 @@ namespace MoveIt.Actions.Transform
             if (_MIT.MITState == MITStates.ApplyButtonHeld)
             {
                 float y = MoveDelta.y;
-                if (_MIT.IsLowSensitivity)
+                if (_MIT.UsingPrecisionMode)
                 {
                     float3 mouseDeltaBefore = _MIT.m_SensitivityTogglePosAbs - _MIT.m_ClickPositionAbs;
-                    float3 mouseDeltaAfter = (_MIT.m_PointerPos - _MIT.m_SensitivityTogglePosAbs) / 5f;
+                    float3 mouseDeltaAfter = (_MIT.m_PointerPos - _MIT.m_SensitivityTogglePosAbs) / 6f;
                     newMoveDelta = mouseDeltaBefore + mouseDeltaAfter;
                 }
                 else
                 {
-                    newMoveDelta = _MIT.m_PointerPos - _MIT.m_ClickPositionAbs;// - m_dragStartRelative;
+                    newMoveDelta = _MIT.m_PointerPos - _MIT.m_ClickPositionAbs;
                 }
                 newMoveDelta.y = y;
 
@@ -41,21 +41,17 @@ namespace MoveIt.Actions.Transform
             else if (_MIT.MITState == MITStates.SecondaryButtonHeld)
             {
                 // Rotation value, 1 = full 360 (uses screen height, not width, to adapt to ultrawide)
-                //float angle = (float)(mouseTravel) / (float)(Screen.height * 1.5f) * _MIT.RotationDirection;
 
                 float mouseTravel;
-                if (_MIT.IsLowSensitivity)
+                if (_MIT.UsingPrecisionMode)
                 {
-                    float mouseRotateBefore = _MIT.m_SensitivityTogglePosX - _MIT.m_MouseStartX;// _MIT.m_SensitivityAngleOffset;
-                    float mouseRotateAfter = (QCommon.MouseScreenPosition.x - _MIT.m_SensitivityTogglePosX) / 5;
-                    mouseTravel = mouseRotateBefore + mouseRotateAfter;// / Screen.width * 1.2f;
-
-                    //newAngle = ushort.MaxValue * 9.58738E-05f * mouseTravel;
+                    float mouseRotateBefore = _MIT.m_SensitivityTogglePosX - _MIT.m_MouseStartX;
+                    float mouseRotateAfter = (QCommon.MouseScreenPosition.x - _MIT.m_SensitivityTogglePosX) / 6;
+                    mouseTravel = mouseRotateBefore + mouseRotateAfter;
                 }
                 else
                 {
                     mouseTravel = QCommon.MouseScreenPosition.x - _MIT.m_MouseStartX;
-                    //newAngle = ushort.MaxValue * 9.58738E-05f * (QCommon.MouseScreenPosition.x - _MIT.m_MouseStartX) / Screen.width * 1.2f;
                 }
                 float angle = mouseTravel / (float)(Screen.height * 1.5f) * _MIT.RotationDirection;
 
@@ -70,7 +66,6 @@ namespace MoveIt.Actions.Transform
                 newAngleDelta = angle * 360;
             }
 
-            // If nothing has changed this frame, end now
             m_UpdateMove = false;
             m_UpdateRotate = false;
             if (!MoveDelta.Equals(newMoveDelta))
@@ -83,6 +78,7 @@ namespace MoveIt.Actions.Transform
                 m_UpdateRotate = true;
             }
 
+            // If nothing has changed this frame, end now
             if (!m_UpdateMove && !m_UpdateRotate)
             {
                 return false;
@@ -91,7 +87,7 @@ namespace MoveIt.Actions.Transform
             MoveDelta = newMoveDelta;
             AngleDelta = newAngleDelta;
 
-            DoFromAngleAndMoveDeltas();
+            DoFromDeltas();
 
             return true;
         }

@@ -1,4 +1,6 @@
-﻿using Colossal.Mathematics;
+﻿using System;
+using System.Linq;
+using Colossal.Mathematics;
 using MoveIt.Actions.Transform;
 using MoveIt.Moveables;
 using MoveIt.Tool;
@@ -20,6 +22,7 @@ namespace MoveIt.Snapper
         StraightSegment,
     }
 
+    [Flags]
     internal enum SnapFlags
     {
         None            = 0,
@@ -44,7 +47,7 @@ namespace MoveIt.Snapper
         public SnapCandidate()
         { }
 
-        public override readonly string ToString()
+        public readonly override string ToString()
         {
             string msg = $"SC:{m_Type}/{m_Flags} w:{m_Weight} {m_Entity.DX()} ";
             msg += m_Type switch
@@ -85,7 +88,7 @@ namespace MoveIt.Snapper
         public SnapResult()
         { }
 
-        public override readonly string ToString()
+        public readonly override string ToString()
         {
             return $"{m_Candidate} - Distance:{m_Distance}, Score:{m_Score}, Pos:{m_SnapPosition.DX()} ({m_Delta.DX()})";
         }
@@ -153,21 +156,20 @@ namespace MoveIt.Snapper
 
             //DebugDumpResults(results);
 
-            float bestScore = 0.2f;
+            var bestScore = 0.2f;
             bestResult = default;
-            bool bestFound = false;
+            var bestFound = false;
             m_SnapType = SnapTypes.None;
 
-            for (int i = 0; i < results.Length; i++)
+            for (var i = 0; i < results.Length; i++)
             {
-                if (results[i].m_Score > bestScore)
-                {
-                    bestScore = results[i].m_Score;
-                    bestResult = results[i];
-                    bestFound = true;
-                    m_SnapType = bestResult.m_Candidate.m_Type;
-                    m_SnapPosition = bestResult.m_SnapPosition;
-                }
+                if (!(results[i].m_Score > bestScore)) continue;
+                
+                bestScore = results[i].m_Score;
+                bestResult = results[i];
+                bestFound = true;
+                m_SnapType = bestResult.m_Candidate.m_Type;
+                m_SnapPosition = bestResult.m_SnapPosition;
             }
 
             return bestFound;
@@ -187,28 +189,22 @@ namespace MoveIt.Snapper
 
         internal void DebugDump()
         {
-            string msg = $"Candidates: {_Candidates.Length}";
-            foreach (var item in _Candidates)
-            {
-                msg += $"\n    {item}";
-            }
+            var msg = $"Candidates: {_Candidates.Length}";
+            msg = _Candidates.Aggregate(msg, (current, item) => current + $"\n    {item}");
             MIT.Log.Debug(msg);
         }
 
         internal void DebugDumpResults(NativeList<SnapResult> results)
         {
-            string msg = $"Results: {results.Length}";
-            foreach (var item in results)
-            {
-                msg += $"\n    {item}";
-            }
+            var msg = $"Results: {results.Length}";
+            msg = results.Aggregate(msg, (current, item) => current + $"\n    {item}");
             MIT.Log.Bundle("SNAP", msg);
         }
     }
 
     internal struct SnapLookups
     {
-        public static SnapLookups m_Lookup;
+        private static SnapLookups _Lookup;
         private static bool _Initialized;
 
         public static void Reset()
@@ -218,14 +214,13 @@ namespace MoveIt.Snapper
 
         public static ref SnapLookups Get(SystemBase system)
         {
-            if (!_Initialized)
-            {
-                m_Lookup = new();
-                m_Lookup.Init(system);
-                _Initialized = true;
-            }
+            if (_Initialized) return ref _Lookup;
+            
+            _Lookup = new();
+            _Lookup.Init(system);
+            _Initialized = true;
 
-            return ref m_Lookup;
+            return ref _Lookup;
         }
 
         internal BufferLookup<Game.Net.ConnectedEdge> gnConnectedEdge;
@@ -235,7 +230,7 @@ namespace MoveIt.Snapper
         internal ComponentLookup<Game.Objects.Transform> goTransform;
         internal ComponentLookup<Components.MIT_ControlPoint> MIT_ControlPoint;
 
-        public void Init(SystemBase system)
+        private void Init(SystemBase system)
         {
             gnConnectedEdge = system.GetBufferLookup<Game.Net.ConnectedEdge>();
             gnCurve = system.GetComponentLookup<Game.Net.Curve>();

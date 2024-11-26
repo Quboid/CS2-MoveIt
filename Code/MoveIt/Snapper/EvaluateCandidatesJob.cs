@@ -76,7 +76,7 @@ namespace MoveIt.Snapper
 
         private readonly State GetState(int index)
         {
-            foreach (var s in m_OldStates)
+            foreach (State s in m_OldStates)
             {
                 if (s.m_Entity.Equals(m_Candidates[index].m_Entity))
                 {

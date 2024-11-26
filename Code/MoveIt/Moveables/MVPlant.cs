@@ -1,4 +1,4 @@
-﻿using MoveIt.Overlays;
+﻿using MoveIt.Overlays.Children;
 using Unity.Entities;
 
 namespace MoveIt.Moveables
@@ -7,8 +7,8 @@ namespace MoveIt.Moveables
     {
         public MVPlant(Entity e) : base(e, Identity.Plant)
         {
-            m_Overlay = Factory.Create<OverlayPlant>(this, OverlayTypes.MVCircle);
-            Refresh();
+            m_Overlay = new OverlayPlant(this);
+            RefreshFromAbstract();
         }
     }
 }

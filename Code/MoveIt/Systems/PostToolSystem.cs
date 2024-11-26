@@ -5,22 +5,14 @@ namespace MoveIt.Systems
 {
     internal partial class MIT_PostToolSystem : MIT_System
     {
-        internal HashSet<Overlay> m_UpdateOverlayQueue = new();
-        internal HashSet<Overlay> m_UpdateOverlayQueueDeferred = new();
+        private HashSet<Overlay> _UpdateOverlayQueue = new();
+        private readonly HashSet<Overlay> _UpdateOverlayQueueDeferred = new();
 
         internal void QueueOverlayUpdate(Overlay overlay)
-        {
-            if (m_UpdateOverlayQueue.Contains(overlay)) return;
-
-            m_UpdateOverlayQueue.Add(overlay);
-        }
+            => _UpdateOverlayQueue.Add(overlay);
 
         internal void QueueOverlayUpdateDeferred(Overlay overlay)
-        {
-            if (m_UpdateOverlayQueueDeferred.Contains(overlay)) return;
-
-            m_UpdateOverlayQueueDeferred.Add(overlay);
-        }
+            => _UpdateOverlayQueueDeferred.Add(overlay);
 
         protected override void OnCreate()
         {
@@ -30,13 +22,13 @@ namespace MoveIt.Systems
         protected override void OnUpdate()
         {
             // Update overlays
-            foreach (Overlay overlay in m_UpdateOverlayQueue)
+            foreach (Overlay overlay in _UpdateOverlayQueue)
             {
                 overlay.Update();
             }
-            m_UpdateOverlayQueue.Clear();
-            m_UpdateOverlayQueue = new(m_UpdateOverlayQueueDeferred);
-            m_UpdateOverlayQueueDeferred.Clear();
+            _UpdateOverlayQueue.Clear();
+            _UpdateOverlayQueue = new(_UpdateOverlayQueueDeferred);
+            _UpdateOverlayQueueDeferred.Clear();
         }
 
         //private void UpdateOverlays()

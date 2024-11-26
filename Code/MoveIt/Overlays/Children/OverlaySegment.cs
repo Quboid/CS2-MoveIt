@@ -1,16 +1,16 @@
 ﻿using Colossal.Mathematics;
-using Colossal.Win32;
 using MoveIt.Moveables;
+using MoveIt.Tool;
 using QCommonLib;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace MoveIt.Overlays
+namespace MoveIt.Overlays.Children
 {
     internal class OverlaySegment : Overlay
     {
-        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
+        private static readonly EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Common),
@@ -20,58 +20,57 @@ namespace MoveIt.Overlays
                     typeof(MIO_DashedLines),
             });
 
-        public static Entity Factory(MVSegment seg)
+
+        public OverlaySegment(Moveable mv) : base(OverlayTypes.MVSegment, mv)
+        { }
+
+        protected override bool CreateOverlayEntity()
         {
-            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
+            if (_Moveable is not MVSegment seg)
+            {
+                MIT.Log.Error($"ERROR OlaySeg.CreateOlayE {_Moveable} is not segment.");
+                return false;
+            }
+
+            m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new()
             {
                 m_Owner = seg.m_Entity,
             };
 
-            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVSegment));
-            _MIT.EntityManager.SetComponentData(e, common);
-            _MIT.EntityManager.SetComponentData<MIO_Bezier>(e, new(seg.Curve, seg.Width));
-            return e;
-        }
-
-        public OverlaySegment() : base(OverlayTypes.MVSegment)
-        { }
-
-        public override bool CreateOverlayEntity()
-        {
-            if (m_Moveable is not MVSegment seg) return false;
-            if (!base.CreateOverlayEntity()) return false;
-
-            m_Entity = OverlaySegment.Factory(seg);
-            EnqueueUpdate();
-
-            foreach (var cpd in seg.m_CPDefinitions)
-            {
-                MVControlPoint cp = _MIT.ControlPointManager.GetOrCreate(cpd);
-                ((OverlayControlPoint)cp.m_Overlay).CreateOverlayEntityIfNoneExists();
-            }
+            _MIT.EntityManager.SetComponentData<MIO_Type>(m_Entity, new(OverlayTypes.MVSegment));
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
+            _MIT.EntityManager.SetComponentData<MIO_Bezier>(m_Entity, new(seg.Curve, seg.Width));
 
             return true;
         }
 
-        public override bool DestroyOverlayEntity()
+        protected override bool DestroyOverlayEntity()
         {
-            UpdateRelatedOverlays();
+            UpdateRelatedNodes();
             return base.DestroyOverlayEntity();
         }
 
         public override void EnqueueUpdate()
         {
+#if IS_DEBUG
+            m_Caller = QCommon.GetStackTrace(15);
+#endif
             base.EnqueueUpdate();
             base.EnqueueUpdateDeferred();
-            UpdateRelatedOverlays();
+            UpdateRelatedNodes();
+            UpdateRelatedCPs();
         }
 
-        private void UpdateRelatedOverlays()
+        private void UpdateRelatedNodes()
         {
             // If the segment has been deleted, return now
-            if (!GetMoveable<MVSegment>().IsValid) return;
+            if (!GetMoveable<MVSegment>().IsValid)
+            {
+                MIT.Log.Error($"UpdateRelatedNodes called for segment {E()} that isn't valid.");
+                return;
+            }
 
             Game.Net.Edge edge = GetMoveable<MVSegment>().Edge;
             if (_MIT.Moveables.TryGet<MVNode>(new MVDefinition(Identity.Node, edge.m_Start, _MIT.IsManipulating), out var nodeA))
@@ -82,8 +81,18 @@ namespace MoveIt.Overlays
             {
                 _MIT.QueueOverlayUpdate(nodeB.m_Overlay);
             }
+        }
 
-            foreach (var mvd in GetMoveable<MVSegment>().m_CPDefinitions)
+        private void UpdateRelatedCPs()
+        {
+            // If the segment has been deleted, return now
+            if (!GetMoveable<MVSegment>().IsValid)
+            {
+                MIT.Log.Error($"UpdateRelatedCPs called for segment {E()} that isn't valid.");
+                return;
+            }
+
+            foreach (MVDefinition mvd in GetMoveable<MVSegment>().m_CPDefinitions)
             {
                 // It won't count as existing if the selection is being cleared and a selected node is cleaned up first
                 if (_MIT.ControlPointManager.GetIfExists(mvd, out var cp))
@@ -95,7 +104,7 @@ namespace MoveIt.Overlays
 
         public override bool Update()
         {
-            if (m_Moveable is not MVSegment seg) return false;
+            if (_Moveable is not MVSegment seg) return false;
             if (m_Entity.Equals(Entity.Null)) return false;
 
             MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
@@ -120,7 +129,7 @@ namespace MoveIt.Overlays
             cpPos[2] = new(CP_RADIUS, curve.Curve.c, quaternion.identity);
             cpPos[3] = new(CP_RADIUS, curve.Curve.d, quaternion.identity);
 
-            for (int i = 0; i < 4; i++)
+            for (var i = 0; i < 4; i++)
             {
                 cpPosBuffer.Add(new(cpPos[i]));
             }

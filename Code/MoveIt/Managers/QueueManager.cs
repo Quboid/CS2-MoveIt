@@ -1,7 +1,9 @@
-﻿using MoveIt.Actions;
+﻿using Game.Tools;
+using MoveIt.Actions;
 using MoveIt.Actions.Select;
 using MoveIt.Selection;
 using MoveIt.Tool;
+using QCommonLib;
 using System.Text;
 
 namespace MoveIt.Managers
@@ -44,51 +46,27 @@ namespace MoveIt.Managers
         private int IndexPrev => Index == 0 ? QUEUE_LENGTH - 1 : Index - 1;
         private int IndexNext => Index >= QUEUE_LENGTH - 1 ? 0 : Index + 1;
 
+        private bool _UndoDecrement = false;
+
         /// <summary>
         /// The index of the newest action.
         /// </summary>
         private int _Head = 0;
 
         /// <summary>
-        /// The index preceeding the oldest action. Never a valid action.
+        /// The index preceding the oldest action. Never a valid action.
         /// </summary>
         private int _Tail = 0;
 
         /// <summary>
         /// The currently active action
-        /// Creates a SelectAction if there none, which should only happen when tool is first enabled.
+        /// Creates a SelectAction if there is none, which should only happen when tool is first enabled.
         /// </summary>
-        public Action Current
-        {
-            get
-            {
-                //if (Index == _Tail) Push();
-
-                return _Actions[Index];
-            }
-        }
-
+        public Action Current => _Actions[Index];
+        
         public Action PrevAction => IndexPrev == _Tail ? new NullAction() : _Actions[IndexPrev];
         public Action NextAction => IndexNext == _Head ? new NullAction() : _Actions[IndexNext];
 
-        /// <summary>
-        /// Get the action for Creation engine, or Current if there isn't one set
-        /// </summary>
-        public Action CreationAction
-        {
-            get => _CreationAction ?? Current;
-            set => _CreationAction = value;
-        }
-        public bool HasCreationAction => _CreationAction != null;
-
-        //public void UpdateNodeIdInStateHistory(ushort oldId, ushort newId)
-        //{
-        //    foreach (Action action in _getPreviousAction())
-        //    {
-        //        if (action == null) continue;
-        //        action.UpdateNodeIdInSegmentState(oldId, newId);
-        //    }
-        //}
 
         public void Push(Action action)
         {
@@ -97,8 +75,8 @@ namespace MoveIt.Managers
                 _Tail = (Index + 2) % QUEUE_LENGTH;
             }
 
-            MIT.Log.Info("--- QueueManager.Push");
-            Current.Archive(MITActions.None, Index);
+            MIT.Log.Info($"--- QueueManager.Push Phase:{Action.Phase}");
+            Current.Archive(Phases.None, Index);
             if (Index != _Head)
             {
                 Invalidate();
@@ -114,21 +92,48 @@ namespace MoveIt.Managers
 
         public void FireAction()
         {
-            if (_MIT.MITAction == MITActions.Do)
+            switch (Action.Phase)
             {
-                _MIT.MITAction = MITActions.None;
-                Do();
+                case Phases.Initialise:
+                    _UndoDecrement = false;
+                    Initialise();
+                    break;
+
+                case Phases.Do:
+                    Do();
+                    break;
+
+                case Phases.Undo:
+                    _UndoDecrement = true;
+                    Undo();
+                    break;
+
+                case Phases.Redo:
+                    Redo();
+                    break;
+
+                case Phases.Finalise:
+                    Finalise();
+                    break;
+
+                case Phases.Cleanup:
+                    Cleanup();
+                    break;
+
+                case Phases.Complete:
+                    Complete();
+                    break;
+
+                case Phases.None:
+                    if (_MIT.m_TempQuery.IsEmpty) _MIT.BaseApplyMode = ApplyMode.None;
+                    break;
             }
-            else if (_MIT.MITAction == MITActions.Undo)
-            {
-                _MIT.MITAction = MITActions.None;
-                Undo();
-            }
-            else if (_MIT.MITAction == MITActions.Redo)
-            {
-                _MIT.MITAction = MITActions.None;
-                Redo();
-            }
+        }
+
+        private void Initialise()
+        {
+            //MIT.Log.Debug($"{UnityEngine.Time.frameCount} Initialise {Debug()}");
+            _Actions[Index].Initialise();
         }
 
         public void Do()
@@ -142,18 +147,19 @@ namespace MoveIt.Managers
             return Index != (_Tail + 1) % QUEUE_LENGTH;
         }
 
-        public void Undo()
+        private void Undo()
         {
             if (!CanUndo()) return;
 
             MIT.Log.Debug("--- QueueManager.Undo");
-            _Actions[Index].Archive(MITActions.Undo, Index);
-            _Actions[IndexPrev].Unarchive(MITActions.Undo, IndexPrev);
+            _Actions[Index].Archive(Phases.Undo, Index);
+            _Actions[IndexPrev].Unarchive(Phases.Undo, IndexPrev);
 
             _Actions[Index].Undo();
-            Index--;
+            //Index--;
+            // BUG: Finalise runs on wrong action because Index is changed before it is called
 
-            //MIT.Log.Debug($"Undo (Can Redo:{CanRedo()}) {Debug()}");
+            //MIT.Log.Debug($"Undo (Can Redo:{CanRedo()}) {DebugQueue()}");
         }
 
         public bool CanRedo()
@@ -161,32 +167,56 @@ namespace MoveIt.Managers
             return Index != _Head;
         }
 
-        public void Redo()
+        private void Redo()
         {
             if (!CanRedo()) return;
 
             MIT.Log.Debug("--- QueueManager.Redo");
-            _Actions[Index].Archive(MITActions.Redo, Index);
-            _Actions[IndexNext].Unarchive(MITActions.Redo, IndexNext);
+            _Actions[Index].Archive(Phases.Redo, Index);
+            _Actions[IndexNext].Unarchive(Phases.Redo, IndexNext);
 
             Index++;
 
             _Actions[Index].Redo();
 
-            //MIT.Log.Debug($"Redo (Can Undo:{CanUndo()},Redo:{CanRedo()}) {Debug()}");
+            //MIT.Log.Debug($"Redo (Can Undo:{CanUndo()},Redo:{CanRedo()}) {DebugQueue()}");
         }
+
+        private void Finalise()
+        {
+            //MIT.Log.Debug($"{UnityEngine.Time.frameCount} Finalise {Debug()}");
+            _Actions[Index].Finalise();
+        }
+
+        private void Cleanup()
+        {
+            //MIT.Log.Debug($"{UnityEngine.Time.frameCount} Cleanup {Debug()}");
+            _Actions[Index].Cleanup();
+        }
+
+        private void Complete()
+        {
+            QLog.Debug($"Phases.Complete undo:{_UndoDecrement}");
+            if (_UndoDecrement)
+            {
+                Index--;
+                _UndoDecrement = false;
+            }
+            Action.Phase = Phases.None;
+        }
+
 
         public T GetPrevious<T>() where T : Action
         {
             T previous = null;
             int idx;
-            int miniumum = (_Tail + 1) % QUEUE_LENGTH;
-            if (_Tail > Index) miniumum -= QUEUE_LENGTH;
+            int minimum = (_Tail + 1) % QUEUE_LENGTH;
+            if (_Tail > Index) minimum -= QUEUE_LENGTH;
 
             int i = Index - 1;
             do
             {
-                // i is negative if _Tail is higher than Index, convert it to be in the actual _Actions range
+                // "i" is negative if _Tail is higher than Index, convert it to be in the actual _Actions range
                 idx = (i + QUEUE_LENGTH) % QUEUE_LENGTH;
 
                 if (_Actions[idx] is DeselectAllAction)
@@ -203,7 +233,7 @@ namespace MoveIt.Managers
 
                 i--;
             }
-            while (i >= miniumum);
+            while (i >= minimum);
 
             return previous;
         }
@@ -211,7 +241,7 @@ namespace MoveIt.Managers
         /// <summary>
         /// Remove any future actions from the queue to avoid a multiverse split time paradox
         /// </summary>
-        public void Invalidate()
+        private void Invalidate()
         {
             int start = IndexNext;
             int end = IndexNext > _Head ? _Head + QUEUE_LENGTH : _Head;
@@ -243,12 +273,12 @@ namespace MoveIt.Managers
         public string DebugQueue()
         {
             StringBuilder sb = new();
-            sb.AppendFormat("Idx:{0} {1}/{2} Creation:{3} Current:{4}-{5}", Index, _Tail, _Head, _MIT.CreationPhase, Index, Current.Name);
+            sb.AppendFormat("Idx:{0} {1}/{2} Phase:{3} Current:{4}-{5}", Index, _Tail, _Head, Action.Phase, Index, Current.Name);
             int min = (_Tail + 1) % QUEUE_LENGTH;
             int max = _Head;
             if (max < _Tail) max += QUEUE_LENGTH;
 
-            int c = 0;
+            var c = 0;
             for (int i = min; i <= max; i++)
             {
                 if (c % 5 == 0) sb.Append("\n");

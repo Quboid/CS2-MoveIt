@@ -1,7 +1,7 @@
 ﻿using Colossal.Entities;
 using Colossal.Mathematics;
-using Colossal.PSI.Common;
 using MoveIt.Moveables;
+using MoveIt.Tool;
 using QCommonLib;
 using System;
 using System.Collections.Generic;
@@ -9,11 +9,11 @@ using System.Linq;
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace MoveIt.Overlays
+namespace MoveIt.Overlays.Children
 {
     public class OverlayNode : Overlay
     {
-        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
+        private static readonly EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Common),
@@ -22,28 +22,12 @@ namespace MoveIt.Overlays
                     typeof(MIO_Circles),
             });
 
-        public static Entity Factory(Entity owner, Circle3 circle)
-        {
-            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
-
-            MIO_Common common = new()
-            {
-                m_Owner = owner,
-            };
-
-            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVNode));
-            _MIT.EntityManager.SetComponentData(e, common);
-            _MIT.EntityManager.SetComponentData<MIO_Circle>(e, new(circle));
-
-            return e;
-        }
-
 
         protected override Game.Objects.Transform Transform
         {
             get
             {
-                var transform = m_Moveable.Transform;
+                var transform = _Moveable.Transform;
                 transform.m_Position = _MIT.EntityManager.TryGetComponent<Game.Net.NodeGeometry>(m_Owner, out var nodeGeo) ?
                     nodeGeo.m_Bounds.Center() :
                     _MIT.EntityManager.GetComponentData<Game.Net.Node>(m_Owner).m_Position;
@@ -52,35 +36,46 @@ namespace MoveIt.Overlays
             }
         }
 
-        public OverlayNode() : base(OverlayTypes.MVNode) { }
+        public OverlayNode(Moveable mv) : base(OverlayTypes.MVNode, mv) { }
 
-        public override bool CreateOverlayEntity()
+        protected override bool CreateOverlayEntity()
         {
-            if (m_Moveable is not MVNode node) return false;
-            if (!base.CreateOverlayEntity()) return false;
-
-            m_Entity = OverlayNode.Factory(m_Moveable.m_Entity, new Circle3(m_Moveable.GetRadius(), Transform.m_Position, quaternion.identity));
-            EnqueueUpdate();
-            
-            foreach (var cpd in node.m_CPDefinitions)
+            if (_Moveable is not MVNode)
             {
-                MVControlPoint cp = _MIT.ControlPointManager.GetOrCreate(cpd);
-                ((OverlayControlPoint)cp.m_Overlay).CreateOverlayEntityIfNoneExists();
+                MIT.Log.Error($"ERROR OlayNode.CreateOlayE {_Moveable} is not node.");
+                return false;
             }
+
+            Circle3 circle = new(_Moveable.GetRadius(), Transform.m_Position, quaternion.identity);
+            m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
+
+            MIO_Common common = new()
+            {
+                m_Owner = _Moveable.m_Entity,
+            };
+
+            _MIT.EntityManager.SetComponentData<MIO_Type>(m_Entity, new(OverlayTypes.MVNode));
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
+            _MIT.EntityManager.SetComponentData<MIO_Circle>(m_Entity, new(circle));
+
+            EnqueueUpdate();
 
             return true;
         }
 
         public override void EnqueueUpdate()
         {
-            if (m_Moveable is not MVNode node) return;
+#if IS_DEBUG
+            m_Caller = QCommon.GetStackTrace(15);
+#endif
+            if (_Moveable is not MVNode node) return;
             if (m_Entity.Equals(Entity.Null)) return;
 
             _MIT.QueueOverlayUpdate(this);
 
             foreach (Entity seg in node.m_Segments.Keys)
             {
-                if (_MIT.Moveables.TryGet<MVSegment>(new MVDefinition(Identity.Segment, seg, m_Moveable.IsManipulatable), out var mvSeg))
+                if (_MIT.Moveables.TryGet<MVSegment>(new MVDefinition(Identity.Segment, seg, _Moveable.IsManipulatable), out var mvSeg))
                 {
                     _MIT.QueueOverlayUpdate(mvSeg.m_Overlay);
                 }
@@ -89,8 +84,12 @@ namespace MoveIt.Overlays
 
         public override bool Update()
         {
-            if (m_Moveable is not MVNode node) return false;
-            if (m_Entity.Equals(Entity.Null)) return false;
+            if (_Moveable is not MVNode node) return false;
+            if (!m_Entity.Exists(_MIT.EntityManager))
+            {
+                QLog.Debug($"OlayNode.Update {m_Entity.D()} (for {m_Owner.DX()}) doesn't exist! Queued by:\n{m_Caller}");
+                return false;
+            }
 
             MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
             UpdateCommon(ref common);
@@ -114,7 +113,7 @@ namespace MoveIt.Overlays
                 circleYPos += isNodeA ? curve.a.y : curve.d.y;
 
                 // Don't show this control point circle/line if the segment is hovered or selected in the same mode
-                MVDefinition segDef = new(Identity.Segment, seg, m_Moveable.IsManipulatable);
+                MVDefinition segDef = new(Identity.Segment, seg, _Moveable.IsManipulatable);
                 if (_MIT.Hover.Is(segDef)) continue;
                 if (_MIT.Selection.Has(segDef)) continue;
 

@@ -71,7 +71,7 @@ namespace MoveIt.Overlays
                             break;
 
                         case OverlayTypes.Circle:
-                        case OverlayTypes.SelectionCenter:
+                        case OverlayTypes.SelectionCentralPoint:
                             DrawCircle(common, data_Circle[idx].Circle, Projection.Ground);
                             break;
 
@@ -155,9 +155,9 @@ namespace MoveIt.Overlays
 
             // Render Moveables
 
-            public readonly void RenderMVBuilding(MIO_Common common, DynamicBuffer<MIO_Lines> lines, DynamicBuffer<MIO_DashedLines> dashedLines)
+            private readonly void RenderMVBuilding(MIO_Common common, DynamicBuffer<MIO_Lines> lines, DynamicBuffer<MIO_DashedLines> dashedLines)
             {
-                for (int i = 0; i < lines.Length; i++)
+                for (var i = 0; i < lines.Length; i++)
                 {
                     DrawLine(common, lines[i].Line, Projection.Ground, default, IsManipulating ? 0.25f : 1f);
                 }
@@ -168,7 +168,7 @@ namespace MoveIt.Overlays
                 }
             }
 
-            public readonly void RenderMVCircle(MIO_Common common, Circle3 circle)
+            private readonly void RenderMVCircle(MIO_Common common, Circle3 circle)
             {
                 if (IsManipulating)
                 {
@@ -180,17 +180,17 @@ namespace MoveIt.Overlays
                 DrawCircle(common, circle, Projection.Fixed);
             }
 
-            public readonly void RenderMVDecal(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
+            private readonly void RenderMVDecal(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
             {
                 if (IsManipulating) return;
-                for (int i = 0; i < lines.Length; i++)
+                for (var i = 0; i < lines.Length; i++)
                 {
                     DrawLine(common, lines[i].Line, Projection.Fixed, default, IsManipulating ? 0.25f : 1f);
                     if (common.ShowShadow) DrawLine(common, lines[i].Line, Projection.Ground, Colors.Get(ColorData.Contexts.Shadow), common.m_ShadowOpacity * (IsManipulating ? 0.25f : 1f));
                 }
             }
 
-            public readonly void RenderMVNode(MIO_Common common, Circle3 circle, DynamicBuffer<MIO_Lines> lines, DynamicBuffer<MIO_Circles> cpPositions)
+            private readonly void RenderMVNode(MIO_Common common, Circle3 circle, DynamicBuffer<MIO_Lines> lines, DynamicBuffer<MIO_Circles> cpPositions)
             {
                 if (IsManipulating) return;
                 //{
@@ -209,7 +209,7 @@ namespace MoveIt.Overlays
                 DrawCircles(faded, cpPositions, Projection.Fixed);
             }
 
-            public readonly void RenderMVSegment(MIO_Common common, MIO_Bezier bezier, DynamicBuffer<MIO_Beziers> curves, DynamicBuffer<MIO_DashedLines> dashed, DynamicBuffer<MIO_Circles> cpPositions)
+            private readonly void RenderMVSegment(MIO_Common common, MIO_Bezier bezier, DynamicBuffer<MIO_Beziers> curves, DynamicBuffer<MIO_DashedLines> dashed, DynamicBuffer<MIO_Circles> cpPositions)
             {
                 if (IsManipulating) return;
 
@@ -217,7 +217,7 @@ namespace MoveIt.Overlays
 
                 for (int i = 0; i < curves.Length; i++)
                 {
-                    DrawCurve(common, curves[i].Curve, Projection.Fixed, Colors.Get(common, m_ToolFlags), 0.2f);
+                    DrawCurve(common, curves[i].Curve, Projection.Fixed, Colors.Get(common, m_ToolFlags), 0.2f, 1f, 1.6f);
                 }
 
                 for (int i = 0; i < dashed.Length; i++)
@@ -226,7 +226,7 @@ namespace MoveIt.Overlays
                 }
             }
 
-            public readonly void RenderMVSurface(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
+            private readonly void RenderMVSurface(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
             {
                 if (IsManipulating) return;
 
@@ -236,7 +236,7 @@ namespace MoveIt.Overlays
                 }
             }
 
-            public readonly void RenderMVControlPoint(MIO_Common common, Circle3 circle)
+            private readonly void RenderMVControlPoint(MIO_Common common, Circle3 circle)
             {
                 if (IsManipulating) return;
 
@@ -245,13 +245,15 @@ namespace MoveIt.Overlays
             }
 
 
-            public readonly void RenderMVManipControlPoint(MIO_Common common, Circle3 circle)
+            private readonly void RenderMVManipControlPoint(MIO_Common common, Circle3 circle)
             {
+                if (!IsManipulating) return;
+
                 DrawCircle(common, circle, Projection.Fixed);
                 if (common.ShowShadow) DrawCircle(common, circle, Projection.Ground, Colors.Get(ColorData.Contexts.Shadow), common.m_ShadowOpacity);
             }
 
-            public readonly void RenderMVManipSegment(MIO_Common common, MIO_Bezier bezier, DynamicBuffer<MIO_Beziers> curves, DynamicBuffer<MIO_DashedLines> dashed)
+            private readonly void RenderMVManipSegment(MIO_Common common, MIO_Bezier bezier, DynamicBuffer<MIO_Beziers> curves, DynamicBuffer<MIO_DashedLines> dashed)
             {
                 if (!IsManipulating) return;
 
@@ -261,9 +263,9 @@ namespace MoveIt.Overlays
 
                 Color c = Colors.Get(common, m_ToolFlags);
 
-                for (int i = 0; i < curves.Length; i++)
+                for (var i = 0; i < curves.Length; i++)
                 {
-                    DrawCurve(common, curves[i].Curve, Projection.Fixed, c, 0.2f);
+                    DrawCurve(common, curves[i].Curve, Projection.Fixed, c, 0.2f, 1f, 1.6f);
                 }
 
                 for (int i = 0; i < dashed.Length; i++)
@@ -275,14 +277,14 @@ namespace MoveIt.Overlays
 
             // Simple draw calls
 
-            public readonly void DrawCircle(MIO_Common common, Circle3 circle, Projection proj, Color color = default, float opacity = 1f)
+            private readonly void DrawCircle(MIO_Common common, Circle3 circle, Projection proj, Color color = default, float opacity = 1f)
             {
                 common.m_OutlineColor = color.Equals(default) ? Colors.Get(common, m_ToolFlags) : color;
                 common.m_OutlineColor.a *= opacity;
                 DrawTools.CircleSimple(m_OverlayRenderBuffer, common, circle, proj);
             }
 
-            public readonly void DrawDashedCircle(MIO_Common common, Circle3 circle, Projection proj, Color fgColor = default, Color bgColor = default, float opacity = 1f)
+            private readonly void DrawDashedCircle(MIO_Common common, Circle3 circle, Projection proj, Color fgColor = default, Color bgColor = default, float opacity = 1f)
             {
                 common.m_OutlineColor = fgColor.Equals(default) ? Colors.Get(common, m_ToolFlags) : fgColor;
                 common.m_BackgroundColor = bgColor;
@@ -290,28 +292,28 @@ namespace MoveIt.Overlays
                 DrawTools.CircleDashedSimple(m_OverlayRenderBuffer, common, circle, proj);
             }
 
-            public readonly void DrawLine(MIO_Common common, Line3.Segment line, Projection proj, Color color = default, float opacity = 1f)
+            private readonly void DrawLine(MIO_Common common, Line3.Segment line, Projection proj, Color color = default, float opacity = 1f)
             {
                 common.m_OutlineColor = color.Equals(default) ? Colors.Get(common, m_ToolFlags) : color;
                 common.m_OutlineColor.a *= opacity;
                 DrawTools.LineSimple(m_OverlayRenderBuffer, common, line, proj);
             }
 
-            public readonly void DrawCurve(MIO_Common common, Bezier4x3 curve, Projection proj, Color color = default, float width = -1, float opacity = 1f)
+            private readonly void DrawCurve(MIO_Common common, Bezier4x3 curve, Projection proj, Color color = default, float width = -1, float opacity = 1f, float widthMultiplier = 1f)
             {
                 common.m_OutlineColor = color.Equals(default) ? Colors.Get(common, m_ToolFlags) : color;
                 common.m_OutlineColor.a *= opacity;
-                DrawTools.Curve(m_OverlayRenderBuffer, common, curve, proj, width);
+                DrawTools.Curve(m_OverlayRenderBuffer, common, curve, proj, width, widthMultiplier);
             }
 
-            public readonly void DrawLineDashed(MIO_Common common, Line3.Segment line, Projection proj, Color color = default, float opacity = 1f)
+            private readonly void DrawLineDashed(MIO_Common common, Line3.Segment line, Projection proj, Color color = default, float opacity = 1f)
             {
                 common.m_OutlineColor = color.Equals(default) ? Colors.Get(common, m_ToolFlags) : color;
                 common.m_OutlineColor.a *= opacity;
                 DrawTools.LineDashedSimple(m_OverlayRenderBuffer, common, line, proj);
             }
 
-            public readonly void DrawLines(MIO_Common common, DynamicBuffer<MIO_Lines> lines, Projection proj, Color color = default, float opacity = 1f)
+            private readonly void DrawLines(MIO_Common common, DynamicBuffer<MIO_Lines> lines, Projection proj, Color color = default, float opacity = 1f)
             {
                 common.m_OutlineColor = color.Equals(default) ? Colors.Get(common, m_ToolFlags) : color;
                 common.m_OutlineColor.a *= opacity;
@@ -322,12 +324,12 @@ namespace MoveIt.Overlays
                 }
             }
 
-            public readonly void DrawBounds(MIO_Common common, Bounds3 bounds, Projection proj, Color color = default, float opacity = 1f)
+            private readonly void DrawBounds(MIO_Common common, Bounds3 bounds, Projection proj, Color color = default, float opacity = 1f)
             {
                 DrawQuad(common, bounds.ToQuad3(), proj, color, opacity);
             }
 
-            public readonly void DrawQuad(MIO_Common common, Quad3 quad, Projection proj, Color color = default, float opacity = 1f)
+            private readonly void DrawQuad(MIO_Common common, Quad3 quad, Projection proj, Color color = default, float opacity = 1f)
             {
                 common.m_OutlineColor = color.Equals(default) ? Colors.Get(common, m_ToolFlags) : color;
                 common.m_OutlineColor.a *= opacity;
@@ -338,7 +340,7 @@ namespace MoveIt.Overlays
                 DrawTools.LineSimple(m_OverlayRenderBuffer, common, quad.bc, proj); // Bottom
             }
 
-            public readonly void DrawLinesDashed(MIO_Common common, DynamicBuffer<MIO_Lines> lines, Projection proj, Color color = default, float opacity = 1f)
+            private readonly void DrawLinesDashed(MIO_Common common, DynamicBuffer<MIO_Lines> lines, Projection proj, Color color = default, float opacity = 1f)
             {
                 common.m_OutlineColor = color.Equals(default) ? Colors.Get(common, m_ToolFlags) : color;
                 common.m_OutlineColor.a *= opacity;
@@ -349,7 +351,7 @@ namespace MoveIt.Overlays
                 }
             }
 
-            public readonly void DrawCircles(MIO_Common common, DynamicBuffer<MIO_Circles> circles, Projection proj, Color color = default, float opacity = 1f)
+            private readonly void DrawCircles(MIO_Common common, DynamicBuffer<MIO_Circles> circles, Projection proj, Color color = default, float opacity = 1f)
             {
                 common.m_OutlineColor = color.Equals(default) ? Colors.Get(common, m_ToolFlags) : color;
                 common.m_OutlineColor.a *= opacity;

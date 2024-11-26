@@ -1,7 +1,6 @@
 ﻿using MoveIt.Moveables;
 using MoveIt.Selection;
 using MoveIt.Tool;
-using QCommonLib;
 using System.Collections.Generic;
 
 namespace MoveIt.Actions
@@ -33,19 +32,21 @@ namespace MoveIt.Actions
             List<MVDefinition> toSelection = prev is null ? new() : prev.GetInitialSelectionStates();
             ToggleMode(fromSelection, toSelection, !m_IsManipulationMode);
             //MIT.Log.Debug($"MSA.Do is:{_MIT.m_IsManipulateMode} |{prev}| from:{fromSelection.Count}, to:{toSelection.Count}");
+
+            Phase = Phases.Complete;
         }
 
         /// <summary>
         /// This action will be restored to the current one
         /// Runs directly after Archive(), before Undo() and Redo(), not on a newly Pushed action
         /// </summary>
-        /// <param name="toolAction">The tool action at the time of unarchiving</param>
+        /// <param name="phase">The tool action at the time of unarchiving</param>
         /// <param name="idx">This action's queue index</param>
-        public override void Unarchive(MITActions toolAction, int idx)
+        public override void Unarchive(Phases phase, int idx)
         {
             _SelectionState.CleanDefinitions();
             _InitialSelectionState.CleanDefinitions();
-            //MIT.Log.Debug($"MSA.Unarchive {idx}:{_MIT.Queue.Current.Name} ToolAction:{toolAction}");
+            MIT.Log.Debug($"MSA.Unarchive {idx}:{_MIT.Queue.Current.Name} ToolAction:{phase}");
         }
 
         /// <summary>
@@ -53,10 +54,10 @@ namespace MoveIt.Actions
         /// </summary>
         public override void Undo()
         {
-            base.Undo();
             List<MVDefinition> fromSelection = _SelectionState.Definitions;
             List<MVDefinition> toSelection = _InitialSelectionState.Definitions;
             ToggleMode(fromSelection, toSelection, m_IsManipulationMode);
+            base.Undo();
         }
 
         /// <summary>
@@ -64,10 +65,10 @@ namespace MoveIt.Actions
         /// </summary>
         public override void Redo()
         {
-            base.Redo();
             List<MVDefinition> fromSelection = _InitialSelectionState.Definitions;
             List<MVDefinition> toSelection = _SelectionState.Definitions;
             ToggleMode(fromSelection, toSelection, !m_IsManipulationMode);
+            base.Redo();
         }
 
         private void ToggleMode(List<MVDefinition> fromSelection, List<MVDefinition> toSelection, bool willBeManipulating)
@@ -87,7 +88,7 @@ namespace MoveIt.Actions
         {
             SelectionState newSelectionStates = new(_MIT.m_IsManipulateMode, toSelection);
 
-            MIT.Log.Debug($"ModeSwitchAction.ProcessSelectionChange" +
+            MIT.Log.Debug($"ModeSwitchAction.ProcessModeSelectionChange" +
                 $"\n FromSelection: {MIT.DebugDefinitions(fromSelection)}" +
                 $"\n   ToSelection: {MIT.DebugDefinitions(toSelection)}" +
                 $"\n         Final: {MIT.DebugDefinitions(newSelectionStates.Definitions)}");
@@ -99,7 +100,7 @@ namespace MoveIt.Actions
             }
             catch (System.Exception ex)
             {
-                MIT.Log.Error($"Failed ProcessSelectionChange toSel:{toSelection.Count}, newSelStates:{newSelectionStates.Count}\n" + ex);
+                MIT.Log.Error($"Failed ProcessModeSelectionChange toSel:{toSelection.Count}, newSelStates:{newSelectionStates.Count}\n" + ex);
 
                 _MIT.Selection = _MIT.m_IsManipulateMode ? new SelectionManip() : new SelectionNormal();
                 _MIT.Selection.Refresh();

@@ -10,9 +10,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using MoveIt.Input;
 using Unity.Collections;
 using Unity.Entities;
 
+// ReSharper disable once CheckNamespace
 namespace MoveIt.Systems
 {
     internal partial class MIT_UISystem : UISystemBase
@@ -105,42 +107,40 @@ namespace MoveIt.Systems
         /// <param name="buttonId">The HTML element's ID</param>
         private void MIT_PanelButtonPress(string section, string buttonId)
         {
-            if (section.Equals("toprow"))
+            if (!section.Equals("toprow")) return;
+            
+            switch (buttonId)
             {
-                switch (buttonId)
-                {
-                    case "undo":
+                case "undo":
 
-                        if (_MIT.MITState == MITStates.Default)
-                        {
-                            _MIT.MITAction = MITActions.Undo;
-                        }
-                        break;
+                    if (_MIT.MITState == MITStates.Default)
+                    {
+                        Actions.Action.Phase = Actions.Phases.Undo;
+                    }
+                    break;
 
-                    case "redo":
-                        if (_MIT.MITState == MITStates.Default)
-                        {
-                            _MIT.MITAction = MITActions.Redo;
-                        }
-                        break;
+                case "redo":
+                    if (_MIT.MITState == MITStates.Default)
+                    {
+                        Actions.Action.Phase = Actions.Phases.Redo;
+                    }
+                    break;
 
-                    case "single":
-                        _MIT.SetSelectionMode(false);
-                        break;
+                case "single":
+                    _MIT.SetSelectionMode(false);
+                    break;
 
-                    case "marquee":
-                        _MIT.SetSelectionMode(true);
-                        break;
+                case "marquee":
+                    _MIT.SetSelectionMode(true);
+                    break;
 
-                    case "manipulation":
-                        _MIT.SetManipulationMode(true);
-                        break;
+                case "manipulation":
+                    _MIT.SetManipulationMode(true);
+                    break;
 
-                    default:
-                        MIT.Log.Debug($"UIButton: {buttonId}");
-                        break;
-                }
-                return;
+                default:
+                    MIT.Log.Debug($"UIButton: {buttonId}");
+                    break;
             }
         }
 
@@ -152,19 +152,15 @@ namespace MoveIt.Systems
         /// <param name="value">The checkbox's value</param>
         private void MIT_PanelCheckboxChange(string section, string buttonId, bool value)
         {
-            if (section.Equals("filters"))
+            if (!section.Equals("filters")) throw new NotImplementedException();
+            
+            if (buttonId.Equals("filtersAll"))
             {
-                if (buttonId.Equals("filtersAll"))
-                {
-                    _PanelState.m_FilterSection.UI_ToggleAll(value);
-                    return;
-                }
-
-                _PanelState.m_FilterSection.SetFilter(buttonId, value);
+                _PanelState.m_FilterSection.UI_ToggleAll(value);
                 return;
             }
 
-            throw new NotImplementedException();
+            _PanelState.m_FilterSection.SetFilter(buttonId, value);
         }
 
         /// <summary>
@@ -177,32 +173,29 @@ namespace MoveIt.Systems
         {
             if (button == 0)
             {
-                if (section.Equals("filters"))
+                switch (section)
                 {
-                    if (id.Equals("filtersAll"))
-                    {
+                    case "filters" when id.Equals("filtersAll"):
                         _PanelState.m_FilterSection.TogglePanelOpen();
                         return;
-                    }
-
-                    _PanelState.m_FilterSection.ToggleFilter(id);
-                    return;
-                }
-
-                if (section.Equals("toolbox"))
-                {
-                    if (id == "toolboxTitle")
+                    case "filters":
+                        _PanelState.m_FilterSection.ToggleFilter(id);
+                        return;
+                    case "toolbox":
                     {
-                        _PanelState.m_ToolboxSection.TogglePanelOpen();
+                        if (id == "toolboxTitle")
+                        {
+                            _PanelState.m_ToolboxSection.TogglePanelOpen();
+                        }
+                        else
+                        {
+                            _MIT.ToolboxManager.Activate(id);
+                        }
+                        return;
                     }
-                    else
-                    {
-                        _MIT.ToolboxManager.Activate(id);
-                    }
-                    return;
+                    default:
+                        return;
                 }
-
-                return;
             }
 
             if (button == 2)
@@ -231,11 +224,11 @@ namespace MoveIt.Systems
             {
                 sb.AppendFormat("/P:**{0}**", _MIT.ToolboxManager.Phase);
             }
-            if (_MIT.MITAction != MITActions.None)
+            if (Actions.Action.Phase != Actions.Phases.None)
             {
-                sb.AppendFormat("/TA:**{0}**", _MIT.MITAction);
+                sb.AppendFormat("/AP:**{0}**", Actions.Action.Phase);
             }
-            sb.AppendFormat("\nAction:**{0}**{1} {2}\n", _MIT.Queue.Current, _MIT.Queue.HasCreationAction ? "*" : "", _MIT.Queue.UI_GetQueueIndexes());
+            sb.AppendFormat("\nAction:**{0}** {1}\n", _MIT.Queue.Current, _MIT.Queue.UI_GetQueueIndexes());
             if (_MIT.Hover.Normal.IsNull && _MIT.Hover.Child.IsNull)
             {
                 sb.AppendFormat("Nothing hovered\n");
@@ -263,11 +256,11 @@ namespace MoveIt.Systems
             sb.AppendFormat("MVs:**{0}** (CPs:{1}), Sel:**{2}** ({3})\n",
                 _MIT.Moveables.Count, _MIT.Moveables.CountOf<MVControlPoint>(), _MIT.Selection.Count,
                 _MIT.Selection.CountFull - _MIT.Selection.Count >= 0 ? _MIT.Selection.CountFull - _MIT.Selection.Count : "...");
-            sb.AppendFormat("Overlays:**{0}** ({1} types), Util:**{2}**, CPs:**{3}**\n",
+            sb.AppendFormat("Overlays:**{0}** ({1} types), Util:**{2}**, CPs:**{3}**/**{4}**\n",
                 GetOverlayCount(),
                 GetOverlayTypeCount(),
-                GetOverlayCount(OverlayTypes.SelectionCenter) + GetOverlayCount(OverlayTypes.Marquee),
-                GetOverlayCount(OverlayTypes.MVControlPoint));
+                GetOverlayCount(OverlayTypes.SelectionCentralPoint) + GetOverlayCount(OverlayTypes.Marquee),
+                GetOverlayCount(OverlayTypes.MVControlPoint), GetOverlayCount(OverlayTypes.MVManipControlPoint));
             return sb.ToString();
         }
 
@@ -275,8 +268,8 @@ namespace MoveIt.Systems
         {
             if (doRebind)
             {
-                var conflicts = GetActionKeyConflicts(Inputs.KEY_TOGGLETOOL);
-                for (int i = 0; i < conflicts.Count; i++)
+                List<ProxyBinding> conflicts = GetActionKeyConflicts(Inputs.KEY_TOGGLETOOL);
+                for (var i = 0; i < conflicts.Count; i++)
                 {
                     ProxyBinding binding = conflicts[i];
                     binding.path = string.Empty;
@@ -322,13 +315,8 @@ namespace MoveIt.Systems
         {
             if (_DrawQuery.IsEmpty) return 0;
 
-            int c = 0;
-            var all = _DrawQuery.ToEntityArray(Allocator.Temp);
-            foreach (Entity e in all)
-            {
-                if (EntityManager.GetComponentData<MIO_Type>(e).m_Type == t) c++;
-            }
-            return c;
+            NativeArray<Entity> all = _DrawQuery.ToEntityArray(Allocator.Temp);
+            return all.Count(e => EntityManager.GetComponentData<MIO_Type>(e).m_Type == t);
         }
 
         internal int GetOverlayTypeCount()
@@ -338,24 +326,24 @@ namespace MoveIt.Systems
                 if (_DrawQuery.IsEmpty) return 0;
 
                 HashSet<OverlayTypes> types = new();
-                var all = _DrawQuery.ToEntityArray(Allocator.Temp);
+                NativeArray<Entity> all = _DrawQuery.ToEntityArray(Allocator.Temp);
                 foreach (Entity e in all)
                 {
                     if (!EntityManager.Exists(e)) continue;
 
-                    var t = EntityManager.GetComponentData<MIO_Type>(e).m_Type;
-                    if (!types.Contains(t)) types.Add(t);
+                    OverlayTypes t = EntityManager.GetComponentData<MIO_Type>(e).m_Type;
+                    types.Add(t);
                 }
                 all.Dispose();
                 return types.Count;
             }
             catch (Exception ex)
             {
-                var all = _DrawQuery.ToEntityArray(Allocator.Temp);
-                string msg = "";
+                NativeArray<Entity> all = _DrawQuery.ToEntityArray(Allocator.Temp);
+                var msg = "";
                 foreach (Entity e in all)
                 {
-                    string exists = "N";
+                    var exists = "N";
                     try
                     {
                         if (EntityManager.Exists(e)) { exists = "Y"; }
@@ -372,7 +360,7 @@ namespace MoveIt.Systems
         internal static List<ProxyBinding> GetActionKeyConflicts(string actionName)
         {
             List<ProxyBinding> results = new();
-            var bindings = Mod.Settings.GetAction(actionName).bindings;
+            IEnumerable<ProxyBinding> bindings = Mod.Settings.GetAction(actionName).bindings;
             foreach (var binding in bindings)
             {
                 results.AddRange(binding.conflicts);
@@ -388,11 +376,11 @@ namespace MoveIt.Systems
 
         internal string DebugDrawQuery()
         {
-            string msg = $"Overlays:{_DrawQuery.CalculateEntityCount()}\n";
-            var all = _DrawQuery.ToEntityArray(Allocator.Temp);
+            var msg = $"Overlays:{_DrawQuery.CalculateEntityCount()}\n";
+            NativeArray<Entity> all = _DrawQuery.ToEntityArray(Allocator.Temp);
             foreach (Entity olay in all)
             {
-                var t = _MIT.EntityManager.GetComponentData<MIO_Type>(olay).m_Type;
+                OverlayTypes t = _MIT.EntityManager.GetComponentData<MIO_Type>(olay).m_Type;
                 msg += $"  [{olay.D()}-{t}]";
             }
             return msg + $"\n{_MIT.Moveables.DebugFull()}";

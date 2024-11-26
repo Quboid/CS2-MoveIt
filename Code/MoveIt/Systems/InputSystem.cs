@@ -1,5 +1,7 @@
-﻿using MoveIt.Actions.Select;
+﻿using MoveIt.Actions;
+using MoveIt.Actions.Select;
 using MoveIt.Actions.Toolbox;
+using MoveIt.Input;
 using MoveIt.Tool;
 using QCommonLib;
 
@@ -115,50 +117,50 @@ namespace MoveIt.Systems
             //DebugDumpAllBindings();
         }
 
-        private void DoToolToggle()
+        private static void DoToolToggle()
         {
             //MIT.Log.Debug($"Key: {Inputs.KEY_TOGGLETOOL}");
             _MIT.RequestToggle();
         }
 
-        private void DoUndo()
+        private static void DoUndo()
         {
             //MIT.Log.Debug($"Key: {Inputs.KEY_UNDO}");
             if (_MIT.MITState == MITStates.Default)
             {
-                _MIT.MITAction = MITActions.Undo;
+                Action.Phase = Phases.Undo;
             }
         }
 
-        private void DoRedo()
+        private static void DoRedo()
         {
             //MIT.Log.Debug($"Key: {Inputs.KEY_REDO}");
             if (_MIT.MITState == MITStates.Default)
             {
-                _MIT.MITAction = MITActions.Redo;
+                Action.Phase = Phases.Redo;
             }
         }
         
-        private void DoDeselectAll()
+        private static void DoDeselectAll()
         {
             //MIT.Log.Debug($"Key: {Inputs.KEY_DESELECTALL}");
             _MIT.Queue.Push(new DeselectAllAction());
-            _MIT.MITAction = MITActions.Do;
-            //_MIT.Queue.Do();
+            Action.Phase = Phases.Do;
         }
-        private void DoFiltersToggle()
+
+        private static void DoFiltersToggle()
         {
             //MIT.Log.Debug($"Key: {Inputs.KEY_FILTERSTOGGLE}");
             _MIT.m_UISystem.ToggleFiltersPanel();
         }
 
-        private void DoDebugFreeze()
+        private static void DoDebugFreeze()
         {
             _MIT.m_OverlaySystem.DebugFreeze = !_MIT.m_OverlaySystem.DebugFreeze;
             MIT.Log.Debug($"Key: {Inputs.KEY_DEBUGFREEZE} ({_MIT.m_OverlaySystem.DebugFreeze})");
         }
 
-        private void ToolboxActivate(string id)
+        private static void ToolboxActivate(string id)
         {
             _MIT.ToolboxManager.Activate(id);
         }

@@ -1,11 +1,10 @@
 ﻿using Colossal.UI.Binding;
-using QCommonLib;
 
 namespace MoveIt.UI
 {
     public class ButtonState : IJsonWritable
     {
-        public string m_Id;
+        public readonly string m_Id;
         public bool m_Enabled;
         public bool m_Active;
 
@@ -63,6 +62,7 @@ namespace MoveIt.UI
             return true;
         }
 
+        // ReSharper disable once BaseObjectGetHashCodeCallInGetHashCode
         public override int GetHashCode() => base.GetHashCode();
     }
 }

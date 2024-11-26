@@ -43,34 +43,35 @@ namespace MoveIt
     internal abstract class RaycastBase
     {
         private readonly RaycastSystem _RaycastSystem;
-        private readonly World _World;
 
         // Will be float.MaxValue,float.MaxValue,float.MaxValue when tool is activated
         internal float3 HitPosition => GetHit().m_HitPosition;
 
-        internal Line3.Segment Line => ToolRaycastSystem.CalculateRaycastLine(Camera.main);
+        internal static Line3.Segment Line => ToolRaycastSystem.CalculateRaycastLine(Camera.main);
 
         protected abstract RaycastInput GetInput();
 
-        public RaycastBase(World gameWorld)
+        protected RaycastBase(World gameWorld)
         {
-            _World = gameWorld;
-            _RaycastSystem = _World.GetOrCreateSystemManaged<RaycastSystem>();
+            _RaycastSystem = gameWorld.GetOrCreateSystemManaged<RaycastSystem>();
 
-            RaycastInput input = GetInput();
+            RaycastInput input = GetInputFromAbstract();
 
             _RaycastSystem.AddInput(this, input);
         }
+        
+        private RaycastInput GetInputFromAbstract()
+            => GetInput();
 
         public NativeArray<RaycastResult> GetResults()
         {
             return _RaycastSystem.GetResult(this);
         }
 
-        public RaycastHit GetHit()
+        private RaycastHit GetHit()
         {
             NativeArray<RaycastResult> result = GetResults();
-            if (result == null || result.Length == 0)
+            if (!result.IsCreated || result.Length == 0)
             {
                 RaycastHit res = new()
                 {

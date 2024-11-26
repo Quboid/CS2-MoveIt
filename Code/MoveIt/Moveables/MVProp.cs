@@ -1,4 +1,4 @@
-﻿using MoveIt.Overlays;
+﻿using MoveIt.Overlays.Children;
 using Unity.Entities;
 
 namespace MoveIt.Moveables
@@ -7,8 +7,8 @@ namespace MoveIt.Moveables
     {
         public MVProp(Entity e) : base(e, Identity.Prop)
         {
-            m_Overlay = Factory.Create<OverlayProp>(this, OverlayTypes.MVCircle);
-            Refresh();
+            m_Overlay = new OverlayProp(this);
+            RefreshFromAbstract();
         }
     }
 }

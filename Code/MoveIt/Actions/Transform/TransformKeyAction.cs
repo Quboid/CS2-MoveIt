@@ -1,5 +1,4 @@
-﻿using MoveIt.Tool;
-using Unity.Mathematics;
+﻿using Unity.Mathematics;
 using UnityEngine;
 
 namespace MoveIt.Actions.Transform
@@ -24,15 +23,25 @@ namespace MoveIt.Actions.Transform
 
             MoveDelta += direction;
 
-            _MIT.MITAction = MITActions.Do;
-            _MIT.CreationPhase = CreationPhases.Create;
+            Phase = Phases.Do;
         }
 
         protected override bool ToolDo()
         {
             m_UpdateMove = true;
-            DoFromAngleAndMoveDeltas();
+            DoFromDeltas();
             return true;
+        }
+
+        protected override void ToolDoLast()
+        {
+            Phase = Phases.Finalise;
+        }
+
+        public override void Archive(Phases phase, int idx)
+        {
+            Phase = Phases.Finalise;
+            base.Archive(phase, idx);
         }
     }
 }

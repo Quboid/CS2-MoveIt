@@ -18,7 +18,7 @@ namespace MoveIt.Selection
 
         public override void ProcessAdd(MVDefinition mvd, bool append)
         {
-            Moveable mv = _MIT.Moveables.GetOrCreate<Moveable>(mvd);
+            var mv = _MIT.Moveables.GetOrCreate<Moveable>(mvd);
 
             if (mv.IsManipulatable)
             {
@@ -35,7 +35,7 @@ namespace MoveIt.Selection
             }
         }
 
-        internal override HashSet<MVDefinition> GetObjectsToTransform()
+        protected override HashSet<MVDefinition> GetObjectsToTransform()
         {
             bool isSegmentMove = _Buffer.Count(mvd => mvd.m_Identity != Identity.Segment && mvd.m_Identity != Identity.NetLane) == 0;
 
@@ -54,7 +54,7 @@ namespace MoveIt.Selection
 
             int max = definitions.Count;
 
-            for (int i = 0; i < max; i++)
+            for (var i = 0; i < max; i++)
             {
                 Moveable mv = GetMV(definitions[i]);
                 List<MVDefinition> list = mv.GetChildrenToTransform();

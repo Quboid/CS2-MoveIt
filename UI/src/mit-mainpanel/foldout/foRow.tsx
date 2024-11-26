@@ -49,7 +49,7 @@ export function FOEntryRow(data: FOMainEntryData, state: FOMainEntryState) : JSX
         [foStyles.inactive]: !state.IsActive,
     });
     const showCB = data.Checkbox !== undefined && state.Checkbox !== undefined;
-    const showPO = true;//data.Popout !== undefined && state.Popout !== undefined;
+    const showPO = false;//data.Popout !== undefined && state.Popout !== undefined;
     const labelClasses = classNames({
         [foStyles.label]: true,
         [foStyles.labelCB]: showCB,

@@ -1,5 +1,4 @@
 ﻿using MoveIt.Tool;
-using QCommonLib;
 using System;
 using Unity.Entities;
 
@@ -12,18 +11,20 @@ namespace MoveIt.Moveables
         public readonly bool m_IsManipulatable  = false;
         public readonly bool m_IsManaged        = false;
         public readonly Entity m_Parent         = Entity.Null;
+        public readonly Identity m_ParentId     = Identity.Invalid;
         public readonly short m_ParentKey       = -1;
 
         public readonly bool IsNull             => m_Entity.Equals(Entity.Null) && m_Parent.Equals(Entity.Null);
         public readonly bool IsChild            => !m_Parent.Equals(Entity.Null);
 
-        public MVDefinition(Identity identity, Entity e, bool isManipulatable, bool isManaged, Entity parent, short parentKey)
+        public MVDefinition(Identity identity, Entity e, bool isManipulatable, bool isManaged, Entity parent, Identity parentId, short parentKey)
         {
             m_Identity          = identity;
             m_Entity            = e;
             m_IsManipulatable   = isManipulatable;
             m_IsManaged         = isManaged;
             m_Parent            = parent;
+            m_ParentId          = parentId;
             m_ParentKey         = parentKey;
         }
 
@@ -37,19 +38,6 @@ namespace MoveIt.Moveables
         // Why on earth does C# not use my default values unless I have this?!
         public MVDefinition()
         { }
-
-        //public Entity RefreshEntity()
-        //{
-        //    if (!m_IsManaged) return m_Entity;
-        //    if (!IsChild) return m_Entity;
-
-        //    if (m_Identity == Identity.ControlPoint)
-        //    {
-        //        MIT.m_Instance.ControlPointManager.GetOrCreate
-        //    }
-
-        //    return m_Entity;
-        //}
 
         public readonly bool Equals(MVDefinition rhs)
         {
@@ -68,25 +56,22 @@ namespace MoveIt.Moveables
 
         public readonly bool Equals(Moveable rhs)
         {
+            if (rhs is null) return false;
+            
             if (IsChild)
             {
-                if (rhs is MVControlPoint cp)
-                {
-                    if (!m_Parent.Equals(cp.m_Parent)) return false;
-                    if (m_ParentKey != cp.m_ParentKey) return false;
-                    if (m_IsManipulatable != cp.IsManipulatable) return false;
-                    return true;
-                }
-                return false;
+                if (rhs is not MVControlPoint cp) return false;
+                if (!m_Parent.Equals(cp.m_Parent)) return false;
+                if (m_ParentKey != cp.m_ParentKey) return false;
+                return m_IsManipulatable == cp.IsManipulatable;
             }
 
             if (!m_Entity.Equals(rhs.m_Entity)) return false;
             if (m_IsManipulatable != rhs.IsManipulatable) return false;
-            if (m_IsManaged != rhs.IsManaged) return false;
-            return true;
+            return m_IsManaged == rhs.IsManaged;
         }
 
-        public override readonly int GetHashCode()
+        public readonly override int GetHashCode()
         {
             unchecked
             {
@@ -97,9 +82,14 @@ namespace MoveIt.Moveables
 
         public override string ToString()
         {
-            string msg = $"{m_Entity.DX()}{(m_IsManipulatable ? "-Manip" : "")}{(m_IsManaged ? "-Managed" : "")}";
+            var msg = $"{m_Entity.DX()}{(m_IsManipulatable ? "-Manip" : "")}{(m_IsManaged ? "-Managed" : "")}";
             if (m_Parent.Equals(Entity.Null) && !m_Entity.Equals(Entity.Null)) return msg;
-            return $"{msg}-Parent:{m_Parent.DX()}-{m_ParentKey}";
+            return m_Parent.Equals(Entity.Null) ? $"{msg}-NullParent" : $"{msg}-Parent:{m_Parent.DX()}-{m_ParentKey}";
+        }
+
+        public string E()
+        {
+            return m_Entity.DX();
         }
     }
 }

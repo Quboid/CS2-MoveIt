@@ -4,16 +4,9 @@ namespace MoveIt.UI
 {
     public class PanelState : IJsonWritable
     {
-        public TopRowButtonStates m_TopRow;
-        public FilterSectionState m_FilterSection;// => MIT.m_Instance?.Filtering?.m_StatesData;
-        public ToolboxSectionState m_ToolboxSection;
-
-        public PanelState()
-        {
-            m_TopRow = new TopRowButtonStates();
-            m_FilterSection = new FilterSectionState();
-            m_ToolboxSection = new ToolboxSectionState();
-        }
+        public readonly TopRowButtonStates m_TopRow             = new();
+        public readonly FilterSectionState m_FilterSection      = new();
+        public readonly ToolboxSectionState m_ToolboxSection    = new();
 
         public void Update()
         {
@@ -36,7 +29,7 @@ namespace MoveIt.UI
 
         public override string ToString()
         {
-            return "PanelState:\n" + m_TopRow.ToString() + "\n" + m_FilterSection.ToString();
+            return "PanelState:\n" + m_TopRow + "\n" + m_FilterSection;
         }
 
         public override bool Equals(object obj)
@@ -46,6 +39,7 @@ namespace MoveIt.UI
             return ps.m_TopRow.Equals(m_TopRow) && (ps.m_FilterSection is not null && ps.m_FilterSection.Equals(m_FilterSection));
         }
 
+        // ReSharper disable once BaseObjectGetHashCodeCallInGetHashCode
         public override int GetHashCode() => base.GetHashCode();
     }
 }

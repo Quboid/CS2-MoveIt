@@ -1,4 +1,5 @@
 ﻿using Colossal.Entities;
+using Game.Objects;
 using Game.Tools;
 using MoveIt.Moveables;
 using QCommonLib;
@@ -15,8 +16,9 @@ namespace MoveIt.Tool
         internal static string DebugDefinitions(IEnumerable<MVDefinition> definitions)
         {
             StringBuilder sb = new();
-            sb.AppendFormat("Definitions: {0}", definitions.Count());
-            foreach (MVDefinition mvd in definitions)
+            IEnumerable<MVDefinition> mvDefinitions = definitions as MVDefinition[] ?? definitions.ToArray();
+            sb.AppendFormat("Definitions: {0}", mvDefinitions.Count());
+            foreach (MVDefinition mvd in mvDefinitions)
             {
                 sb.AppendFormat("\n        {0}", mvd);
             }
@@ -32,8 +34,9 @@ namespace MoveIt.Tool
         internal string DebugMoveables(IEnumerable<Moveable> moveables)
         {
             StringBuilder sb = new();
-            sb.AppendFormat("Moveables: {0}", moveables.Count());
-            foreach (Moveable mv in moveables)
+            IEnumerable<Moveable> enumerable = moveables as Moveable[] ?? moveables.ToArray();
+            sb.AppendFormat("Moveables: {0}", enumerable.Count());
+            foreach (Moveable mv in enumerable)
             {
                 sb.AppendFormat("\n        {0} - {1}", mv, mv.Definition);
             }
@@ -112,7 +115,7 @@ namespace MoveIt.Tool
                     hitDesc = $"{cp.m_OriginalEntity.D()} \"{prefabInfo.m_Name}\"";
                 }
             }
-            MIT_ToolTipSystem.instance.Set($"{hasHit} {cp.m_Position.D()}, {cp.m_HitPosition.D()} {hitDesc}");
+            Systems.MIT_ToolTipSystem.instance.Set($"{hasHit} {cp.m_Position.D()}, {cp.m_HitPosition.D()} {hitDesc}");
         }
 
         private void DebugControlPointLog(ControlPoint cp)
@@ -145,7 +148,7 @@ namespace MoveIt.Tool
             Identity id = QTypes.GetEntityIdentity(e);
             string idCode = QTypes.GetIdentityCode(id);
 
-            string ent = $"E{e.Index}.{e.Version}{idCode}";
+            var ent = $"E{e.Index}.{e.Version}{idCode}";
             if (align) ent = $"{ent,13}";
             return $"{ent}{(incPrefab ? $" (\"{QCommon.GetPrefabName(manager, e)}\")" : "")}";
         }
@@ -155,16 +158,16 @@ namespace MoveIt.Tool
             StringBuilder sb = new();
             sb.AppendFormat("Entity: {0}", e.D());
             EntityManager manager = World.DefaultGameObjectInjectionWorld.EntityManager;
-            if (manager.TryGetComponent<Game.Objects.Transform>(e, out var transform))
+            if (manager.TryGetComponent<Game.Objects.Transform>(e, out Transform transform))
             {
                 sb.AppendFormat(" ({0})", transform.D());
             }
 
-            var compTypes = manager.GetComponentTypes(e);
-            int sharCount = compTypes.Where(c => IsSharedComponent(c)).Count();
-            int compCount = compTypes.Where(c => IsNormalComponent(c)).Count();
-            int buffCount = compTypes.Where(c => IsBufferComponent(c)).Count();
-            int tagsCount = compTypes.Where(c => IsTagComponent(c)).Count();
+            NativeArray<ComponentType> compTypes = manager.GetComponentTypes(e);
+            int sharCount = compTypes.Count(IsSharedComponent);
+            int compCount = compTypes.Count(IsNormalComponent);
+            int buffCount = compTypes.Count(IsBufferComponent);
+            int tagsCount = compTypes.Count(IsTagComponent);
             StringBuilder sharStr = new();
             StringBuilder compStr = new();
             StringBuilder buffStr = new();
@@ -172,7 +175,7 @@ namespace MoveIt.Tool
 
             if (sharCount > 0)
             {
-                foreach (var compType in compTypes.Where(c => IsSharedComponent(c)))
+                foreach (ComponentType compType in compTypes.Where(IsSharedComponent))
                 {
                     sharStr.AppendFormat("{0},  ", compType.GetManagedType());
                 }
@@ -180,7 +183,7 @@ namespace MoveIt.Tool
             }
             if (compCount > 0)
             {
-                foreach (var compType in compTypes.Where(c => IsNormalComponent(c)))
+                foreach (ComponentType compType in compTypes.Where(IsNormalComponent))
                 {
                     compStr.AppendFormat("{0},  ", compType.GetManagedType());
                 }
@@ -188,7 +191,7 @@ namespace MoveIt.Tool
             }
             if (buffCount > 0)
             {
-                foreach (var compType in compTypes.Where(c => IsBufferComponent(c)))
+                foreach (ComponentType compType in compTypes.Where(IsBufferComponent))
                 {
                     int count = QByType.GetRefBufferLength(compType.GetManagedType(), e);
                     buffStr.AppendFormat("{0}({1}),  ", compType.GetManagedType(), count);
@@ -197,7 +200,7 @@ namespace MoveIt.Tool
             }
             if (tagsCount > 0)
             {
-                foreach (var compType in compTypes.Where(c => IsTagComponent(c)))
+                foreach (ComponentType compType in compTypes.Where(IsTagComponent))
                 {
                     tagsStr.AppendFormat("{0},  ", compType.GetManagedType());
                 }
@@ -208,7 +211,7 @@ namespace MoveIt.Tool
             sb.AppendFormat("\n Components:{0} - {1}", compCount, compStr);
             sb.AppendFormat("\n    Buffers:{0} - {1}", buffCount, buffStr);
             sb.AppendFormat("\n       Tags:{0} - {1}", tagsCount, tagsStr);
-            if (manager.TryGetComponent<Temp>(e, out var temp))
+            if (manager.TryGetComponent<Temp>(e, out Temp temp))
             {
                 sb.AppendFormat("\n      <Temp> orig:{0}, flags:{1}", temp.m_Original.D(), temp.m_Flags);
             }
@@ -216,9 +219,9 @@ namespace MoveIt.Tool
         }
 
         private static bool IsSharedComponent(ComponentType c)  => c.IsSharedComponent;
-        private static bool IsNormalComponent(ComponentType c)  => !c.IsSharedComponent && c.IsBuffer == false && !c.IsZeroSized;
-        private static bool IsBufferComponent(ComponentType c)  => !c.IsSharedComponent && c.IsBuffer;
-        private static bool IsTagComponent(ComponentType c)     => !c.IsSharedComponent && c.IsBuffer == false && c.IsZeroSized;
+        private static bool IsNormalComponent(ComponentType c)  => c is { IsSharedComponent: false, IsBuffer: false, IsZeroSized: false };
+        private static bool IsBufferComponent(ComponentType c)  => c is { IsSharedComponent: false, IsBuffer: true };
+        private static bool IsTagComponent(ComponentType c)     => c is { IsSharedComponent: false, IsBuffer: false, IsZeroSized: true };
 
         public static void DebugDumpEntity(this Entity e, string prefix = "")
         {

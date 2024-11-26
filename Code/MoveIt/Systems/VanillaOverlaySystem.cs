@@ -20,16 +20,15 @@ namespace MoveIt.Systems
         protected override void OnUpdate()
         {
             // Hide the vanilla game overlay ("MeshLayer.Outline")
-            if (_AllHighlightedEntitiesQuery.CalculateEntityCount() > 0)
-            {
-                using var tempEntities = _AllHighlightedEntitiesQuery.ToEntityArray(Allocator.Temp);
+            if (_AllHighlightedEntitiesQuery.CalculateEntityCount() <= 0) return;
+            
+            using NativeArray<Entity> tempEntities = _AllHighlightedEntitiesQuery.ToEntityArray(Allocator.Temp);
 
-                for (int i = 0; i < tempEntities.Length; i++)
-                {
-                    EntityManager.RemoveComponent<Highlighted>(tempEntities[i]);
-                    EntityManager.AddComponent<Game.Common.Updated>(tempEntities[i]);
-                    EntityManager.AddComponent<Game.Common.BatchesUpdated>(tempEntities[i]);
-                }
+            foreach (Entity e in tempEntities)
+            {
+                EntityManager.RemoveComponent<Highlighted>(e);
+                EntityManager.AddComponent<Game.Common.Updated>(e);
+                EntityManager.AddComponent<Game.Common.BatchesUpdated>(e);
             }
         }
 

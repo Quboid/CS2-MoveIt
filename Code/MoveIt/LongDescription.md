@@ -1,4 +1,10 @@
-﻿# Move It for Cities Skylines 2
+﻿# Move It Beta for Cities Skylines 2.
+
+This is the unstable beta version and may have unexpected issues. Please report any in the forum or on Discord. Do not use more than one version of Move It.
+
+Stable version:
+https://mods.paradoxplaza.com/mods/74324/Windows
+
 
 You can move trees, props, decals, buildings, surfaces, nodes, and segment curves.
 
@@ -51,12 +57,13 @@ Manipulating segments - you can move the control points in all three axis; the 2
 
 Hotkeys: view and change any keyboard settings here.
 
+This is an beta version of Move It. Save often, save different.
+
 
 ## Known Issues
 * Align to terrain height does yet not work with objects that affect terrain, e.g. buildings and on-ground roads.
 * Page Up/Down do not work in the editor. Use Numpad 9 and 3 instead, or rebind the move up/down keys.
 * Some players experience an occasional crash the first time they use Move It after using Undo. If you get this, please send me your log files.
-
 
 ## Credits:
 

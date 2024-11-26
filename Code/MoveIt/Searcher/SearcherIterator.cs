@@ -31,7 +31,7 @@ namespace MoveIt.Searcher
         /// Does the given <see cref="bounds">bounds</see> intersect the search area?
         /// </summary>
         /// <param name="bounds">The QuadTree bounds</param>
-        /// <returns>Does bounds intersect search area?</returns>
+        /// <returns>Does "bounds" intersect search area?</returns>
         public readonly bool Intersect(Game.Common.QuadTreeBoundsXZ bounds)
         {
             Bounds2 b = bounds.m_Bounds.xz;
@@ -62,7 +62,7 @@ namespace MoveIt.Searcher
             }
 
             QObjectSimple obj = new(m_Manager, ref m_Lookup, e);
-            var prefab = m_Manager.GetComponentData<Game.Prefabs.PrefabRef>(e).m_Prefab;
+            Entity prefab = m_Manager.GetComponentData<Game.Prefabs.PrefabRef>(e).m_Prefab;
 
             // Building
             if (!m_IsManipulating && (obj.m_Identity == Identity.Building || obj.m_Identity == Identity.Extension))
@@ -108,9 +108,6 @@ namespace MoveIt.Searcher
                             m_EntityList.Add(e);
                             return;
                         }
-                        break;
-
-                    default:
                         break;
                 }
 
@@ -160,9 +157,6 @@ namespace MoveIt.Searcher
                             return;
                         }
                         break;
-
-                    default:
-                        break;
                 }
                 return;
             }
@@ -199,9 +193,6 @@ namespace MoveIt.Searcher
                     case SearchTypes.Ray:
                         // Handled by vanilla raycast results
                         return;
-
-                    default:
-                        break;
                 }
                 return;
             }
@@ -251,9 +242,6 @@ namespace MoveIt.Searcher
                                 return;
                             }
                             break;
-
-                        default:
-                            break;
                     }
 
                     return;
@@ -297,9 +285,6 @@ namespace MoveIt.Searcher
                             return;
                         }
                         break;
-
-                    default:
-                        break;
                 }
             }
         }
@@ -328,14 +313,14 @@ namespace MoveIt.Searcher
             if (m_Manager.HasComponent<Game.Common.Owner>(e)) return;
             if (!m_Manager.HasComponent<Surface>(e)) return;
 
-            if (m_Manager.TryGetBuffer<Node>(e, true, out var nodes) && m_Manager.TryGetBuffer<Triangle>(e, true, out var triangles))
-            {
-                Triangle2 tri = AreaUtils.GetTriangle2(nodes, triangles[areaSearchItem.m_Triangle]);
-                if (!MathUtils.Intersect(m_SearchOuterBounds, tri)) return;
-                if (m_Type == SearchTypes.Marquee && !MathUtils.Intersect(m_SearchQuad, tri)) return;
+            if (!m_Manager.TryGetBuffer<Node>(e, true, out DynamicBuffer<Node> nodes) ||
+                !m_Manager.TryGetBuffer<Triangle>(e, true, out DynamicBuffer<Triangle> triangles)) return;
+            
+            Triangle2 tri = AreaUtils.GetTriangle2(nodes, triangles[areaSearchItem.m_Triangle]);
+            if (!MathUtils.Intersect(m_SearchOuterBounds, tri)) return;
+            if (m_Type == SearchTypes.Marquee && !MathUtils.Intersect(m_SearchQuad, tri)) return;
 
-                m_EntityList.Add(e);
-            }
+            m_EntityList.Add(e);
         }
 
         public void Dispose()

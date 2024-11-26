@@ -8,7 +8,7 @@ namespace MoveIt.UI.Foldout
     /// </summary>
     public abstract class FOEntryStateBase : FOStateBase
     {
-        public FOEntryStateBase(string rawId, bool active, CheckboxState checkboxState = null)
+        protected FOEntryStateBase(string rawId, bool active, CheckboxState checkboxState = null)
             : base(rawId, active, checkboxState) { }
     }
 
@@ -17,7 +17,7 @@ namespace MoveIt.UI.Foldout
     /// </summary>
     public class FOEntryState : FOEntryStateBase
     {
-        public FOPopoutContainerState m_PopoutState;
+        public readonly FOPopoutContainerState m_PopoutState;
 
         public FOEntryState(string rawId, bool active, CheckboxState checkboxState = null, FOPopoutContainerState popoutState = null)
             : base(rawId, active, checkboxState)
@@ -25,13 +25,11 @@ namespace MoveIt.UI.Foldout
             m_PopoutState = popoutState;
         }
 
-        public override void WriteExtendInner(IJsonWriter writer)
+        protected override void WriteExtendInner(IJsonWriter writer)
         {
-            if (m_PopoutState is not null)
-            {
-                writer.PropertyName("Popout");
-                writer.Write(m_PopoutState);
-            }
+            if (m_PopoutState is null) return;
+            writer.PropertyName("Popout");
+            writer.Write(m_PopoutState);
         }
     }
 

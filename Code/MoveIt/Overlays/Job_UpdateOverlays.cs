@@ -1,4 +1,5 @@
 ﻿using Colossal.Mathematics;
+using Game.Areas;
 using MoveIt.Tool;
 using Unity.Burst;
 using Unity.Burst.Intrinsics;
@@ -34,7 +35,7 @@ namespace MoveIt.Overlays
             [ReadOnly] public ComponentLookup<Game.Prefabs.ObjectGeometryData>      clu_ObjectGeometryData;
             [ReadOnly] public ComponentLookup<Game.Prefabs.PrefabRef>               clu_PrefabRefs;
 
-            public readonly bool IsManipulating => (m_ToolFlags & ToolFlags.ManipulationMode) > 0;
+            private readonly bool _IsManipulating => (m_ToolFlags & ToolFlags.ManipulationMode) > 0;
 
             public void Execute(in ArchetypeChunk chunk, int unfilteredChunkIndex, bool useEnabledMask, in v128 chunkEnabledMask)
             {
@@ -51,9 +52,9 @@ namespace MoveIt.Overlays
 
                 while (enumerator.NextEntityIndex(out var idx))
                 {
-                    if (data_Overlay[idx].m_Type == OverlayTypes.SelectionCenter)
+                    if (data_Overlay[idx].m_Type == OverlayTypes.SelectionCentralPoint)
                     {
-                        EarlyUpdateSelectionCenter(data_CommonData, idx, data_Circle, data_SelectionData[idx]);
+                        EarlyUpdateSelectionCentralPoint(data_CommonData, idx, data_Circle, data_SelectionData[idx]);
                     }
 
                     MIO_Common common = data_CommonData[idx];
@@ -105,20 +106,22 @@ namespace MoveIt.Overlays
                                 data_Lines[idx]);
                             break;
 
-                        case OverlayTypes.SelectionCenter:
+                        case OverlayTypes.SelectionCentralPoint:
                             UpdateSelectionCenter(
                                 data_CommonData,
                                 idx,
                                 data_Circle,
                                 data_SelectionData[idx]);
                             break;
-
-                        default:
-                            break;
                     }
                 }
             }
 
+            /// <summary>
+            /// Calculate the overlay's common component so the line widths are adjusted for camera distance.
+            /// </summary>
+            /// <param name="common">Reference to the MIO_Common component</param>
+            /// <param name="cameraPosition">The current camera position</param>
             private readonly void CalculateLines(ref MIO_Common common, float3 cameraPosition)
             {
                 float dist = math.clamp(math.distance(common.m_Transform.m_Position, cameraPosition), 0, Overlay.LINE_MAX_DISTANCE) / Overlay.LINE_MAX_DISTANCE;
@@ -133,7 +136,7 @@ namespace MoveIt.Overlays
             }
 
 
-            public readonly void UpdateMVBuilding(MIO_Common common, DynamicBuffer<MIO_Lines> lines, DynamicBuffer<MIO_DashedLines> dashedLines)
+            private void UpdateMVBuilding(MIO_Common common, DynamicBuffer<MIO_Lines> lines, DynamicBuffer<MIO_DashedLines> dashedLines)
             {
                 float3 lotHalfSize;
                 Game.Prefabs.PrefabRef prefab = clu_PrefabRefs[common.m_Owner];
@@ -151,10 +154,10 @@ namespace MoveIt.Overlays
                 DrawTools.CalculateBuildingRectangleLines(common.m_Transform, common.m_OutlineWidthGround, lotHalfSize, ref lines, ref dashedLines);
             }
 
-            public readonly void UpdateMVSurface(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
+            private readonly void UpdateMVSurface(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
             {
                 lines.Clear();
-                var nodes = blu_AreasNode[common.m_Owner];
+                DynamicBuffer<Node> nodes = blu_AreasNode[common.m_Owner];
                 int c = nodes.Length;
 
                 lines.Add(new(new(nodes[c - 1].m_Position, nodes[0].m_Position)));
@@ -164,10 +167,10 @@ namespace MoveIt.Overlays
                 }
             }
 
-            public readonly void UpdateMVControlPoint(NativeArray<MIO_Common> data_Common, int idx)
+            private readonly void UpdateMVControlPoint(NativeArray<MIO_Common> data_Common, int idx)
             {
                 MIO_Common common = data_Common[idx];
-                ColorData.Contexts context = ColorData.Contexts.None;
+                var context = ColorData.Contexts.None;
 
                 if ((common.m_Flags & InteractionFlags.ParentHovering) > 0)             context = ColorData.Contexts.Hovering;
                 else if ((common.m_Flags & InteractionFlags.ParentSelected) > 0)        context = ColorData.Contexts.Selected;
@@ -180,10 +183,10 @@ namespace MoveIt.Overlays
                 //QLog.Bundle($"[{common.m_Owner.D()}n]", $"{common.m_Flags} Tool:{m_ToolFlags} Context:{context} Manip:{common.m_Manipulation}");
             }
 
-            public readonly void UpdateMVManipControlPoint(NativeArray<MIO_Common> data_Common, int idx)
+            private readonly void UpdateMVManipControlPoint(NativeArray<MIO_Common> data_Common, int idx)
             {
                 MIO_Common common = data_Common[idx];
-                ColorData.Contexts context = ColorData.Contexts.None;
+                var context = ColorData.Contexts.None;
 
                 if ((common.m_Flags & InteractionFlags.Hovering) > 0)                   context = ColorData.Contexts.ManipChildHovering;
                 else if ((common.m_Flags & InteractionFlags.Selected) > 0)              context = ColorData.Contexts.ManipChildSelected;
@@ -198,7 +201,7 @@ namespace MoveIt.Overlays
                 //QLog.Bundle($"[{common.m_Owner.DX()}M]", $"{common.m_Flags} Tool:{m_ToolFlags} Context:{context} Manip:{common.m_Manipulation}");
             }
 
-            public readonly void UpdateMVDecal(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
+            private readonly void UpdateMVDecal(MIO_Common common, DynamicBuffer<MIO_Lines> lines)
             {
                 Game.Prefabs.PrefabRef prefab = clu_PrefabRefs[common.m_Owner];
                 Game.Prefabs.ObjectGeometryData geoData = clu_ObjectGeometryData[prefab];
@@ -207,7 +210,7 @@ namespace MoveIt.Overlays
                 DrawTools.CalculateRectangleLines(common.m_Transform, common.m_OutlineWidthGround, lotHalfSize, ref lines);
             }
 
-            public readonly void UpdateQuad(NativeArray<MIO_Common> data_Common, int idx, MIO_Quad quadComp)
+            private readonly void UpdateQuad(NativeArray<MIO_Common> data_Common, int idx, MIO_Quad quadComp)
             {
                 Quad3 quad = quadComp.Quad;
 
@@ -218,7 +221,7 @@ namespace MoveIt.Overlays
                 data_Common[idx] = common;
             }
 
-            public readonly void EarlyUpdateSelectionCenter(NativeArray<MIO_Common> data_Common, int idx, NativeArray<MIO_Circle> data_Circle, MIO_SelectionData selectionData)
+            private readonly void EarlyUpdateSelectionCentralPoint(NativeArray<MIO_Common> data_Common, int idx, NativeArray<MIO_Circle> data_Circle, MIO_SelectionData selectionData)
             {
                 MIO_Common common = data_Common[idx];
                 MIO_Circle circle = data_Circle[idx];
@@ -240,12 +243,12 @@ namespace MoveIt.Overlays
                 data_Circle[idx] = circle;
             }
 
-            public readonly void UpdateSelectionCenter(NativeArray<MIO_Common> data_Common, int idx, NativeArray<MIO_Circle> data_Circle, MIO_SelectionData selectionData)
+            private readonly void UpdateSelectionCenter(NativeArray<MIO_Common> data_Common, int idx, NativeArray<MIO_Circle> data_Circle, MIO_SelectionData selectionData)
             {
                 MIO_Common common = data_Common[idx];
                 MIO_Circle circle = data_Circle[idx];
 
-                circle.Circle.radius = (common.m_OutlineWidthGround / Overlay.LINE_DEFAULT_WIDTH) * (Overlay.SELECT_SCALE_MULTIPLYER) + Overlay.SELECT_BASE_RADIUS;
+                circle.Circle.radius = (common.m_OutlineWidthGround / Overlay.LINE_DEFAULT_WIDTH) * (Overlay.SELECT_SCALE_MULTIPLIER) + Overlay.SELECT_BASE_RADIUS;
                 data_Circle[idx] = circle;
 
                 if (m_IsManipMode)
@@ -254,7 +257,7 @@ namespace MoveIt.Overlays
                     common.m_OutlineColor = Colors.Get(ColorData.Contexts.ManipChildSelected);
                     common.m_IsManipulatable = true;
                 }
-                else if (IsManipulating)
+                else if (_IsManipulating)
                 {
                     // We are in Normal Mode, but showing Manipulation Mode (player is holding Alt)
                     common.m_Flags = InteractionFlags.None;

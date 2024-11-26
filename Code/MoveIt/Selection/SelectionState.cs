@@ -6,21 +6,40 @@ using System.Linq;
 
 namespace MoveIt.Selection
 {
-    public class SelectionState
+    public abstract class ActionState
     {
-        protected static MIT _MIT = MIT.m_Instance;
+        protected static readonly MIT _MIT = MIT.m_Instance;
 
-        protected readonly List<MVDefinition> _Definitions;
-        protected bool _IsManipulation;
+        protected readonly bool _IsManipulation;
+
+        protected ActionState(bool isManipulation)
+        {
+            _IsManipulation = isManipulation;
+        }
+    }
+
+    // public class TransformState : ActionState
+    // {
+    //     protected readonly List<Neighbour> _Neighbours;
+    //     public List<Neighbour> Neighbours => _Neighbours;
+    //
+    //     public TransformState(bool isManipulation, List<Neighbour> neighbours) : base(isManipulation)
+    //     {
+    //         _Neighbours = neighbours;
+    //     }
+    // }
+
+    public class SelectionState : ActionState
+    {
+        private readonly List<MVDefinition> _Definitions;
 
         public List<MVDefinition> Definitions => _Definitions;
         public int Count => _Definitions.Count;
         public bool Any => Count > 0;
 
-        public SelectionState(bool isManipulation, List<MVDefinition> definitions)
+        public SelectionState(bool isManipulation, List<MVDefinition> definitions) : base(isManipulation)
         {
             _Definitions = definitions;
-            _IsManipulation = isManipulation;
         }
 
         /// <summary>
@@ -44,10 +63,10 @@ namespace MoveIt.Selection
         /// </summary>
         /// <param name="definitions">MVDefinitions to clean</param>
         /// <returns>List of MVDefinitions without invalid entries</returns>
-        internal static List<MVDefinition> CleanDefinitions(List<MVDefinition> definitions)
+        private static List<MVDefinition> CleanDefinitions(List<MVDefinition> definitions)
         {
-            string msg = $"SelState.CleanDefinitions; OldDefs:{definitions.Count}";
-            string removing = "";
+            var msg = $"SelState.CleanDefinitions; OldDefs:{definitions.Count}";
+            var removing = "";
             HashSet<MVDefinition> toRemove = new();
 
             foreach (var mvd in definitions)
@@ -78,34 +97,33 @@ namespace MoveIt.Selection
         internal static SelectionState SelectionToState(bool isManipulation, HashSet<MVDefinition> definitions = null)
         {
             definitions ??= new();
+            string old = MIT.DebugDefinitions(definitions);
             SelectionState result = new(isManipulation, definitions.ToList());
 
+            QLog.Debug($"SS.SelectionToState {QCommon.GetCallerDebug()}\nOld: {old}\nNew: {MIT.DebugDefinitions(result.Definitions)}");
+
             return result;
         }
 
-        internal static SelectionBase StateToSelection(SelectionState state)
-        {
-            SelectionBase result;
-            if (state._IsManipulation)
-            {
-                result = new SelectionManip(state);
-            }
-            else
-            {
-                result = new SelectionNormal(state);
-            }
-            return result;
-        }
+        //internal static SelectionBase StateToSelection(SelectionState state)
+        //{
+        //    SelectionBase result;
+        //    if (state._IsManipulation)
+        //    {
+        //        result = new SelectionManip(state);
+        //    }
+        //    else
+        //    {
+        //        result = new SelectionNormal(state);
+        //    }
+        //    return result;
+        //}
 
 
         public string Debug()
         {
-            string msg = $"SelectionState Definitions:{_Definitions.Count}";
-            foreach (MVDefinition mvd in _Definitions)
-            {
-                msg += $"\n    {mvd}";
-            }
-            return msg;
+            var msg = $"SelectionState Definitions:{_Definitions.Count} {QCommon.GetCallerDebug()}";
+            return _Definitions.Aggregate(msg, (current, mvd) => current + $"\n    {mvd}");
         }
 
         public void DebugDump(string prefix = "")

@@ -1,15 +1,15 @@
 ﻿using Colossal.Mathematics;
-using Game.Net;
 using MoveIt.Moveables;
+using MoveIt.Tool;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace MoveIt.Overlays
+namespace MoveIt.Overlays.Children
 {
     internal class OverlayManipSegment : Overlay
     {
-        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
+        private static readonly EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Bezier),
@@ -18,9 +18,19 @@ namespace MoveIt.Overlays
                     typeof(MIO_DashedLines),
             });
 
-        public static Entity Factory(MVManipSegment mseg)
+
+        public OverlayManipSegment(Moveable mv) : base(OverlayTypes.MVManipSegment, mv)
+        { }
+
+        protected override bool CreateOverlayEntity()
         {
-            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
+            if (_Moveable is not MVManipSegment mseg)
+            {
+                MIT.Log.Error($"ERROR OlayManipSeg.CreateOlayE {_Moveable} is not manip-segment.");
+                return false;
+            }
+
+            m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new()
             {
@@ -29,37 +39,20 @@ namespace MoveIt.Overlays
                 m_IsManipChild      = mseg.IsManipChild,
             };
 
-            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVManipSegment));
-            _MIT.EntityManager.SetComponentData(e, common);
-            _MIT.EntityManager.SetComponentData<MIO_Bezier>(e, new(mseg.Curve, mseg.Width));
-            return e;
-        }
-
-        public OverlayManipSegment() : base(OverlayTypes.MVManipSegment)
-        { }
-
-        public override bool CreateOverlayEntity()
-        {
-            if (m_Moveable is not MVManipSegment mseg) return false;
-            if (!base.CreateOverlayEntity()) return false;
-
-            m_Entity = OverlayManipSegment.Factory(mseg);
+            _MIT.EntityManager.SetComponentData<MIO_Type>(m_Entity, new(OverlayTypes.MVManipSegment));
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
+            _MIT.EntityManager.SetComponentData<MIO_Bezier>(m_Entity, new(mseg.Curve, mseg.Width));
+                
             EnqueueUpdate();
-
-            foreach (var cpd in mseg.m_CPDefinitions)
-            {
-                MVManipControlPoint cp = _MIT.ControlPointManager.GetOrCreate(cpd) as MVManipControlPoint;
-                ((OverlayManipControlPoint)cp.m_Overlay).CreateOverlayEntityIfNoneExists();
-            }
 
             return true;
         }
 
         public override bool Update()
         {
-            if (m_Moveable is not MVManipSegment seg) return false;
+            if (_Moveable is not MVManipSegment seg) return false;
             if (m_Entity.Equals(Entity.Null)) return false;
-            
+
             MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
             UpdateCommon(ref common);
             _MIT.EntityManager.SetComponentData(m_Entity, common);

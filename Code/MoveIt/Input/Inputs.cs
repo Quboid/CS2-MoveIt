@@ -1,4 +1,4 @@
-﻿namespace MoveIt
+﻿namespace MoveIt.Input
 {
     internal static class Inputs
     {

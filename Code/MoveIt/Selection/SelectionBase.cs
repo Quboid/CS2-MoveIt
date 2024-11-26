@@ -1,9 +1,10 @@
 ﻿using Colossal.IO.AssetDatabase.Internal;
 using Colossal.Mathematics;
 using MoveIt.Moveables;
-using MoveIt.Overlays;
+using MoveIt.Overlays.Children;
 using MoveIt.Tool;
 using QCommonLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,14 +29,14 @@ namespace MoveIt.Selection
 
         protected static readonly MIT _MIT = MIT.m_Instance;
 
-        internal virtual string Name { get; }
+        internal abstract string Name { get; }
         protected HashSet<MVDefinition> _Buffer;
         protected HashSet<MVDefinition> _BufferFull;
 
         public int Count => _Buffer.Count;
         public int CountFull => _BufferFull.Count;
-        public virtual bool Any { get; }
-        public virtual bool IsActive { get; }
+        public abstract bool Any { get; }
+        public abstract bool IsActive { get; }
 
         /// <summary>
         /// Get a copy of the current selection definitions
@@ -60,29 +61,29 @@ namespace MoveIt.Selection
         /// <summary>
         /// The centre-point of all objects that transform
         /// </summary>
-        public float3 Center => _Center;
-        public float CenterTerrainHeight => _MIT.GetTerrainHeight(_Center);
-        private float3 _Center;
+        public float3 Center { get; private set; }
+
+        public float CenterTerrainHeight => _MIT.GetTerrainHeight(Center);
         private float _Radius;
 
-        public SelectionBase()
+        protected SelectionBase()
         {
             _Buffer = new();
             _BufferFull = new();
             PrepareSelectionCenterOverlay();
         }
 
-        public SelectionBase(SelectionBase old)
+        protected SelectionBase(SelectionBase old)
         {
             SelectionBaseData data = old.GetCopy();
             _Buffer = data.m_Buffer;
             _BufferFull = data.m_BufferFull;
-            _Center = data.m_Center;
+            Center = data.m_Center;
             _Radius = data.m_Radius;
             PrepareSelectionCenterOverlay();
         }
 
-        public SelectionBase(SelectionState state)
+        protected SelectionBase(SelectionState state)
         {
             _Buffer = new();
             _BufferFull = new();
@@ -92,7 +93,7 @@ namespace MoveIt.Selection
 
         public abstract void ProcessAdd(MVDefinition mvd, bool append);
 
-        protected void PrepareSelectionCenterOverlay()
+        private static void PrepareSelectionCenterOverlay()
         {
             if (m_Overlay is null)
             {
@@ -106,8 +107,8 @@ namespace MoveIt.Selection
 
         public bool Add(IEnumerable<MVDefinition> definitions, bool fast)
         {
-            bool result = true;
-            int c = 0;
+            var result = true;
+            var c = 0;
             foreach (MVDefinition mvd in definitions)
             {
                 if (!AddFromDefinition(mvd))
@@ -121,7 +122,7 @@ namespace MoveIt.Selection
             return result;
         }
 
-        public bool Add(MVDefinition mvd)
+        protected bool Add(MVDefinition mvd)
         {
             if (!AddFromDefinition(mvd)) return false;
             UpdateFull();
@@ -135,7 +136,7 @@ namespace MoveIt.Selection
             if (_Buffer.Contains(mvd)) return false;
             if (_Buffer.Count >= MAX_SELECTION_SIZE) return false;
 
-            Moveable mv = _MIT.Moveables.GetOrCreate(mvd);
+            Moveable mv = _MIT.Moveables.GetOrCreate<Moveable>(mvd);
             if (mv is null) return false;
 
             _Buffer.Add(mvd);
@@ -160,66 +161,92 @@ namespace MoveIt.Selection
             HashSet<MVDefinition> toRemove = new();
             HashSet<Moveable> toAdd = new();
 
-            foreach (var mvd in _Buffer)
+            try
             {
-                if (mvd.m_Identity == Identity.ControlPoint)
+                foreach (MVDefinition mvd in _Buffer)
                 {
-                    if (!_MIT.IsValid(mvd.m_Parent))
+                    if (mvd.m_Identity == Identity.ControlPoint)
                     {
-                        toRemove.Add(mvd);
-                        removing += $"  CP {mvd}";
-                    }
-                    else
-                    {
-                        // If CP entity no longer exists (e.g. was cleaned up by Moveables.Refresh()), this will create a new entity
-                        MVControlPoint cp = GetMV<MVControlPoint>(mvd);
-                        MIT.Log.Debug($"Refreshing CP:\nMVD: {mvd}\n CP: {cp.Definition}");
-                        if (!mvd.m_Entity.Equals(cp.m_Entity))
+                        if (!_MIT.IsValid(mvd.m_Parent))
                         {
                             toRemove.Add(mvd);
-                            toAdd.Add(cp);
-                            cp.m_Overlay.AddFlag(InteractionFlags.ParentSelected);
-                            swapping += $" [{mvd.m_Entity.DX()}=>{cp.m_Entity.DX()}-{cp.m_Overlay.m_Entity.D()}]";
+                            removing += $"  CP {mvd}";
                         }
                         else
                         {
-                            noupdate += $"  CP {mvd}";
+                            // If CP entity no longer exists (e.g. was cleaned up by Moveables.Refresh()), this will create a new entity
+                            var cp = GetMV<MVControlPoint>(mvd);
+                            MIT.Log.Debug($"Refreshing CP:\nMVD: {mvd}\n CP: {cp.Definition} <{cp.GetType().Name}>");
+                            if (!mvd.m_Entity.Equals(cp.m_Entity))
+                            {
+                                toRemove.Add(mvd);
+                                toAdd.Add(cp);
+                                cp.m_Overlay.AddFlag(InteractionFlags.ParentSelected);
+                                swapping += $" [{mvd.m_Entity.DX()}=>{cp.m_Entity.DX()}-Olay:{cp.m_Overlay.m_Entity.D()}]";
+                            }
+                            else
+                            {
+                                noupdate += $"  CP {mvd}";
+                            }
                         }
                     }
-                }
-                else if (!_MIT.IsValid(mvd))
-                {
-                    toRemove.Add(mvd);
-                    removing += $"  {mvd}";
-                }
-                else if (!_MIT.Moveables.Has(mvd))
-                {
-                    _MIT.Moveables.GetOrCreate(mvd);
-                    readding += $"  {mvd}";
-                }
-                else
-                {
-                    noupdate += $"  {mvd}";
-                }
-            }
-
-            foreach (MVDefinition mvd in toRemove)
-            {
-                if (_MIT.Moveables.TryGet(mvd, out Moveable mv))
-                {
-                    if (mv.OverlayHasFlag(InteractionFlags.Selected))
+                    else if (!_MIT.IsValid(mvd))
                     {
-                        mv.OnDeselect();
+                        toRemove.Add(mvd);
+                        removing += $"  {mvd}";
                     }
-                    mv.Dispose();
+                    else if (!_MIT.Moveables.Has(mvd))
+                    {
+                        _MIT.Moveables.GetOrCreate<Moveable>(mvd);
+                        readding += $"  {mvd}";
+                    }
+                    else
+                    {
+                        noupdate += $"  {mvd}";
+                    }
                 }
-                _Buffer.Remove(mvd);
+            }
+            catch (Exception ex)
+            {
+                MIT.Log.Error($"SB.Refresh failed {ex}\n{QCommon.GetStackTrace(8)}", "SB01");
+            }
+            // BUG this removed newly recreated CPs
+            try
+            {
+                foreach (MVDefinition mvd in toRemove)
+                {
+                    if (_MIT.Moveables.TryGet(mvd, out Moveable mv))
+                    {
+                        // toAdd may contain this Moveable but with a different child entity; TryGet does not compare child objects' entity
+                        if (!toAdd.Contains(mv))
+                        {
+                            if (mv.OverlayHasFlag(InteractionFlags.Selected))
+                            {
+                                mv.OnDeselect();
+                            }
+                            mv.Dispose();
+                        }
+                    }
+                    _Buffer.Remove(mvd);
+                }
+            }
+            catch (Exception ex)
+            {
+                MIT.Log.Error($"SB.Refresh failed {ex}\n{QCommon.GetStackTrace(8)}", "SB02");
             }
 
-            foreach (Moveable mv in toAdd)
+            try
             {
-                _Buffer.Add(mv.Definition);
-                mv.OnSelect();
+                QLog.Debug($"Adding {toAdd.Count} new moveables");
+                foreach (Moveable mv in toAdd)
+                {
+                    _Buffer.Add(mv.Definition);
+                    mv.OnSelect();
+                }
+            }
+            catch (Exception ex)
+            {
+                MIT.Log.Error($"SB.Refresh failed {ex}\n{QCommon.GetStackTrace(8)}", "SB03");
             }
 
             MIT.Log.Debug($"{msg}, NewBuffer:{_Buffer.Count}" +
@@ -228,7 +255,14 @@ namespace MoveIt.Selection
                 $"{(removing.Length > 0 ? $"\n  Removing: {removing}" : "")}" +
                 $"{(noupdate.Length > 0 ? $"\n Unchanged: {noupdate}" : "")}");
 
-            UpdateFull();
+            try
+            {
+                UpdateFull();
+            }
+            catch (Exception ex)
+            {
+                MIT.Log.Error($"SB.Refresh failed {ex}\n{QCommon.GetStackTrace(8)}", "SB04");
+            }
             //_MIT.Moveables.DebugDumpFull($"{Name}.RefreshFromArchive Full-MoveablesManager-Dump ");
         }
 
@@ -241,19 +275,16 @@ namespace MoveIt.Selection
             //string msg = "";
             _BufferFull.Clear();
 
-            foreach (var mvd in _Buffer)
+            foreach (MVDefinition mvd in _Buffer)
             {
                 _BufferFull.Add(mvd);
-                Moveable mv = _MIT.Moveables.GetOrCreate(mvd);
+                var mv = _MIT.Moveables.GetOrCreate<Moveable>(mvd);
                 mv.Refresh();
 
-                foreach (MVDefinition mvdChild in mv.GetAllChildren())
+                foreach (MVDefinition mvdChild in mv.GetAllChildren().Where(mvdChild => !_BufferFull.Contains(mvdChild)))
                 {
-                    if (!_BufferFull.Contains(mvdChild))
-                    {
-                        _BufferFull.Add(mvdChild);
-                        //msg += $"\n    + {QTypes.GetIdentityCode(mvd.m_Identity)}  {mvdChild}";
-                    }
+                    _BufferFull.Add(mvdChild);
+                    //msg += $"\n    + {QTypes.GetIdentityCode(mvd.m_Identity)}  {mvdChild}";
                 }
                 mv.UpdateOverlay();
             }
@@ -275,7 +306,7 @@ namespace MoveIt.Selection
             if (Has(mvd)) Remove(mvd);
         }
 
-        public void Remove(MVDefinition mvd)
+        protected void Remove(MVDefinition mvd)
         {
             Moveable mv = GetMV(mvd);
             _Buffer.Remove(mvd);
@@ -288,26 +319,60 @@ namespace MoveIt.Selection
             HashSet<MVDefinition> mvds = new(_Buffer);
             _Buffer.Clear();
             //MIT.DebugDumpDefinitions(mvds, "SelBase.Clear ", true);
-            foreach (MVDefinition mvd in mvds)
+            foreach (MVDefinition mvd in mvds.Where(mvd => mvd.m_Identity == Identity.ControlPoint))
             {
-                if (mvd.m_Identity != Identity.ControlPoint) continue;
                 GetMV(mvd).OnDeselect();
             }
-            foreach (MVDefinition mvd in mvds)
+            foreach (MVDefinition mvd in mvds.Where(mvd => mvd.m_Identity != Identity.ControlPoint))
             {
-                if (mvd.m_Identity == Identity.ControlPoint) continue;
                 GetMV(mvd).OnDeselect();
             }
             mvds.Clear();
             UpdateFull();
         }
 
-
-        public bool Has(MVDefinition mvd)
+        /// <summary>
+        /// Does the selection include the defined object?
+        /// </summary>
+        /// <param name="mvd">The definition of the object to check</param>
+        /// <param name="includeParent">Should it count as included if its parent object is selected?</param>
+        /// <param name="includeChildren">Should it count as included if any of its children objects are selected?</param>
+        /// <returns>Does the selection have this object?</returns>
+        public bool Has(MVDefinition mvd, bool includeParent = true, bool includeChildren = false)
         {
-            foreach (var lhs in _Buffer)
+            //if (mvd.m_Identity == Identity.ControlPoint)
+            //{
+            //    QLog.Debug($"HAS {mvd}:{BufferHas(ref _Buffer, mvd, includeParent, includeChildren)} {QCommon.GetCallerDebug()}");
+            //}
+            return BufferHas(ref _Buffer, mvd, includeParent, includeChildren);
+        }
+
+        public bool HasFull(MVDefinition mvd, bool includeParent = true, bool includeChildren = false)
+        {
+            return BufferHas(ref _BufferFull, mvd, includeParent, includeChildren);
+        }
+
+        protected bool BufferHas(ref HashSet<MVDefinition> buffer, MVDefinition mvd, bool includeParent, bool includeChildren)
+        {
+            if (includeParent)
             {
-                if (lhs.Equals(mvd))
+                MVDefinition parentDef = new(mvd.m_ParentId, mvd.m_Parent, mvd.m_IsManipulatable);
+                if (_BufferFull.Contains(parentDef))
+                {
+                    return true;
+                }
+            }
+
+            foreach (MVDefinition bufferDef in buffer)
+            {
+                if (bufferDef.Equals(mvd))
+                {
+                    return true;
+                }
+
+                if (!includeChildren || !_MIT.Moveables.TryGet(bufferDef, out Moveable mv)) continue;
+                
+                if (mv.GetAllChildren().Any(mvdChild => mvdChild.Equals(mvd)))
                 {
                     return true;
                 }
@@ -315,18 +380,13 @@ namespace MoveIt.Selection
             return false;
         }
 
-        public bool HasFull(MVDefinition mvd)
-        {
-            return _BufferFull.Count(lhs => mvd.Equals(lhs)) > 0;
-        }
-
         /// <summary>
-        /// Get the objects that actually transform
+        /// Get the objects that actually transform from the main Buffer
         /// </summary>
-        internal virtual HashSet<MVDefinition> GetObjectsToTransform() { return new(); }
+        protected virtual HashSet<MVDefinition> GetObjectsToTransform() { return new(); }
 
         /// <summary>
-        /// Get the objects that actually transform
+        /// Get the objects that actually transform from the full Buffer
         /// </summary>
         internal virtual HashSet<MVDefinition> GetObjectsToTransformFull() { return new(); }
 
@@ -336,7 +396,7 @@ namespace MoveIt.Selection
 
             if (mvds.Count == 0)
             {
-                _Center = 0f;
+                Center = 0f;
                 _Radius = 0f;
                 m_Overlay.EnqueueUpdate();
                 return;
@@ -344,14 +404,20 @@ namespace MoveIt.Selection
 
             using NativeList<float2> mvPosList = new(Allocator.Temp);
             float y = 0;
-            foreach (MVDefinition mvd in mvds)
+            try
             {
-                Moveable mv = GetMV(mvd);
-                float3 pos = mv.Transform.m_Position;
-                y += pos.y;
-                mvPosList.Add(pos.XZ());
+                foreach (float3 pos in mvds.Select(GetMV).Select(mv => mv.Transform.m_Position))
+                {
+                    y += pos.y;
+                    mvPosList.Add(pos.XZ());
+                }
+
+                y /= mvds.Count;
             }
-            y /= mvds.Count;
+            catch (Exception ex)
+            {
+                MIT.Log.Warning($"CalculateCenter failed!\n{MIT.DebugDefinitions(mvds)}\n{ex}");
+            }
 
             if (mvds.Count > MAX_CIRCLECALC_SIZE)
             {
@@ -364,7 +430,7 @@ namespace MoveIt.Selection
                     if (pos.y > extremes.max.y) extremes.max.y = pos.y;
                 }
                 float2 center2D = extremes.Center();
-                _Center = new(center2D.x, y, center2D.y);
+                Center = new(center2D.x, y, center2D.y);
                 _Radius = math.distance(center2D, extremes.max);
             }
             else
@@ -372,7 +438,7 @@ namespace MoveIt.Selection
                 //Profiler.BeginSample("CalculateCenter Welzl");
                 Circle2 mec = QMinimumEnclosingCircle.Welzl(mvPosList);
                 //Profiler.EndSample();
-                _Center = new(mec.position.x, y, mec.position.y);
+                Center = new(mec.position.x, y, mec.position.y);
                 _Radius = mec.radius;
             }
 
@@ -393,7 +459,7 @@ namespace MoveIt.Selection
         public Bounds3 GetTotalBounds(float expand = 0)
         {
             HashSet<MVDefinition> source = GetObjectsToTransformFull();
-            Bounds3 totalBounds = new(_Center, _Center);
+            Bounds3 totalBounds = new(Center, Center);
 
             foreach (MVDefinition mvd in source)
             {
@@ -405,7 +471,7 @@ namespace MoveIt.Selection
             return totalBounds;
         }
 
-        internal SelectionBaseData GetCopy()
+        private SelectionBaseData GetCopy()
         {
             HashSet<MVDefinition> buffer = new(_Buffer);
             HashSet<MVDefinition> bufferFull = new(_BufferFull);
@@ -414,39 +480,27 @@ namespace MoveIt.Selection
             {
                 m_Buffer = buffer,
                 m_BufferFull = bufferFull,
-                m_Center = _Center,
+                m_Center = Center,
                 m_Radius = _Radius,
             };
         }
 
         internal static Moveable GetMV(MVDefinition mvd)
-            => _MIT.Moveables.GetOrCreate(mvd);
-
+            => _MIT.Moveables.GetOrCreate<Moveable>(mvd);
 
         internal static T GetMV<T>(MVDefinition mvd) where T : Moveable
             => _MIT.Moveables.GetOrCreate<T>(mvd);
 
-        //private HashSet<Line3.Segment> _DebugLines = new();
-        //private HashSet<Circle3> _DebugCirclesCyan = new();
-        //public void AddDebugOverlay()
-        //{
-        //    List<Moveable> moveables = GetObjectsToTransform();
-        //    if (moveables.Count < 1) return;
-
-        //    _DebugLines.ForEach(line => Overlays.DebugOverlays.Line(line));
-        //    _DebugCirclesCyan.ForEach(circle => Overlays.DebugOverlays.Circle(circle.position, circle.radius, UnityEngine.Color.cyan));
-        //}
 
 
         public virtual string DebugSelection()
         {
             StringBuilder sb = new("[" + Count.ToString() + "/" + _BufferFull.Count + "]");
-            if (_BufferFull.Count > 0)
+            if (_BufferFull.Count <= 0) return sb.ToString();
+            
+            foreach (MVDefinition mvd in _BufferFull)
             {
-                foreach (MVDefinition mvd in _BufferFull)
-                {
-                    sb.AppendFormat("\n    {0}{1}", _Buffer.Contains(mvd) ? " " : "*", mvd);
-                }
+                sb.AppendFormat("\n    {0}{1}", _Buffer.Contains(mvd) ? " " : "*", mvd);
             }
             return sb.ToString();
         }

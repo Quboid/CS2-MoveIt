@@ -8,17 +8,19 @@ using Unity.Mathematics;
 
 namespace MoveIt.Searcher
 {
+    [Flags]
     internal enum Filters
     {
-        None = 0,
-        Buildings = 1,
-        Plants = 2,
-        Props = 4,
-        Decals = 8,
-        Nodes = 16,
-        Segments = 32,
-        ControlPoints = 64,
-        Surfaces = 128,
+        None            = 0,
+        Buildings       = 1,
+        Plants          = 2,
+        Props           = 4,
+        Decals          = 8,
+        Nodes           = 16,
+        Segments        = 32,
+        Netlanes        = 64,
+        ControlPoints   = 128,
+        Surfaces        = 256,
     }
 
     internal enum SearchTypes
@@ -29,18 +31,11 @@ namespace MoveIt.Searcher
         Ray,
     }
 
-    internal record struct Result : IComparable<Result>
+    internal record struct Result(Entity m_Entity, Identity m_Identity, float m_Distance) : IComparable<Result>
     {
-        public Entity m_Entity;
-        public Identity m_Identity;
-        public float m_Distance;
-
-        public Result(Entity e, Identity identity, float distance)
-        {
-            m_Entity = e;
-            m_Identity = identity;
-            m_Distance = distance;
-        }
+        public Entity m_Entity = m_Entity;
+        public Identity m_Identity = m_Identity;
+        public float m_Distance = m_Distance;
 
         public readonly int CompareTo(Result other)
         {
@@ -53,8 +48,8 @@ namespace MoveIt.Searcher
     internal static class Utils
     {
         internal const Filters FilterAllStatics = Filters.Buildings | Filters.Plants | Filters.Props | Filters.Decals;
-        internal const Filters FilterAllNetworks = Filters.Nodes | Filters.Segments | Filters.ControlPoints;
-        internal const Filters FilterAll = Filters.Buildings | Filters.Plants | Filters.Props | Filters.Decals | Filters.Nodes | Filters.Segments | Filters.ControlPoints | Filters.Surfaces;
+        internal const Filters FilterAllNetworks = Filters.Nodes | Filters.Segments | Filters.Netlanes | Filters.ControlPoints;
+        internal const Filters FilterAll = Filters.Buildings | Filters.Plants | Filters.Props | Filters.Decals | Filters.Nodes | Filters.Segments | Filters.Netlanes | Filters.ControlPoints | Filters.Surfaces;
 
         internal static int IdentityPriority(Identity id)
             => id switch

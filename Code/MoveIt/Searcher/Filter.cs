@@ -29,7 +29,7 @@ namespace MoveIt.Searcher
             set => m_UIEntry.m_CheckboxState.Changed = value;
         }
 
-        internal Filters m_MaskBit;
+        internal readonly Filters m_MaskBit;
 
         internal bool Equal(Filter other)
         {

@@ -1,5 +1,6 @@
 ﻿using Colossal.Mathematics;
-using MoveIt.Overlays;
+using MoveIt.Overlays.Children;
+using MoveIt.QAccessor.QEntity;
 using Unity.Entities;
 
 namespace MoveIt.Moveables
@@ -10,20 +11,20 @@ namespace MoveIt.Moveables
         {
             get
             {
-                Circle3 circle = QAccessor.QEntity.GetSurfaceCircle(_MIT.EntityManager, m_Entity);
+                Circle3 circle = QEntity.GetSurfaceCircle(_MIT.EntityManager, m_Entity);
                 return new(circle.position, circle.rotation);
             }
         }
 
         public MVSurface(Entity e) : base(e, Identity.Surface)
         {
-            m_Overlay = Factory.Create<OverlaySurface>(this, OverlayTypes.MVSurface);
-            Refresh();
+            m_Overlay = new OverlaySurface(this);
+            RefreshFromAbstract();
         }
 
         internal override float GetRadius()
         {
-            return QAccessor.QEntity.GetSurfaceCircle(_MIT.EntityManager, m_Entity).radius;
+            return QEntity.GetSurfaceCircle(_MIT.EntityManager, m_Entity).radius;
         }
     }
 }

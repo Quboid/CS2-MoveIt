@@ -15,7 +15,7 @@ namespace MoveIt.Overlays
         public const float LINE_MAX_WIDTH           = 3f;
         public const int   LINE_MAX_DISTANCE        = 4000;
         public const float LINE_DEFAULT_WIDTH       = 0.3f;
-        public const float SELECT_SCALE_MULTIPLYER  = 0.5f;
+        public const float SELECT_SCALE_MULTIPLIER  = 0.5f;
         public const float SELECT_BASE_RADIUS       = 0.5f;
         public const float CP_RADIUS                = 1.5f;
         public const int   DEBUG_TTL                = 100;
@@ -23,36 +23,49 @@ namespace MoveIt.Overlays
         /// <summary>
         /// How to process this overlay
         /// </summary>
-        public OverlayTypes m_Type  = OverlayTypes.None;
+        public OverlayTypes m_Type;
         /// <summary>
         /// The entity that has a Moveable which this overlay represents, if any
         /// </summary>
-        public Entity m_Owner       = Entity.Null;
+        public Entity m_Owner;
         /// <summary>
         /// The actual overlay that gets rendered
         /// </summary>
         public Entity m_Entity      = Entity.Null;
         /// <summary>
+        /// The name of the method that called for the update, only when IS_DEBUG is set
+        /// </summary>
+        protected string m_Caller   = string.Empty;
+        /// <summary>
         /// The Moveable which this overlay represents, if any
         /// </summary>
-        public Moveable m_Moveable  = null;
-        public T GetMoveable<T>() where T : Moveable => m_Moveable as T;
+        protected Moveable _Moveable;
+
+        protected T GetMoveable<T>() where T : Moveable => _Moveable as T;
 
         public string Name => GetType().Name;
 
-        protected virtual Game.Objects.Transform Transform => m_Moveable.Transform;
+        protected virtual Game.Objects.Transform Transform => _Moveable.Transform;
         internal MIO_Common Common => _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
 
         public override string ToString()
         {
             return $"[Overlay {Name.Substring(7, Name.Length - 7)}, " +
                 $"ent:{(m_Entity.Equals(Entity.Null) ? "Null" : m_Entity.D() + "/" + _MIT.EntityManager.GetComponentData<MIO_Type>(m_Entity).m_Type + "/" + Common.m_Flags)}, " +
-                $"owner:{m_Moveable?.Name} {(m_Moveable is null ? "null" : $"{m_Moveable.D(true)}")}]";
+                $"owner:{_Moveable?.Name} {(_Moveable is null ? "null" : $"{_Moveable.D(true)}")}]";
         }
 
-        public Overlay(OverlayTypes type)
+        protected Overlay(OverlayTypes type, Moveable mv)
         {
             m_Type = type;
+            _Moveable = mv;
+            m_Owner = mv?.m_Entity ?? Entity.Null;
+            if (type != OverlayTypes.None) CreateOverlayEntityFromAbstract();
+        }
+
+        private void CreateOverlayEntityFromAbstract()
+        {
+            CreateOverlayEntity();
         }
 
         protected void UpdateCommon(ref MIO_Common common)
@@ -60,7 +73,7 @@ namespace MoveIt.Overlays
             common.m_Transform = Transform;
             common.m_TerrainHeight = _MIT.GetTerrainHeight(common.m_Transform.m_Position);
 
-            float elevation = 0f;
+            var elevation = 0f;
 
             if (_MIT.EntityManager.HasComponent<Game.Net.Elevation>(m_Owner))
             {
@@ -74,7 +87,7 @@ namespace MoveIt.Overlays
             }
 
             float terrainOffset = (common.m_Transform.m_Position.y + elevation) - common.m_TerrainHeight;
-            float terrainOffsetAbs = math.abs(terrainOffset) - 2f;
+            float terrainOffsetAbs = math.abs(terrainOffset) - 2f; // Shadow never appears if height offset is less than 2m
             if (terrainOffsetAbs < 0f)
             {
                 common.m_ShadowOpacity = 0f;
@@ -91,6 +104,9 @@ namespace MoveIt.Overlays
 
         public virtual void EnqueueUpdate()
         {
+#if IS_DEBUG
+            m_Caller = QCommon.GetStackTrace(15);
+#endif
             _MIT.QueueOverlayUpdate(this);
         }
 
@@ -101,15 +117,23 @@ namespace MoveIt.Overlays
 
         public virtual bool Update()
         {
-            if (m_Moveable is null) return false;
-            if (m_Entity.Equals(Entity.Null)) return false;
+            if (_Moveable is null) return false;
+            if (!m_Entity.Exists(_MIT.EntityManager))
+            {
+                QLog.Debug($"OvUp {Name} {m_Entity.D()} (for {m_Owner.DX()}) doesn't exist!"
+#if IS_DEBUG
+                    + $" Caller: {(m_Caller.Equals(string.Empty) ? "<null>" : "\n" + m_Caller)}"
+#endif
+                    );
+                return false;
+            }
 
-            MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
+            var common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
             UpdateCommon(ref common);
 
             if (_MIT.EntityManager.HasComponent<MIO_Circle>(m_Entity))
             {
-                MIO_Circle circle = _MIT.EntityManager.GetComponentData<MIO_Circle>(m_Entity);
+                var circle = _MIT.EntityManager.GetComponentData<MIO_Circle>(m_Entity);
                 circle.Circle.position = common.m_Transform.m_Position;
                 _MIT.EntityManager.SetComponentData(m_Entity, circle);
             }
@@ -120,16 +144,19 @@ namespace MoveIt.Overlays
         
         public virtual void AddFlag(InteractionFlags flags)
         {
-            //MIT.Log.Debug($"Adding flag {flags} to overlay {m_Entity.D()} of {m_Owner.DX()}");
-            if (m_Entity.Equals(Entity.Null))
+            //MIT.Log.Debug($"Adding flag {flags} to olay {m_Entity.D()} of {m_Owner.DX()}");
+            if (!m_Owner.Exists(_MIT.EntityManager))
             {
-                if (!CreateOverlayEntity())
-                {
-                    return;
-                }
+                MIT.Log.Error($"{this} does not have a CP entity! ({m_Owner.DX()}, exists:{_MIT.EntityManager.Exists(m_Owner)})");
+                return;
+            }
+            if (!m_Entity.Exists(_MIT.EntityManager))
+            {
+                MIT.Log.Error($"{this} does not have an overlay entity!");
+                return;
             }
 
-            MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
+            var common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
 
             common.m_Flags |= flags;
             _MIT.EntityManager.SetComponentData(m_Entity, common);
@@ -137,35 +164,26 @@ namespace MoveIt.Overlays
 
         public virtual void RemoveFlag(InteractionFlags flags)
         {
-            //MIT.Log.Debug($"Removing flag {flags} to overlay {m_Entity.D()} of {m_Owner.DX()}");
-            if (m_Entity.Equals(Entity.Null)) return;
+            if (!m_Entity.Exists(_MIT.EntityManager))
+            {
+                //MIT.Log.Debug($"Overlay.RemoveFlag {m_Entity.D()} (for {m_Owner.DX()}) doesn't exist!\n{QCommon.GetStackTrace()}");
+                return;
+            }
 
-            MIO_Common common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
+            var common = _MIT.EntityManager.GetComponentData<MIO_Common>(m_Entity);
 
             common.m_Flags &= ~flags;
-
-            if (common.m_Flags == InteractionFlags.None)
-            {
-                DestroyOverlayEntity();
-            }
+            //MIT.Log.Debug($"Removing flag {flags} from overlay {m_Entity.D()} of {m_Owner.DX()}, remaining flags:{common.m_Flags}");
 
             _MIT.EntityManager.SetComponentData(m_Entity, common);
         }
 
 
-        public virtual bool CreateOverlayEntity()
-        {
-            if (!m_Entity.Equals(Entity.Null))
-            {
-                MIT.Log.Error($"Creating overlay when one already exists for {m_Owner.DX(true)} ({m_Entity.D()}).", "MIT01");
-                return false;
-            }
-            return true;
-        }
+        protected abstract bool CreateOverlayEntity();
 
-        public virtual bool DestroyOverlayEntity()
+        protected virtual bool DestroyOverlayEntity()
         {
-            if (m_Entity.Equals(Entity.Null))
+            if (!m_Entity.Exists(_MIT.EntityManager))
             {
                 MIT.Log.Error($"Destroying overlay when none exists for {m_Owner.DX(true)}.", "MIT02");
                 return false;
@@ -182,6 +200,11 @@ namespace MoveIt.Overlays
         {
             if (m_Entity.Equals(Entity.Null)) return;
             DestroyOverlayEntity();
+        }
+
+        public string E()
+        {
+            return m_Entity.DX();
         }
     }
 }

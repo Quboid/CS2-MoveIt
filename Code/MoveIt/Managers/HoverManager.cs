@@ -1,8 +1,10 @@
 ﻿using Colossal.Mathematics;
 using Game.Tools;
 using MoveIt.Moveables;
+using MoveIt.Overlays.DebugOverlays;
 using MoveIt.Tool;
 using QCommonLib;
+using System.Linq;
 using System.Text;
 using Unity.Collections;
 using Unity.Entities;
@@ -14,11 +16,13 @@ namespace MoveIt.Managers
     {
         protected readonly MIT _MIT = MIT.m_Instance;
 
+        public bool IsForChild => _IsForChild;
+        private readonly bool _IsForChild;
+
         public HoverHolder(bool isForManipChild)
         {
-            m_IsForManipChild = isForManipChild;
+            _IsForChild = isForManipChild;
         }
-        public bool m_IsForManipChild;
 
         /// <summary>
         /// The hovered object, or default MVDefinition if none
@@ -84,45 +88,89 @@ namespace MoveIt.Managers
 
         internal void Unset()
         {
-            Moveable mv = MV;
-            Definition  = new();
-            MV          = null;
-            mv?.OnUnhover();
+            Moveable mv         = MV;
+            MVDefinition mvd    = Definition;
+            Definition          = new();
+            MV                  = null;
+
+            if (_MIT.Moveables.RemoveIfUnused(mvd))
+            {
+                // Unhover remaining children
+                mv?.OnUnhoverChildren();
+            }
+            else
+            {
+                mv?.OnUnhover();
+            }
         }
 
-        public bool IsNull => Definition.m_Entity.Equals(Entity.Null) && Definition.m_Parent.Equals(Entity.Null);
-        public bool IsSelected => !IsNull && _MIT.Selection.Has(Definition);
+        public bool IsNull          => Definition.m_Entity.Equals(Entity.Null) && Definition.m_Parent.Equals(Entity.Null);
+        public bool IsSelected      => !IsNull && _MIT.Selection.Has(Definition, false);
         public bool IsManipulatable => !IsNull && MV.IsManipulatable;
 
+        public override string ToString()
+        {
+            return _Definition.ToString();
+        }
     }
 
     public class HoverManager : MIT_Manager
     {
         //private readonly MIT_HoverSystem _HoverSystem;
 
-        public HoverManager()
-        {
-            Normal = new(false);
-            Child = new(true);
-            //_HoverSystem = _MIT.World.GetOrCreateSystemManaged<MIT_HoverSystem>();
-        }
+        // public HoverManager()
+        // {
+        //     Normal = new(false);
+        //     Child = new(true);
+        //     //_HoverSystem = _MIT.World.GetOrCreateSystemManaged<MIT_HoverSystem>();
+        // }
 
-        public HoverHolder Normal { get; set; }
-        public HoverHolder Child { get; set; }
+        public HoverHolder Normal { get; set; } = new(false);
+        public HoverHolder Child { get; set; } = new(true);
 
+        /// <summary>
+        /// Get the HoverHolder of whatever hovered object is "top", i.e. the most relevant
+        /// </summary>
         public HoverHolder TopHovered
         {
             get
             {
+                //QLog.Bundle("HOV_ISNULL", $"ChildNull:{Child.Definition.m_Entity.Equals(Entity.Null)},  ParentNull:{Child.Definition.m_Parent.Equals(Entity.Null)},  isNull:{Child.Definition.m_Entity.Equals(Entity.Null) && Child.Definition.m_Parent.Equals(Entity.Null)}");
                 if (!Child.IsNull) return Child;
                 return Normal;
             }
         }
 
+        /// <summary>
+        /// Get the MVDefinition of whatever pressed object is "top", i.e. the most relevant
+        /// </summary>
+        public MVDefinition TopPressed
+        {
+            get
+            {
+                //QLog.Bundle("PRS_ISNULL", $"ChildNull:{Child.OnPress.m_Entity.Equals(Entity.Null)},  ParentNull:{Child.OnPress.m_Parent.Equals(Entity.Null)},  isNull:{Child.OnPress.m_Entity.Equals(Entity.Null) && Child.OnPress.m_Parent.Equals(Entity.Null)}");
+                if (!Child.OnPress.IsNull) return Child.OnPress;
+                return Normal.OnPress;
+            }
+        }
+
+        /// <summary>
+        /// Is the passed MVDefinition currently being hovered?
+        /// </summary>
+        /// <param name="mvd">The object definition to check</param>
+        /// <returns>True if either Normal or Child hovered matches</returns>
         public bool Is(MVDefinition mvd)
         {
-            return mvd.Equals(Normal.Definition) || mvd.Equals(Child.Definition);
+            if (mvd.Equals(Normal.Definition)) return true;
+            if (mvd.Equals(Child.Definition)) return true;
+
+            if (IsChildOf(Normal.MV, mvd)) return true;
+            if (IsChildOf(Child.MV, mvd)) return true;
+            return false;
         }
+
+        private static bool IsChildOf(Moveable hovered, MVDefinition mvd)
+            => hovered is not null && hovered.GetAllChildren().Any(childDef => childDef.Equals(mvd));
 
         /// <summary>
         /// Refresh the hovered object on tool activation
@@ -148,13 +196,11 @@ namespace MoveIt.Managers
                 return;
             }
 
-            //_MIT.Hovered = _MIT.IsManipulating ? Child : Normal;
-
             using Searcher.Searcher searcher = new(_MIT.Filtering.GetMask(), _MIT.IsManipulating, _MIT.m_PointerPos);
 
             NativeArray<Game.Common.RaycastResult> vanillaNetworkResults = _MIT.m_RaycastSystem.GetResult(toolRaycastSystem);
             NativeArray<Game.Common.RaycastResult> vanillaSurfaceResults = _MIT.m_RaycastSurface.GetResults();
-            Ray ray = Camera.main.ScreenPointToRay(Game.Input.InputManager.instance.mousePosition);
+            // Ray ray = Camera.main.ScreenPointToRay(Game.Input.InputManager.instance.mousePosition);
             searcher.SearchRay(ToolRaycastSystem.CalculateRaycastLine(Camera.main), vanillaNetworkResults, vanillaSurfaceResults);
             vanillaNetworkResults.Dispose();
             vanillaSurfaceResults.Dispose();
@@ -191,18 +237,20 @@ namespace MoveIt.Managers
 
                     if (_MIT.IsManipulating)
                     {
-                        if (QTypes.IsManipChildPredict(id, _MIT.IsManipulating) != holder.m_IsForManipChild) continue;
+                        if (QTypes.IsManipChildPredict(id, _MIT.IsManipulating) != holder.IsForChild) continue;
                     }
 
                     Entity parent = Entity.Null;
+                    var parentId = Identity.None;
                     short parentKey = -1;
                     if (id == Identity.ControlPoint)
                     {
                         var component = _MIT.EntityManager.GetComponentData<Components.MIT_ControlPoint>(e);
                         parent = component.m_Parent;
+                        parentId = component.m_ParentId;
                         parentKey = component.m_ParentKey;
                     }
-                    to = new(id, e, objIsManip, QTypes.IsManagedPredict(id), parent, parentKey);
+                    to = new(id, e, objIsManip, QTypes.IsManagedPredict(id), parent, parentId, parentKey);
                     found = true;
                 }
                 while (!found && i < searcher.m_Results.Length);
@@ -232,7 +280,7 @@ namespace MoveIt.Managers
             if (Normal.MV is not null)
             {
                 Normal.MV.m_Overlay.AddFlag(InteractionFlags.ToolHover);
-                foreach (var mv in Normal.MV.GetChildMoveablesForOverlays<Moveable>())
+                foreach (Moveable mv in Normal.MV.GetChildMoveablesForOverlays<Moveable>())
                 {
                     mv.m_Overlay.AddFlag(InteractionFlags.ToolParentHover);
                 }
@@ -241,7 +289,7 @@ namespace MoveIt.Managers
             if (Child.MV is not null)
             {
                 Child.MV.m_Overlay.AddFlag(InteractionFlags.ToolHover);
-                foreach (var mv in Child.MV.GetChildMoveablesForOverlays<Moveable>())
+                foreach (Moveable mv in Child.MV.GetChildMoveablesForOverlays<Moveable>())
                 {
                     mv.m_Overlay.AddFlag(InteractionFlags.ToolParentHover);
                 }
@@ -255,7 +303,7 @@ namespace MoveIt.Managers
             if (Normal.MV is not null)
             {
                 Normal.MV.m_Overlay.RemoveFlag(InteractionFlags.ToolHover);
-                foreach (var mv in Normal.MV.GetChildMoveablesForOverlays<Moveable>())
+                foreach (Moveable mv in Normal.MV.GetChildMoveablesForOverlays<Moveable>())
                 {
                     mv.m_Overlay.RemoveFlag(InteractionFlags.ToolParentHover);
                 }
@@ -264,7 +312,7 @@ namespace MoveIt.Managers
             if (Child.MV is not null)
             {
                 Child.MV.m_Overlay.RemoveFlag(InteractionFlags.ToolHover);
-                foreach (var mv in Child.MV.GetChildMoveablesForOverlays<Moveable>())
+                foreach (Moveable mv in Child.MV.GetChildMoveablesForOverlays<Moveable>())
                 {
                     mv.m_Overlay.RemoveFlag(InteractionFlags.ToolParentHover);
                 }
@@ -284,11 +332,11 @@ namespace MoveIt.Managers
             {
                 sb.AppendFormat("{0}-{1}", Normal.Definition.m_Entity.DX(true), (Normal.MV.IsManipulatable ? (Normal.MV.IsManipChild ? "C" : "P") : "N"));
             }
-            if (!Normal.LastValid.Equals(Entity.Null))
+            if (!Normal.LastValid.m_Entity.Equals(Entity.Null))
             {
                 sb.AppendFormat(", Valid:{0}", Normal.LastValid.m_Entity.DX(true));
             }
-            if (!Normal.OnPress.Equals(Entity.Null))
+            if (!Normal.OnPress.m_Entity.Equals(Entity.Null))
             {
                 sb.AppendFormat(", Press:{0}", Normal.OnPress.m_Entity.DX(true));
             }
@@ -302,11 +350,11 @@ namespace MoveIt.Managers
             {
                 sb.AppendFormat("{0}-{1}", Child.Definition.m_Entity.DX(true), (Child.MV.IsManipulatable ? (Child.MV.IsManipChild ? "C" : "P") : "N"));
             }
-            if (!Child.LastValid.Equals(Entity.Null))
+            if (!Child.LastValid.m_Entity.Equals(Entity.Null))
             {
                 sb.AppendFormat(", Valid:{0}", Child.LastValid.m_Entity.DX(true));
             }
-            if (!Child.OnPress.Equals(Entity.Null))
+            if (!Child.OnPress.m_Entity.Equals(Entity.Null))
             {
                 sb.AppendFormat(", Press:{0}", Child.OnPress.m_Entity.DX(true));
             }
@@ -317,17 +365,17 @@ namespace MoveIt.Managers
         public static void DebugRaycastLine()
         {
             Line3.Segment line = ToolRaycastSystem.CalculateRaycastLine(Camera.main);
-            Overlays.DebugLine.Factory(line, 0, new(0.2f, 0.8f, 0f, 0.5f), 7, 1);
+            DebugLine.Factory(line, 0, new(0.2f, 0.8f, 0f, 0.5f), 7, 1);
         }
 
         public static string DebugVanillaResults(NativeArray<Game.Common.RaycastResult> networkResults, NativeArray<Game.Common.RaycastResult> surfaceResults)
         {
-            string msg = $"networkResults:{networkResults.Length}, surfaceResults:{surfaceResults.Length}";
-            foreach (var result in networkResults)
+            var msg = $"networkResults:{networkResults.Length}, surfaceResults:{surfaceResults.Length}";
+            foreach (Game.Common.RaycastResult result in networkResults)
             {
                 msg += $"\n    NET: {result.m_Owner.DX()} - {result.m_Hit.m_HitEntity.DX()} - {result.m_Hit.m_HitPosition.D()} - {result.m_Hit.m_NormalizedDistance}";
             }
-            foreach (var result in surfaceResults)
+            foreach (Game.Common.RaycastResult result in surfaceResults)
             {
                 msg += $"\n    SUR: {result.m_Owner.DX()} - {result.m_Hit.m_HitEntity.DX()} - {result.m_Hit.m_HitPosition.D()} - {result.m_Hit.m_NormalizedDistance}";
             }

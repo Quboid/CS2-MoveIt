@@ -1,43 +1,31 @@
 ﻿using Colossal.Mathematics;
+using MoveIt.Moveables;
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace MoveIt.Overlays
+namespace MoveIt.Overlays.Children
 {
     public abstract class OverlayMoveableCircle : Overlay
     {
-        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
+        private static readonly EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                     typeof(MIO_Type),
                     typeof(MIO_Common),
                     typeof(MIO_Circle),
             });
 
-        public static Entity Factory(Entity owner, float radius, float3 position)
+
+        public OverlayMoveableCircle(Moveable mv) : base(OverlayTypes.MVCircle, mv) { }
+
+        protected override bool CreateOverlayEntity()
         {
-            return Factory(owner, new Circle3(radius, position, quaternion.identity));
-        }
+            Circle3 circle = new(_Moveable.GetRadius(), Transform.m_Position, quaternion.identity);
+            m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
 
-        public static Entity Factory(Entity owner, Circle3 circle)
-        {
-            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
+            _MIT.EntityManager.SetComponentData<MIO_Type>(m_Entity, new(OverlayTypes.MVCircle));
+            _MIT.EntityManager.SetComponentData<MIO_Common>(m_Entity, new(_Moveable.m_Entity));
+            _MIT.EntityManager.SetComponentData<MIO_Circle>(m_Entity, new(circle));
 
-            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVCircle));
-            _MIT.EntityManager.SetComponentData<MIO_Common>(e, new(owner));
-            _MIT.EntityManager.SetComponentData<MIO_Circle>(e, new(circle));
-
-            return e;
-        }
-
-
-        public OverlayMoveableCircle() : base(OverlayTypes.MVCircle) { }
-
-        public override bool CreateOverlayEntity()
-        {
-            if (m_Moveable is null) return false;
-            if (!base.CreateOverlayEntity()) return false;
-
-            m_Entity = Factory(m_Moveable.m_Entity, m_Moveable.GetRadius(), Transform.m_Position);
             EnqueueUpdate();
 
             return true;

@@ -20,14 +20,15 @@ namespace MoveIt
         Prop,
         Decal,
         Surface,
+        Overlay,
         Invalid
     }
 
-    public class QTypes
+    public static class QTypes
     {
         public static bool IsManipulationPredict(Identity identity, bool isToolManipulating)
         {
-            if (identity == Identity.Segment || identity == Identity.NetLane || identity == Identity.ControlPoint)
+            if (identity is Identity.Segment or Identity.NetLane or Identity.ControlPoint)
             {
                 return isToolManipulating;
             }
@@ -36,14 +37,7 @@ namespace MoveIt
         }
 
         public static bool IsManipChildPredict(Identity identity, bool isToolManipulating)
-        {
-            if (identity == Identity.ControlPoint)
-            {
-                return isToolManipulating;
-            }
-
-            return false;
-        }
+            => identity == Identity.ControlPoint && isToolManipulating;
 
         public static bool IsManagedPredict(Identity identity)
             => identity == Identity.ControlPoint;
@@ -63,6 +57,7 @@ namespace MoveIt
                 Identity.Prop           => "PRP",
                 Identity.Decal          => "DEC",
                 Identity.Surface        => "SUR",
+                Identity.Overlay        => "OVR",
                 Identity.Other          => "***",
                 Identity.Invalid        => "???",
                 _ => throw new System.NotImplementedException(),
@@ -83,7 +78,11 @@ namespace MoveIt
                 return Identity.Invalid;
             }
 
-            if (manager.HasComponent<Game.Objects.Plant>(e))
+            if (manager.HasComponent<Overlays.MIO_Type>(e))
+            {
+                return Identity.Overlay;
+            }
+            else if (manager.HasComponent<Game.Objects.Plant>(e))
             {
                 return Identity.Plant;
             }
@@ -126,7 +125,7 @@ namespace MoveIt
             {
                 return Identity.ControlPoint;
             }
-            else if (manager.HasComponent<Game.Objects.ObjectGeometry>(e) && !manager.HasComponent<Game.Objects.Pillar>(e))
+            else if (manager.HasComponent<Game.Objects.ObjectGeometry>(e))// && !manager.HasComponent<Game.Objects.Pillar>(e))
             {
                 if (manager.HasComponent<Game.Objects.Surface>(e))
                 {

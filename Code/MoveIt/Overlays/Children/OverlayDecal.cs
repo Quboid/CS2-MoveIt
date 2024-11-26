@@ -1,10 +1,11 @@
-﻿using Unity.Entities;
+﻿using MoveIt.Moveables;
+using Unity.Entities;
 
-namespace MoveIt.Overlays
+namespace MoveIt.Overlays.Children
 {
     internal class OverlayDecal : Overlay
     {
-        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
+        private static readonly EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                 typeof(MIO_Type),
                 typeof(MIO_Common),
@@ -12,26 +13,18 @@ namespace MoveIt.Overlays
                 typeof(MIO_Lines),
             });
 
-        public static Entity Factory(Entity owner)
+
+        public OverlayDecal(Moveable mv) : base(OverlayTypes.MVDecal, mv) { }
+
+        protected override bool CreateOverlayEntity()
         {
-            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
+            m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
 
-            MIO_Common common = new(owner);
+            MIO_Common common = new(_Moveable.m_Entity);
 
-            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.MVDecal));
-            _MIT.EntityManager.SetComponentData(e, common);
+            _MIT.EntityManager.SetComponentData<MIO_Type>(m_Entity, new(OverlayTypes.MVDecal));
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
 
-            return e;
-        }
-
-
-        public OverlayDecal() : base(OverlayTypes.MVDecal) { }
-
-        public override bool CreateOverlayEntity()
-        {
-            if (!base.CreateOverlayEntity()) return false;
-
-            m_Entity = OverlayDecal.Factory(m_Moveable.m_Entity);
             EnqueueUpdate();
 
             return true;

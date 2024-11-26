@@ -1,6 +1,6 @@
 ﻿using Colossal.Mathematics;
 using MoveIt.Actions.Transform;
-using MoveIt.Overlays;
+using MoveIt.Overlays.Children;
 using MoveIt.QAccessor;
 using MoveIt.Tool;
 using QCommonLib;
@@ -41,11 +41,20 @@ namespace MoveIt.Moveables
 
         public MVSegment(Entity e) : base(e, Identity.Segment)
         {
-            m_Overlay = Factory.Create<OverlaySegment>(this, OverlayTypes.MVSegment);
-            Refresh();
+            m_CPDefinitions = new();
+            for (short i = 0; i < CURVE_CPS; i++)
+            {
+                MVDefinition mvd = new(Identity.ControlPoint, Entity.Null, IsManipulatable, true, m_Entity, m_Identity, i);
+                MVControlPoint cp = _MIT.ControlPointManager.GetOrCreateMoveable(mvd);
+                m_CPDefinitions.Add(cp.Definition);
+            }
+
+            m_Overlay = new OverlaySegment(this);
+
+            RefreshFromAbstract();
         }
 
-        public MVSegment(Entity e, Identity identity) : base(e, identity)
+        protected MVSegment(Entity e, Identity identity) : base(e, identity)
         { } // Pass-thru for children
 
 
@@ -54,25 +63,21 @@ namespace MoveIt.Moveables
             if (!IsValid) return false;
             if (!IsOverlayValid) return false;
 
-            m_CPDefinitions = new();
-            for (short i = 0; i < CURVE_CPS; i++)
-            {
-                MVDefinition mvd = new(Identity.ControlPoint, Entity.Null, IsManipulatable, IsManaged, m_Entity, i);
-                MVControlPoint cp = _MIT.ControlPointManager.GetOrCreate(mvd);
-                m_CPDefinitions.Add(cp.Definition);
-            }
+            //QLog.Debug($"Olay-EnqueueUpdate {GetType().Name}.{System.Reflection.MethodBase.GetCurrentMethod().Name} {E()} caller:{QCommon.GetCallingMethodName()}");
             m_Overlay.EnqueueUpdate();
             return true;
         }
 
-        internal override List<MVDefinition> GetAllChildren() => m_CPDefinitions;
+        internal override List<MVDefinition> GetAllChildren()
+            => m_CPDefinitions;
 
-        internal override List<MVDefinition> GetChildrenToTransform() => new() { m_CPDefinitions[1], m_CPDefinitions[2] };
+        internal override List<MVDefinition> GetChildrenToTransform()
+            => new() { m_CPDefinitions[1], m_CPDefinitions[2] };
 
         internal override List<T> GetChildMoveablesForOverlays<T>() 
         {
             List<T> result = new();
-            m_CPDefinitions.ForEach(cpd => result.Add(_MIT.ControlPointManager.GetOrCreate(cpd) as T));
+            m_CPDefinitions.ForEach(cpd => result.Add(_MIT.ControlPointManager.GetOrCreateMoveable(cpd) as T));
             return result;
         }
 
@@ -116,7 +121,7 @@ namespace MoveIt.Moveables
             }
             List<MVControlPoint> cps = new();
 
-            m_CPDefinitions.ForEach(cpd => cps.Add(_MIT.ControlPointManager.GetOrCreate(cpd)));
+            m_CPDefinitions.ForEach(cpd => cps.Add(_MIT.ControlPointManager.GetOrCreateMoveable(cpd)));
 
             return cps;
         }
@@ -126,7 +131,7 @@ namespace MoveIt.Moveables
             Bezier4x3 curve = Curve;
             float2 mag = (curve.d - curve.a).XZ();
             float angle = math.atan2(mag.x, mag.y) * Mathf.Rad2Deg + 90f;
-            float angleRaw = angle;
+            //float angleRaw = angle;
             bool isLeft = ((curve.d.x - curve.a.x) * (pos.z - curve.a.z) - (pos.x - curve.a.x) * (curve.d.z - curve.a.z)) > 0;
             if (!isLeft) angle += 180;
             angle %= 360;

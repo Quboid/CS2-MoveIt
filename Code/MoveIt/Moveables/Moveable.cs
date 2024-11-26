@@ -14,7 +14,7 @@ namespace MoveIt.Moveables
 {
     public abstract class Moveable : IEquatable<Moveable>, IDisposable
     {
-        public const int CURVE_CPS = 4;
+        protected const int CURVE_CPS = 4;
 
         protected static readonly MIT _MIT = MIT.m_Instance;
 
@@ -29,12 +29,17 @@ namespace MoveIt.Moveables
         public Entity m_Parent = Entity.Null;
 
         /// <summary>
+        /// The game object (building/node/CP/etc)'s parent's type, if any
+        /// </summary>
+        public readonly Identity m_ParentId = Identity.None;
+
+        /// <summary>
         /// How this Moveable is referenced by parent
         /// For curve CPs, 0 = a, 1 = b, etc
         /// </summary>
         public short m_ParentKey = -1;
 
-        public Identity m_Identity;
+        public readonly Identity m_Identity;
         public Overlay m_Overlay;
         public string Name => GetType().Name;
 
@@ -59,11 +64,11 @@ namespace MoveIt.Moveables
         public virtual bool IsOverlayValid => m_Overlay is not null;
 
         public virtual Game.Objects.Transform Transform => _MIT.EntityManager.GetComponentData<Game.Objects.Transform>(m_Entity);
-        public virtual MVDefinition Definition => new(m_Identity, m_Entity, IsManipulatable, IsManaged, m_Parent, m_ParentKey);
-        public virtual MVDefinition ParentDefinition => new(QTypes.GetEntityIdentity(m_Parent), m_Parent, IsManipulatable, false, Entity.Null, -1);
+        public virtual MVDefinition Definition => new(m_Identity, m_Entity, IsManipulatable, IsManaged, m_Parent, m_ParentId, m_ParentKey);
+        public virtual MVDefinition ParentDefinition => new(QTypes.GetEntityIdentity(m_Parent), m_Parent, IsManipulatable, false, Entity.Null, Identity.None, -1);
 
 
-        public Moveable(Entity e, Identity identity)
+        protected Moveable(Entity e, Identity identity)
         {
             m_Entity = e;
             m_Identity = identity;
@@ -78,15 +83,24 @@ namespace MoveIt.Moveables
             if (!IsValid) return false;
             if (!IsOverlayValid) return false;
 
+            //QLog.Debug($"Olay-EnqueueUpdate {GetType().Name}.{System.Reflection.MethodBase.GetCurrentMethod().Name} {E()} caller:{QCommon.GetCallingMethodName()}");
             m_Overlay.EnqueueUpdate();
             return true;
         }
+        
+        protected bool RefreshFromAbstract()
+            => Refresh();
 
         internal virtual void MoveIt(TransformBase action, State state, bool move, bool rotate)
         {
             if (!move && !rotate) return;
 
             state.Transform(move, rotate);
+        }
+
+        internal virtual void UpdateCurve(State state)
+        {
+            state.UpdateCurve();
         }
 
         internal void UpdateOverlay()
@@ -120,12 +134,12 @@ namespace MoveIt.Moveables
             m_Overlay.AddFlag(flags);
 
             flags = InteractionFlags.ParentHovering | (_MIT.MITState == MITStates.ToolActive ? InteractionFlags.ToolParentHover : 0);
-            foreach (var mv in GetChildMoveablesForOverlays<Moveable>())
+            foreach (Moveable mv in GetChildMoveablesForOverlays<Moveable>())
             {
                 mv.m_Overlay.AddFlag(flags);
             }
 
-            //QLog.XDebug($"{m_Entity.D()} {Name} OnHover {m_Overlay.Common.m_Flags}");
+            //MIT.Log.Debug($"{m_Entity.D()} {Name} OnHover {m_Overlay.Common.m_Flags}");
         }
 
         /// <summary>
@@ -133,14 +147,10 @@ namespace MoveIt.Moveables
         /// </summary>
         public virtual void OnUnhover()
         {
-            //QLog.XDebug($"{m_Entity.D()} {Name} OnUnhover {m_Overlay.Common.m_Flags}");
+            MIT.Log.Debug($"{m_Entity.D()} {Name} OnUnhover {m_Overlay.Common.m_Flags} {QCommon.GetCallerDebug()}");
 
             m_Overlay.RemoveFlag(InteractionFlags.Hovering | InteractionFlags.ToolHover);
-
-            foreach (var mv in GetChildMoveablesForOverlays<Moveable>())
-            {
-                mv.m_Overlay.RemoveFlag(InteractionFlags.ParentHovering | InteractionFlags.ToolParentHover);
-            }
+            OnUnhoverChildren();
 
             if (m_Overlay.Common.m_Flags == 0)
             {
@@ -148,16 +158,30 @@ namespace MoveIt.Moveables
             }
         }
 
+        public virtual void OnUnhoverChildren()
+        {
+            MIT.Log.Debug($"{m_Entity.D()} {Name} OnUnhoverChildren {QCommon.GetCallerDebug()}");
+
+            // Don't use GetChildMoveablesForOverlays as it will always create the Moveable, creating orphaned CPs
+            foreach (MVDefinition mvd in GetAllChildren())
+            {
+                if (_MIT.Moveables.TryGet<Moveable>(mvd, out Moveable mv))
+                {
+                    mv.m_Overlay.RemoveFlag(InteractionFlags.ParentHovering | InteractionFlags.ToolParentHover);
+                }
+            }
+        }
+
         public virtual void OnClick()
         {
-            //MIT.Log.Debug($"{m_Entity.D()} {Name} OnClick angle:{Transform.m_Rotation.Y()}");
+            //MIT.Log.Debug($"ONCLICK {m_Entity.D()} {Name}");
         }
 
         public virtual void OnSelect()
         {
             //MIT.Log.Debug($"{m_Entity.D()} {Name} OnSelect");
             m_Overlay.AddFlag(InteractionFlags.Selected);
-            foreach (var mv in GetChildMoveablesForOverlays<Moveable>())
+            foreach (Moveable mv in GetChildMoveablesForOverlays<Moveable>())
             {
                 mv.m_Overlay.AddFlag(IsManipulatable ? InteractionFlags.ParentManipulating : InteractionFlags.ParentSelected);
             }
@@ -168,9 +192,9 @@ namespace MoveIt.Moveables
         /// </summary>
         public virtual void OnDeselect()
         {
-            //MIT.Log.Debug($"{m_Entity.D()} {Name} OnDeselect");
+            MIT.Log.Debug($"{m_Entity.D()} {Name} OnDeselect {QCommon.GetCallerDebug()}");
             m_Overlay.RemoveFlag(InteractionFlags.Selected);
-            foreach (var mv in GetChildMoveablesForOverlays<Moveable>())
+            foreach (Moveable mv in GetChildMoveablesForOverlays<Moveable>())
             {
                 mv.m_Overlay.RemoveFlag(IsManipulatable ? InteractionFlags.ParentManipulating : InteractionFlags.ParentSelected);
             }
@@ -224,10 +248,11 @@ namespace MoveIt.Moveables
 
         public virtual void Dispose()
         {
-            m_Overlay.Dispose();
+            m_Overlay?.Dispose();
         }
 
 
+        #region Debug
         internal string D(bool full = false)
         {
             return $"{(IsManipulatable ? "M" : "n")}-{m_Entity.DX(full)}";
@@ -242,5 +267,11 @@ namespace MoveIt.Moveables
         {
             return D(true);
         }
+
+        public string E()
+        {
+            return m_Entity.DX();
+        }
+        #endregion
     }
 }

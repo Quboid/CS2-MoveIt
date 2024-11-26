@@ -5,13 +5,13 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace MoveIt.QAccessor
+namespace MoveIt.QAccessor.QEntity
 {
     internal partial struct QEntity
     {
-        private readonly float3 Segment_Position => BezierPosition(Curve);
+        private float3 Segment_Position => BezierPosition(Curve);
 
-        private readonly float Segment_Angle
+        private float Segment_Angle
         {
             get
             {
@@ -20,17 +20,17 @@ namespace MoveIt.QAccessor
             }
         }
 
-        private readonly quaternion Segment_Rotation => quaternion.EulerXYZ(0f, Angle, 0f);
+        private quaternion Segment_Rotation => quaternion.EulerXYZ(0f, Angle, 0f);
 
 
         private bool Segment_SetUpdated()
         {
             TryAddUpdate(m_Entity);
 
-            Game.Net.Edge edge = m_Lookup.gnEdge.GetRefRO(m_Entity).ValueRO;
-            QEntity node = new(m_Manager, ref m_Lookup, edge.m_Start, Identity.Node);
+            Game.Net.Edge edge = _Lookup.gnEdge.GetRefRO(m_Entity).ValueRO;
+            QEntity node = new(_Manager, ref _Lookup, edge.m_Start, Identity.Node);
             node.SetUpdated();
-            node = new(m_Manager, ref m_Lookup, edge.m_End, Identity.Node);
+            node = new(_Manager, ref _Lookup, edge.m_End, Identity.Node);
             node.SetUpdated();
 
             if (TryGetComponent<Game.Net.Aggregated>(out var aggregateComp))
@@ -52,7 +52,7 @@ namespace MoveIt.QAccessor
             return true;
         }
 
-        private readonly bool Segment_MoveTo(State state, float3 newPosition, float3 delta)
+        private bool Segment_MoveTo(State state, float3 newPosition, float3 delta)
         {
             MIT.Log.Info($"QSeg.Move called - new:{newPosition.DX()}, delta:{delta.DX()}, start:{Position.DX()}");
             return false;
@@ -66,6 +66,12 @@ namespace MoveIt.QAccessor
         private readonly bool Segment_RotateTo(State state, quaternion newRotation, ref Matrix4x4 matrix, float3 origin)
         {
             return false;
+        }
+
+        private bool Segment_UpdateCurve(State state)
+        {
+            _Lookup.gnCurve.GetRefRW(m_Entity).ValueRW.m_Bezier = state.m_Curve;
+            return Segment_SetUpdated();
         }
 
 

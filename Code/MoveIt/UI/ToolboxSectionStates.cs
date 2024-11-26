@@ -22,19 +22,17 @@ namespace MoveIt.UI
         {
             if (_MIT.ToolboxManager is not null && _MIT.ToolboxManager.IsActive(m_Id) && _MIT.MITState == Tool.MITStates.ToolActive)
             {
-                if (!m_UIEntry.m_Active)
-                {
-                    m_UIEntry.m_Active = true;
-                    UI_Changed = true;
-                }
+                if (m_UIEntry.m_Active) return m_UIEntry;
+                
+                m_UIEntry.m_Active = true;
+                UI_Changed = true;
                 return m_UIEntry;
             }
 
-            if (m_UIEntry.m_Active)
-            {
-                m_UIEntry.m_Active = false;
-                UI_Changed = true;
-            }
+            if (!m_UIEntry.m_Active) return m_UIEntry;
+            
+            m_UIEntry.m_Active = false;
+            UI_Changed = true;
             return m_UIEntry;
         }
     }

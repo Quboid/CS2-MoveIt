@@ -44,16 +44,16 @@ namespace MoveIt.Settings
                 }
 
                 ZipFile.CreateFromDirectory(pathLogs, archiveFile, CompressionLevel.Optimal, true);
-                using var archive = ZipFile.Open(archiveFile, ZipArchiveMode.Update);
+                using ZipArchive archive = ZipFile.Open(archiveFile, ZipArchiveMode.Update);
 
-                for (int i = 0; i < rootFiles.Length; i++)
+                foreach (string file in rootFiles)
                 {
-                    string logFile = Path.Combine(pathAppData, rootFiles[i]);
+                    string logFile = Path.Combine(pathAppData, file);
                     string tmpFile = Path.Combine(pathAppData, "MIT_Log.tmp");
                     if (File.Exists(logFile))
                     {
                         File.Copy(logFile, tmpFile);
-                        archive.CreateEntryFromFile(tmpFile, rootFiles[i]);
+                        archive.CreateEntryFromFile(tmpFile, file);
                         File.Delete(tmpFile);
                     }
                 }

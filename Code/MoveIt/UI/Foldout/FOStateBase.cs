@@ -5,10 +5,10 @@ namespace MoveIt.UI.Foldout
 {
     public abstract class FOStateBase : StateBase
     {
-        public CheckboxState m_CheckboxState;
-        public string m_RawId;
+        public readonly CheckboxState m_CheckboxState;
+        public readonly string m_RawId;
 
-        public FOStateBase(string rawId, bool active, CheckboxState checkboxState = null) : base(rawId + "Row", true, active)
+        protected FOStateBase(string rawId, bool active, CheckboxState checkboxState = null) : base(rawId + "Row", true, active)
         {
             m_CheckboxState = checkboxState;
             m_RawId = rawId;
@@ -31,7 +31,7 @@ namespace MoveIt.UI.Foldout
             m_CheckboxState.Update(CBenabled, CBactive);
         }
 
-        public override void WriteExtend(IJsonWriter writer)
+        protected override void WriteExtend(IJsonWriter writer)
         {
             writer.PropertyName("RawId");
             writer.Write(m_RawId);
@@ -43,7 +43,7 @@ namespace MoveIt.UI.Foldout
             WriteExtendInner(writer);
         }
 
-        public virtual void WriteExtendInner(IJsonWriter writer)
+        protected virtual void WriteExtendInner(IJsonWriter writer)
         { }
 
         public override string ToString()

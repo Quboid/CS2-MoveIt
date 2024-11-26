@@ -1,10 +1,12 @@
-﻿namespace MoveIt.Overlays
+﻿using MoveIt.Moveables;
+
+namespace MoveIt.Overlays.Children
 {
     public class OverlayNone : Overlay
     {
-        public OverlayNone() : base(OverlayTypes.None) { }
+        public OverlayNone(Moveable mv) : base(OverlayTypes.None, mv) { }
 
-        public override bool CreateOverlayEntity() => false;
-        public override bool DestroyOverlayEntity() => false;
+        protected override bool CreateOverlayEntity() => false;
+        protected override bool DestroyOverlayEntity() => false;
     }
 }

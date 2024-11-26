@@ -1,4 +1,6 @@
 ﻿using MoveIt.Moveables;
+using MoveIt.Tool;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Mathematics;
 
@@ -22,6 +24,9 @@ namespace MoveIt.Actions.Transform
 
         internal int Count => m_States.Length;
 
+        //protected readonly List<Neighbour> _Neighbours;
+        //public List<Neighbour> Neighbours => _Neighbours;
+
         internal TransformState(int length)
         {
             m_States = new NativeArray<State>(length, Allocator.Persistent);
@@ -43,5 +48,32 @@ namespace MoveIt.Actions.Transform
         {
             return $"[TrState:{(this is TransformStateNew ? "New" : "Old")},#{m_States.Length}]";
         }
+
+#if USE_BURST
+        // Do nothing if in burst mode
+
+        public string DebugStates()
+        {
+            return string.Empty;
+        }
+
+        public void DebugDumpStates(string prefix = "")
+        { }
+#else
+        public string DebugStates()
+        {
+            string msg = $"States: {m_States.Length}";
+            for (int i = 0; i < m_States.Length; i++)
+            {
+                msg += $"\n    {m_States[i]}";
+            }
+            return msg;
+        }
+
+        public void DebugDumpStates(string prefix = "")
+        {
+            MIT.Log.Debug(prefix + DebugStates());
+        }
+#endif
     }
 }

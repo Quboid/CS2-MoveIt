@@ -2,6 +2,7 @@
 using Game.Input;
 using Game.Modding;
 using Game.Settings;
+using MoveIt.Input;
 using MoveIt.Tool;
 using QCommonLib;
 
@@ -73,6 +74,7 @@ namespace MoveIt.Settings
         [SettingsUIButton]
         public bool SaveLogsToDesktopBtn
         {
+            // ReSharper disable once ValueParameterNotUsed
             set => FileUtils.SaveLogsToDesktop();
         }
 
@@ -86,6 +88,7 @@ namespace MoveIt.Settings
         [SettingsUIHideByConditionAttribute(typeof(FileUtils), nameof(FileUtils.HideGooeeWarning))]
         public bool OpenLocalModsFolderBtn
         {
+            // ReSharper disable once ValueParameterNotUsed
             set => FileUtils.OpenLocalModsFolder();
         }
 
@@ -180,11 +183,13 @@ namespace MoveIt.Settings
         #region Mouse imitators
         [SettingsUIMouseBinding(QInputSystem.MOUSE_APPLY)]
         [SettingsUISection(tabKeys, groupHotkeys)]
+        [SettingsUIBindingMimic(InputManager.kToolMap, "Apply")]
         [SettingsUIHidden]
         public ProxyBinding ApplyMimic { get; set; }
 
         [SettingsUIMouseBinding(QInputSystem.MOUSE_CANCEL)]
         [SettingsUISection(tabKeys, groupHotkeys)]
+        [SettingsUIBindingMimic(InputManager.kToolMap, "Cancel")]
         [SettingsUIHidden]
         public ProxyBinding CancelMimic { get; set; }
         #endregion

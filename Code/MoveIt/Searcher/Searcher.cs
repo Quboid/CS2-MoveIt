@@ -22,8 +22,8 @@ namespace MoveIt.Searcher
 
         protected NativeList<Entity> _Entities;
         protected bool _DoSort;
-        protected Filters _Filters;
-        protected bool _IsManipulating;
+        protected readonly Filters _Filters;
+        protected readonly bool _IsManipulating;
         protected float3 _TerrainPosition;
         protected NativeArray<RaycastResult> _NetworkResults;
         protected NativeArray<RaycastResult> _SurfaceResults;
@@ -48,7 +48,7 @@ namespace MoveIt.Searcher
             _Lookup = QLookupFactory.Get();
         }
 
-        internal static Game.Objects.SearchSystem ObjSearch
+        protected static Game.Objects.SearchSystem ObjSearch
         {
             get
             {
@@ -58,7 +58,7 @@ namespace MoveIt.Searcher
         }
         private static Game.Objects.SearchSystem _ObjSearch;
 
-        internal static Game.Net.SearchSystem NetSearch
+        protected static Game.Net.SearchSystem NetSearch
         {
             get
             {
@@ -68,7 +68,7 @@ namespace MoveIt.Searcher
         }
         private static Game.Net.SearchSystem _NetSearch;
 
-        internal static Game.Areas.SearchSystem AreaSearch
+        protected static Game.Areas.SearchSystem AreaSearch
         {
             get
             {
@@ -141,10 +141,10 @@ namespace MoveIt.Searcher
             {
                 var staticTree = ObjSearch.GetStaticSearchTree(true, out JobHandle objSearchTreeHandle);
                 var networkTree = NetSearch.GetNetSearchTree(true, out JobHandle netSearchTreeHandle);
-                var areaTree = AreaSearch.GetSearchTree(true, out JobHandle netAreaTreeHandle);
+                var areaTree = AreaSearch.GetSearchTree(true, out JobHandle areaSearchTreeHandle);
                 objSearchTreeHandle.Complete();
                 netSearchTreeHandle.Complete();
-                netAreaTreeHandle.Complete();
+                areaSearchTreeHandle.Complete();
 
                 _Entities = new NativeList<Entity>(0, Allocator.TempJob);
                 var controlPoints = new NativeArray<Components.MIT_ControlPoint>(_MIT.ControlPointManager.GetAllData(_IsManipulating).ToArray(), Allocator.TempJob);
@@ -174,12 +174,14 @@ namespace MoveIt.Searcher
                 job.Run();
 
                 // Add valid vanilla network segment results
-                if (_Type == SearchTypes.Ray && (_Filters & Filters.Segments) != 0)
+                bool includeSegs  = (_Filters & Filters.Segments) != 0;
+                bool includeLanes = (_Filters & Filters.Netlanes) != 0;
+                if (_Type == SearchTypes.Ray && (includeSegs || includeLanes))
                 {
-                    foreach (var result in _NetworkResults)
+                    foreach (RaycastResult result in _NetworkResults)
                     {
                         if (result.m_Owner.Equals(Entity.Null)) continue;
-                        if (TryGetValidVanillaRaycast(_MIT.EntityManager, result, out Entity entity))
+                        if (TryGetValidVanillaRaycast(result, out Entity entity))
                         {
                             _Entities.Add(entity);
                         }
@@ -187,11 +189,12 @@ namespace MoveIt.Searcher
                 }
 
                 // Add valid vanilla surface results
-                if (_Type == SearchTypes.Ray && (_Filters & Filters.Surfaces) != 0)
+                bool includeSurfaces = (_Filters & Filters.Surfaces) != 0;
+                if (_Type == SearchTypes.Ray && includeSurfaces)
                 {
-                    foreach (var result in _SurfaceResults)
+                    foreach (RaycastResult result in _SurfaceResults)
                     {
-                        if (TryGetValidVanillaRaycast(_MIT.EntityManager, result, out Entity entity))
+                        if (TryGetValidVanillaRaycast(result, out Entity entity))
                         {
                             _Entities.Add(entity);
                         }
@@ -202,7 +205,7 @@ namespace MoveIt.Searcher
                 m_Results = new NativeArray<Result>(Count, Allocator.TempJob);
                 if (HasSearchResults())
                 {
-                    for (int i = 0; i < Count; i++)
+                    for (var i = 0; i < Count; i++)
                     {
                         Entity e = _Entities[i];
                         Result r = new()
@@ -230,22 +233,40 @@ namespace MoveIt.Searcher
             }
         }
 
-        private bool TryGetValidVanillaRaycast(EntityManager manager, RaycastResult raycast, out Entity result)
+        private bool TryGetValidVanillaRaycast(RaycastResult raycast, out Entity result)
         {
-            bool found = false;
+            var found = false;
             result = Entity.Null;
             Entity e = raycast.m_Owner;
 
-            if (QTypes.GetEntityIdentity(e) switch
+            switch (QTypes.GetEntityIdentity(e))
             {
-                Identity.NetLane => true,
-                Identity.Segment => true,
-                Identity.Surface => true,
-                _ => false,
-            })
-            {
-                result = e;
-                found = true;
+                case Identity.NetLane:
+                    if ((_Filters & Filters.Netlanes) != 0)
+                    {
+                        result = e;
+                        found = true;
+                    }
+                    break;
+
+                case Identity.Segment:
+                    if ((_Filters & Filters.Segments) != 0)
+                    {
+                        result = e;
+                        found = true;
+                    }
+                    break;
+
+                case Identity.Surface:
+                    if ((_Filters & Filters.Surfaces) != 0)
+                    {
+                        result = e;
+                        found = true;
+                    }
+                    break;
+
+                default:
+                    break;
             }
 
             return found;
@@ -269,7 +290,7 @@ namespace MoveIt.Searcher
         /// <returns>The distance in metres</returns>
         private float GetDistance(Entity e)
         {
-            float distance = 0f;
+            var distance = 0f;
 
             QObjectSimple accessor = new(_MIT.EntityManager, ref _Lookup, e);
             float3 position = accessor.m_Parent.Position;
@@ -331,11 +352,11 @@ namespace MoveIt.Searcher
 
         internal string DebugSearchResults(bool full = false)
         {
-            int netCount = _NetworkResults.Count(res => TryGetValidVanillaRaycast(_MIT.EntityManager, res, out _));
-            int surCount = _SurfaceResults.Count(res => TryGetValidVanillaRaycast(_MIT.EntityManager, res, out _));
+            int netCount = _NetworkResults.Count(res => TryGetValidVanillaRaycast(res, out _));
+            int surCount = _SurfaceResults.Count(res => TryGetValidVanillaRaycast(res, out _));
 
             StringBuilder sb = new();
-            sb.AppendFormat("Search results: {0}; Network results: {1}/{2}; Surface results: {1}/{2}", Count, netCount, _NetworkResults.Length, surCount, _SurfaceResults.Length);
+            sb.AppendFormat("Results: {0}; Network results: {1}/{2}; Surface results: {3}/{4}", Count, netCount, _NetworkResults.Length, surCount, _SurfaceResults.Length);
             if (Count < 1) return sb.ToString();
 
             sb.Append("\n    ");
@@ -371,9 +392,9 @@ namespace MoveIt.Searcher
             MIT.Log.Debug(prefix + DebugSearchResults(full));
         }
 
-        internal void DebugDumpSearchResultsBundle(string key, bool full = false, string prefix = "")
+        internal void DebugDumpSearchResultsBundle(string key, bool full = false, bool includeEmpty = false, string prefix = "")
         {
-            if (HasSearchResults())
+            if (includeEmpty || HasSearchResults())
             {
                 MIT.Log.Bundle(key, prefix + DebugSearchResults(full));
             }

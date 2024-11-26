@@ -10,19 +10,19 @@ namespace MoveIt.QAccessor
     /// </summary>
     public struct QObjectSimple : IDisposable
     {
-        internal EntityManager m_Manager;
+        private EntityManager _Manager;
         public Entity m_Entity;
-        internal QEntity m_Parent;
-        internal Identity m_Identity;
+        internal QEntity.QEntity m_Parent;
+        internal readonly Identity m_Identity;
 
         internal QObjectSimple(EntityManager manager, ref QLookup lookup, Entity e)
         {
-            if (e == Entity.Null) throw new ArgumentNullException("Creating QObject with null entity");
+            if (e == Entity.Null) throw new ArgumentNullException(nameof(e), "Creating QObject with null entity");
 
-            m_Manager   = manager;
+            _Manager   = manager;
             m_Entity    = e;
             m_Identity  = QTypes.GetEntityIdentity(manager, e);
-            m_Parent    = new(m_Manager, ref lookup, e, m_Identity);
+            m_Parent    = new(_Manager, ref lookup, e, m_Identity);
 
             //DebugDumpFullObject();
         }

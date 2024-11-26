@@ -1,4 +1,5 @@
-﻿using Game.Common;
+﻿using Colossal.Mathematics;
+using Game.Common;
 using Game.Net;
 using Game.Tools;
 using MoveIt.Actions;
@@ -6,7 +7,10 @@ using MoveIt.Actions.Select;
 using MoveIt.Actions.Transform;
 using MoveIt.Overlays;
 using QCommonLib;
+using System.Reflection;
+using System;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace MoveIt.Tool
 {
@@ -93,24 +97,19 @@ namespace MoveIt.Tool
             }
             else
             {
-                if (m_MarqueeSelect)
-                {
-                    mode = "Marquee";
-                }
-                else
-                {
-                    mode = "Single";
-                }
+                mode = m_MarqueeSelect ? "Marquee" : "Single";
             }
 
-            MIT_ToolTipSystem.instance.Set($"Mode: {mode}", 1.25f);
+            Systems.MIT_ToolTipSystem.instance.Set($"Mode: {mode}", 1.25f);
         }
 
         internal void MoveStart()
         {
+            //QLog.Debug($"MOVESTART OnPress:{Hover.TopPressed.E()}-Null:{Hover.TopPressed.IsNull} :: {Hover.Normal.OnPress.E()}/{Hover.Child.OnPress.E()} (sel:{Selection.Has(Hover.TopPressed)})\n{QCommon.GetStackTrace(3)}");
+
             if (MITState == MITStates.SecondaryButtonHeld) return;
             TransformAction action;
-            if (Selection.Has(Hovered.OnPress))
+            if (Selection.Has(Hover.TopPressed))
             {
                 action = new TransformAction();
                 Queue.Push(action);
@@ -119,7 +118,7 @@ namespace MoveIt.Tool
             {
                 // Requires OnHold to have fired, causing a 250ms delay
                 Queue.Push(new SelectAction());
-                Queue.Current.Do();
+                Queue.Do();
 
                 action = new TransformAction();
                 Queue.Push(action);
@@ -131,8 +130,7 @@ namespace MoveIt.Tool
         internal void RotationStart()
         {
             if (MITState == MITStates.ApplyButtonHeld) return;
-            TransformAction action;
-            action = new TransformAction();
+            var action = new TransformAction();
             Queue.Push(action);
             MITState = MITStates.SecondaryButtonHeld;
 
@@ -142,7 +140,7 @@ namespace MoveIt.Tool
         private void TransformStart()
         {
             m_DragPointerOffsetFromSelection = Selection.Center - m_PointerPos;
-            CreationPhase = CreationPhases.Positioning;
+            Actions.Action.Phase = Phases.Do;
         }
 
         internal void EndMove()
@@ -155,15 +153,15 @@ namespace MoveIt.Tool
             TransformEnd();
         }
 
-        internal void TransformEnd()
+        private void TransformEnd()
         {
             if (Queue.Current is TransformBase action)
             {
-                action.OnHoldEnd();
+                Actions.Action.Phase = Phases.Finalise;
             }
             else
             {
-                throw new System.Exception($"In EndTransform, action is {Queue.Current.Name} not TransformAction");
+                throw new Exception($"In EndTransform, action is {Queue.Current.Name} not TransformAction");
             }
             MITState = MITStates.Default;
         }
@@ -195,16 +193,23 @@ namespace MoveIt.Tool
 
         internal void ProcessSensitivityMode(bool enable)
         {
-            if (Queue is not null && Queue.Current is not null && Queue.Current.m_CanUseLowSensitivity)
+            if (Queue?.Current is null || !Queue.Current.m_CanUseLowSensitivity) return;
+            
+            if (enable)
             {
-                if (enable)
-                {
-                    m_SensitivityTogglePosAbs = m_PointerPos;
-                    m_SensitivityTogglePosX = QCommon.MouseScreenPosition.x; //UnityEngine.InputSystem.Mouse.current.position.x.ReadValue();
-                }
-
-                _IsLowSensitivity = enable;
+                m_SensitivityTogglePosAbs = m_PointerPos;
+                m_SensitivityTogglePosX = QCommon.MouseScreenPosition.x; //UnityEngine.InputSystem.Mouse.current.position.x.ReadValue();
             }
+
+            _IsLowSensitivity = enable;
+        }
+
+        internal void SetUpdateAreaField(Bounds3 bounds)
+        {
+            if (Mathf.Approximately(bounds.min.x, bounds.max.x) || Mathf.Approximately(bounds.min.z, bounds.max.z)) return;
+            float4 area = new(bounds.min.x, bounds.min.z, bounds.max.x, bounds.max.z);
+            FieldInfo field = m_TerrainSystem.GetType().GetField("m_UpdateArea", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("Failed to find TerrainSystem.m_UpdateArea");
+            field.SetValue(m_TerrainSystem, area);
         }
 
         //internal void DejankNodes()

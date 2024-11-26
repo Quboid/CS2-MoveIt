@@ -1,6 +1,5 @@
 ﻿using MoveIt.Actions.Transform;
 using MoveIt.Moveables;
-using MoveIt.Tool;
 using QCommonLib;
 
 namespace MoveIt.Actions.Toolbox
@@ -29,12 +28,12 @@ namespace MoveIt.Actions.Toolbox
             MoveDelta = new(0f, 0f, 0f);
             AngleDelta = angle - m_Old.m_States[seniorIdx].m_InitialRotation.Y();
 
-            DoFromAngleAndMoveDeltas();
+            DoFromDeltas();
 
             m_UpdateMove = true;
             m_UpdateRotate = true;
-            _MIT.CreationPhase = CreationPhases.Create;
-            _MIT.ToolboxManager.Phase = Managers.Phases.Finalize;
+            Phase = Phases.Finalise;
+            _MIT.ToolboxManager.Phase = Managers.ToolboxManager.Phases.Finalise;
             return true;
         }
     }

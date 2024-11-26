@@ -4,13 +4,13 @@ using QCommonLib;
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace MoveIt.Overlays
+namespace MoveIt.Overlays.DebugOverlays
 {
     public class DebugBounds
     {
         protected static readonly MIT _MIT = MIT.m_Instance;
 
-        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
+        private static readonly EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                 typeof(MIO_Type),
                 typeof(MIO_Common),
@@ -19,7 +19,7 @@ namespace MoveIt.Overlays
                 typeof(MIO_Bounds),
             });
 
-        private static EntityArchetype _ArchetypeTTL = _MIT.EntityManager.CreateArchetype(
+        private static readonly EntityArchetype _ArchetypeTTL = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                 typeof(MIO_Type),
                 typeof(MIO_Common),

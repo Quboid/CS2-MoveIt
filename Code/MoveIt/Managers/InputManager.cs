@@ -61,7 +61,7 @@ namespace MoveIt.Managers
                     }
 
                     TransformKeyAction tka = _MIT.Queue.Current as TransformKeyAction;
-                    tka.Process(direction);
+                    tka?.Process(direction);
 
                     return true;
                 }
@@ -74,7 +74,7 @@ namespace MoveIt.Managers
             direction = float3.zero;
             angle = 0;
 
-            float magnitude = 8f;
+            var magnitude = 8f;
             if (QKeyboard.Shift) magnitude *= QKeyboard.Alt ? 64f : 8f;
             if (QKeyboard.Control) magnitude /= QKeyboard.Alt ? 64f : 8f;
 

@@ -16,6 +16,12 @@ namespace MoveIt.Actions.Toolbox
             for (int i = 0; i < m_Old.Count; i++)
             {
                 State old = m_Old.m_States[i];
+                if (!old.m_Entity.Exists(_MIT.EntityManager))
+                {
+                    MIT.Log.Warning($"{GetType().Name}.{System.Reflection.MethodBase.GetCurrentMethod().Name} Invalid state: {old} {QCommon.GetCallerDebug()}");
+                    continue;
+                }
+
                 float3 position = old.m_Position;
                 var angle = Moveable.m_Identity switch
                 {
@@ -34,8 +40,8 @@ namespace MoveIt.Actions.Toolbox
             }
 
             m_UpdateRotate = true;
-            _MIT.CreationPhase = CreationPhases.Create;
-            _MIT.ToolboxManager.Phase = Managers.Phases.Finalize;
+            Phase = Phases.Finalise;
+            _MIT.ToolboxManager.Phase = Managers.ToolboxManager.Phases.Finalise;
             return true;
         }
     }

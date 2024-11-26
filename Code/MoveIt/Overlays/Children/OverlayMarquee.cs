@@ -2,11 +2,11 @@
 using MoveIt.Tool;
 using Unity.Entities;
 
-namespace MoveIt.Overlays
+namespace MoveIt.Overlays.Children
 {
     public class OverlayMarquee : Overlay
     {
-        private static EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
+        private static readonly EntityArchetype _Archetype = _MIT.EntityManager.CreateArchetype(
             new ComponentType[] {
                 typeof(MIO_Type),
                 typeof(MIO_Common),
@@ -14,41 +14,28 @@ namespace MoveIt.Overlays
                 typeof(MIO_Quad),
             });
 
-        public static Entity Factory(Entity owner)
+
+        public OverlayMarquee(int index, int version = 1) : base(OverlayTypes.None, null)
         {
-            Entity e = _MIT.EntityManager.CreateEntity(_Archetype);
+            Entity owner = new() { Index = index, Version = version };
+            m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
 
             MIO_Common common = new()
             {
-                m_Flags = InteractionFlags.Static,
-                m_OutlineColor = Colors.Get(ColorData.Contexts.Hovering),
-                m_Owner = owner,
+                m_Flags         = InteractionFlags.Static,
+                m_OutlineColor  = Colors.Get(ColorData.Contexts.Hovering),
+                m_Owner         = owner,
             };
 
-            _MIT.EntityManager.SetComponentData<MIO_Type>(e, new(OverlayTypes.Marquee));
-            _MIT.EntityManager.SetComponentData(e, common);
+            _MIT.EntityManager.SetComponentData<MIO_Type>(m_Entity, new(OverlayTypes.Marquee));
+            _MIT.EntityManager.SetComponentData(m_Entity, common);
 
-            return e;
+            m_Owner = owner;
+            m_Type = OverlayTypes.Marquee;
+            _Moveable = null;
         }
 
-        public static OverlayMarquee HandlerFactory(int index, int version = 1)
-        {
-            Entity owner = new() { Index = index, Version = version };
-            Entity e = OverlayMarquee.Factory(owner);
-
-            OverlayMarquee overlay = new()
-            {
-                m_Owner = owner,
-                m_Entity = e
-            };
-
-            return overlay;
-        }
-
-
-        public OverlayMarquee() : base(OverlayTypes.Marquee) { }
-
-        public override bool CreateOverlayEntity()
+        protected override bool CreateOverlayEntity()
         {
             MIT.Log.Error($"Trying to automatically make OverlayMarquee.", "MIT02");
             return false;

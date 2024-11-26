@@ -1,6 +1,7 @@
 ﻿using Colossal.Collections;
 using Colossal.Mathematics;
 using MoveIt.QAccessor;
+using MoveIt.Tool;
 using QCommonLib;
 using System.Linq;
 using Unity.Burst;
@@ -80,11 +81,47 @@ namespace MoveIt.Searcher
 
                 m_NetworkTree.Iterate(ref iterator);
 
-                for (int i = 0; i < iterator.m_EntityList.Length; i++)
+                foreach (Entity e in iterator.m_EntityList)
                 {
-                    Entity e = iterator.m_EntityList[i];
-                    if (((m_Filters & Filters.Nodes) == 0) && m_Manager.HasComponent<Game.Net.Node>(e)) continue;
-                    if (((m_Filters & Filters.Segments) == 0) && m_Manager.HasComponent<Game.Net.Edge>(e)) continue;
+                    // Nodes
+                    if ((m_Filters & Filters.Nodes) == 0)
+                    {
+                        if (m_Manager.HasComponent<Game.Net.Node>(e) && !m_Manager.HasComponent<Game.Tools.EditorContainer>(e))
+                        {
+                            continue;
+                        }
+                    }
+
+                    // Segments
+                    if ((m_Filters & Filters.Segments) == 0)
+                    {
+                        if (m_Manager.HasComponent<Game.Net.Edge>(e) && m_Manager.HasComponent<Game.Net.EdgeGeometry>(e))
+                        {
+                            continue;
+                        }
+                    }
+
+                    // Netlanes
+                    if ((m_Filters & Filters.Netlanes) == 0)
+                    {
+                        if (m_Manager.HasComponent<Game.Net.Node>(e) && m_Manager.HasComponent<Game.Tools.EditorContainer>(e))
+                        {
+                            continue;
+                        }
+                        if (m_Manager.HasComponent<Game.Net.Edge>(e) && !m_Manager.HasComponent<Game.Net.EdgeGeometry>(e))
+                        {
+                            continue;
+                        }
+                    }
+
+                    //if (((m_Filters & Filters.Nodes) == 0) && m_Manager.HasComponent<Game.Net.Node>(e)) continue;
+                    //if (((m_Filters & Filters.Segments) == 0) && m_Manager.HasComponent<Game.Net.Edge>(e) && m_Manager.HasComponent<Game.Net.EdgeGeometry>(e)) continue;
+                    //if (((m_Filters & Filters.Netlanes) == 0) &&
+                    //    ((m_Manager.HasComponent<Game.Net.Edge>(e) && !m_Manager.HasComponent<Game.Net.EdgeGeometry>(e)) || 
+                    //    m_Manager.HasComponent<Game.Net.AreaLane>(e)))
+                    //{
+                    //    continue;
+                    //}
 
                     if (!m_Results.Contains(e))
                     {
@@ -111,7 +148,7 @@ namespace MoveIt.Searcher
 
                 m_AreaTree.Iterate(ref iterator);
 
-                for (int i = 0; i < iterator.m_EntityList.Length; i++)
+                for (var i = 0; i < iterator.m_EntityList.Length; i++)
                 {
                     if (!m_Results.Contains(iterator.m_EntityList[i]))
                     {
@@ -161,7 +198,7 @@ namespace MoveIt.Searcher
         private readonly bool FilterStatic(Entity e)
         {
             if ((m_Filters & Utils.FilterAllStatics) == 0) return false; // Not looking for a static
-            if ((m_Filters & Utils.FilterAllStatics) == Utils.FilterAllStatics) return true; // Looking for any static
+            //if ((m_Filters & Utils.FilterAllStatics) == Utils.FilterAllStatics) return true; // Looking for any static - TOO BROAD, GETS MVOther/etc
 
             Identity identity = QTypes.GetEntityIdentity(m_Manager, e);
 
@@ -170,6 +207,7 @@ namespace MoveIt.Searcher
             {
                 case Identity.Building:
                 case Identity.Extension:
+                case Identity.ServiceUpgrade:
                     result = (m_Filters & Filters.Buildings) != 0;
                     break;
 

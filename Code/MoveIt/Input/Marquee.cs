@@ -1,11 +1,13 @@
 ﻿using Colossal.Mathematics;
 using MoveIt.Actions.Select;
+using MoveIt.Overlays.Children;
 using MoveIt.Tool;
 using QCommonLib;
 using System.Collections.Generic;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
+using Debug = System.Diagnostics.Debug;
 
 namespace MoveIt.Input
 {
@@ -21,7 +23,7 @@ namespace MoveIt.Input
         internal Bounds3 m_LastBounds;
         internal bool m_HasMoved;
 
-        private readonly Overlays.OverlayMarquee _Overlay;
+        private readonly OverlayMarquee _Overlay;
 
         internal Marquee(float3 position)
         {
@@ -33,7 +35,7 @@ namespace MoveIt.Input
             m_LastBounds = new(float.MaxValue, float.MaxValue);
             m_HasMoved = false;
 
-            _Overlay = Overlays.OverlayMarquee.HandlerFactory(2);
+            _Overlay = new OverlayMarquee(2);
         }
 
         internal bool CheckIfMoved(float3 position)
@@ -56,12 +58,13 @@ namespace MoveIt.Input
             m_SelectArea.a = m_StartPosition;
             m_SelectArea.c = position;
 
-            if (m_SelectArea.a.x == m_SelectArea.c.x && m_SelectArea.a.z == m_SelectArea.c.z)
+            if (Mathf.Approximately(m_SelectArea.a.x, m_SelectArea.c.x) && Mathf.Approximately(m_SelectArea.a.z, m_SelectArea.c.z))
             {
                 m_SelectArea = default;
                 return false;
             }
 
+            Debug.Assert(Camera.main != null, "Camera.main != null");
             float angle = Camera.main.transform.localEulerAngles.y * Mathf.Deg2Rad;
             float3 down = new Vector3(Mathf.Cos(angle), 0, -Mathf.Sin(angle));
             float3 right = new Vector3(-down.z, 0, down.x);

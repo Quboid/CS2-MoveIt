@@ -25,11 +25,11 @@ namespace MoveIt.Overlays
             buffer.DrawLine(common.m_OutlineColor, common.m_OutlineColor, common.GetWidth(proj), GetProjection(proj), line, common.GetWidth(proj));
         }
 
-        public static void Curve(OverlayRenderSystem.Buffer buffer, MIO_Common common, Bezier4x3 curve, Projection proj, float width = -1)
+        public static void Curve(OverlayRenderSystem.Buffer buffer, MIO_Common common, Bezier4x3 curve, Projection proj, float width = -1, float widthMultiplier = 1f)
         {
             // Unreliable except if Style is Projected
-            if (width == -1) width = common.GetWidth(proj) * 5;
-            buffer.DrawCurve(common.m_OutlineColor, Color.clear, common.GetWidth(proj), GetProjection(proj), curve, width, 1f);
+            if (Mathf.Approximately(width, -1)) width = common.GetWidth(proj) * 5;
+            buffer.DrawCurve(common.m_OutlineColor, Color.clear, common.GetWidth(proj) * widthMultiplier, GetProjection(proj), curve, width * widthMultiplier, 1f);
         }
 
         public static void CurveThin(OverlayRenderSystem.Buffer buffer, MIO_Common common, Bezier4x3 curve, Projection proj)
@@ -52,7 +52,8 @@ namespace MoveIt.Overlays
         #endregion
 
         #region Drawing Circles
-        public const float CIRCLE_BEZIER = 0.55228475f;
+
+        private const float CIRCLE_BEZIER = 0.55228475f;
 
         public static void CircleSimple(OverlayRenderSystem.Buffer buffer, MIO_Common common, Circle3 circle, Projection proj)
         {
@@ -112,7 +113,7 @@ namespace MoveIt.Overlays
         #region Static line calculations
         internal static NativeArray<Line3.Segment> CalculateBoundsLines(Bounds3 bounds)
         {
-            var (a, b) = (bounds.min, bounds.max);
+            (float3 a, float3 b) = (bounds.min, bounds.max);
             return CalculateRectangleLines(new(a.x, a.z, b.x, b.z));
         }
 
