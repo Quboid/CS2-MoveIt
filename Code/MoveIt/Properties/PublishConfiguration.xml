@@ -91,15 +91,15 @@ Icons from SVG Repo, and from WishForge.Games under CC Attribution License.</Lon
   <!--Link to the forum post where the mod can be discussed-->
   <ForumLink Value="https://forum.paradoxplaza.com/forum/threads/move-it.1684140/" />
   <!--Version of the mod-->
-  <ModVersion Value="0.5.1.0" />
+  <ModVersion Value="0.5.2" />
   <!--Recommended version of the base game to use the mod-->
   <GameVersion Value="1.*" />
   <!--Dependency for the mod, can be set multiple-->
   <Dependency Id="" DisplayName="" Version="" />
   <!--Change log for new version. Single line or multi line. Supports minimal markdown subset-->
-  <ChangeLog>0.5.1
-- Updated for 1.1.12f
-- Numerous minor tweaks</ChangeLog>
+  <ChangeLog>0.5.2
+- Fixed errors, particularly when opening Move It after bulldozing selected objects
+- Improved logging</ChangeLog>
   <!--External link. supported types are discord, github, youtube, twitch, x, paypal, patreon-->
   <ExternalLink Type="discord" Url="https://discord.gg/nURB9MQ" />
   <ExternalLink Type="patreon" Url="https://www.patreon.com/Quboid" />

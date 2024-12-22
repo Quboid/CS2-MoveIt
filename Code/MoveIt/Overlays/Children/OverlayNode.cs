@@ -82,6 +82,7 @@ namespace MoveIt.Overlays.Children
             }
         }
 
+        private static bool s_ShownUpdateError = false;
         public override bool Update()
         {
             if (_Moveable is not MVNode node) return false;
@@ -109,6 +110,21 @@ namespace MoveIt.Overlays.Children
             float circleYPos = 0f;
             foreach ((Entity seg, bool isNodeA) in node.m_Segments)
             {
+                if (!seg.Exists(_MIT.EntityManager))
+                {
+                    string msg = $"Segment {seg.D()} doesn't exist for node {node} overlay {m_Entity.D()} {QCommon.GetCallerDebug()}";
+                    if (!s_ShownUpdateError)
+                    {
+                        MIT.Log.Error(msg, "MI-OLYNOD01");
+                        s_ShownUpdateError = true;
+                    }
+                    else
+                    {
+                        MIT.Log.Warning(msg, "MI-OLYNOD02");
+                    }
+                    continue;
+                }
+
                 Bezier4x3 curve = _MIT.EntityManager.GetComponentData<Game.Net.Curve>(seg).m_Bezier;
                 circleYPos += isNodeA ? curve.a.y : curve.d.y;
 

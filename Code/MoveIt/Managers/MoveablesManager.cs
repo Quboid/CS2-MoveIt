@@ -295,6 +295,7 @@ namespace MoveIt.Managers
 
         internal void RemoveDo(Moveable mv)
         {
+            MIT.Log.Info($"Removing {mv} {QCommon.GetCallerDebug()}", "MI-MMREMDO-01");
             //QLog.Debug($"MM.RemoveDo: {mv.D()}");
             _Moveables.Remove(mv);
             mv.Dispose();

@@ -68,7 +68,7 @@ namespace MoveIt.Overlays.Children
             // If the segment has been deleted, return now
             if (!GetMoveable<MVSegment>().IsValid)
             {
-                MIT.Log.Error($"UpdateRelatedNodes called for segment {E()} that isn't valid.");
+                MIT.Log.Debug($"UpdateRelatedNodes called for segment {E()} that isn't valid {QCommon.GetCallerDebug()}.");
                 return;
             }
 

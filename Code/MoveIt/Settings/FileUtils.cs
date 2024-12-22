@@ -25,7 +25,7 @@ namespace MoveIt.Settings
 
         internal static void SaveLogsToDesktop()
         {
-            string timestamp        = $"{DateTime.Now:yyyy-MM-dd_hh_mm_ss}";
+            string timestamp        = $"{DateTime.Now:yyyy-MM-dd_HH_mm_ss}";
             string logTime          = QLoggerBase.GetFormattedTimeNow();
             string pathDesktop      = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             string archiveFile      = Path.Combine(pathDesktop, $"MoveIt_Logs_{timestamp}.zip");

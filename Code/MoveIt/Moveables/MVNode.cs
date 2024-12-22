@@ -36,8 +36,8 @@ namespace MoveIt.Moveables
         /// The segments (edges) attached to this segment; Entity -> IsStart
         /// IsStart = true when this node is that edge's m_Start node, false for m_End
         /// </summary>
-        internal readonly Dictionary<Entity, bool> m_Segments;
-        internal readonly List<MVDefinition> m_CPDefinitions;
+        internal Dictionary<Entity, bool> m_Segments;
+        internal List<MVDefinition> m_CPDefinitions;
 
         public override Game.Objects.Transform Transform
         {
@@ -54,6 +54,21 @@ namespace MoveIt.Moveables
 
         public MVNode(Entity e) : base(e, Identity.Node)
         {
+            RefreshSegmentData();
+            m_Overlay = new OverlayNode(this);
+            RefreshFromAbstract();
+        }
+
+        public MVNode(Entity e, Identity identity) : base(e, identity)
+        { } // Pass-thru for children
+
+        /// <summary>
+        /// Refresh this node's connected segment data.
+        /// Needs to run on Refresh to handle a segment being deleted outside of Move It
+        /// </summary>
+        private void RefreshSegmentData()
+        {
+            QLog.Debug($"RefreshSegmentData {E()} - {GetType().Name}.{System.Reflection.MethodBase.GetCurrentMethod().Name} {E()} {QCommon.GetCallerDebug()}");
             m_Segments = new();
             m_CPDefinitions = new();
 
@@ -74,20 +89,15 @@ namespace MoveIt.Moveables
                     m_CPDefinitions.Add(cp.Definition);
                 }
             }
-
-            m_Overlay = new OverlayNode(this);
-            RefreshFromAbstract();
         }
-
-        public MVNode(Entity e, Identity identity) : base(e, identity)
-        { } // Pass-thru for children
 
         internal override bool Refresh()
         {
             if (!IsValid) return false;
             if (!IsOverlayValid) return false;
 
-            //QLog.Debug($"Olay-EnqueueUpdate {GetType().Name}.{System.Reflection.MethodBase.GetCurrentMethod().Name} {E()} caller:{QCommon.GetCallingMethodName()}");
+            RefreshSegmentData();
+            QLog.Debug($"Refresh {E()} - {GetType().Name}.{System.Reflection.MethodBase.GetCurrentMethod().Name} {E()} {QCommon.GetCallerDebug()}");
             m_Overlay.EnqueueUpdate();
 
             return true;
