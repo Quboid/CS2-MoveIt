@@ -30,7 +30,7 @@ namespace MoveIt.Overlays.Children
 
             m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
 
-            MIO_Common common = new()
+            MIO_Common common = new(true)
             {
                 m_Owner = mcp.m_Entity,
                 m_IsManipulatable = mcp.IsManipulatable,

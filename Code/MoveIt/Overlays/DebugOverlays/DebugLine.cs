@@ -36,7 +36,7 @@ namespace MoveIt.Overlays.DebugOverlays
 
             float3 position = line.a + (line.ab / 2);
 
-            MIO_Common common = new()
+            MIO_Common common = new(true)
             {
                 m_Flags = InteractionFlags.Static,
                 m_OutlineColor = color.Equals(default) ? Colors.Get(ColorData.Contexts.Hovering) : color,

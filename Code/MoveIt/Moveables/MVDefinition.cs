@@ -4,15 +4,15 @@ using Unity.Entities;
 
 namespace MoveIt.Moveables
 {
-    public readonly record struct MVDefinition : IEquatable<MVDefinition>, IEquatable<Moveable>
+    public readonly struct MVDefinition : IEquatable<MVDefinition>, IEquatable<Moveable>
     {
-        public readonly Identity m_Identity     = Identity.Invalid;
-        public readonly Entity m_Entity         = Entity.Null;
-        public readonly bool m_IsManipulatable  = false;
-        public readonly bool m_IsManaged        = false;
-        public readonly Entity m_Parent         = Entity.Null;
-        public readonly Identity m_ParentId     = Identity.Invalid;
-        public readonly short m_ParentKey       = -1;
+        public readonly Identity m_Identity;
+        public readonly Entity m_Entity;
+        public readonly bool m_IsManipulatable;
+        public readonly bool m_IsManaged;
+        public readonly Entity m_Parent;
+        public readonly Identity m_ParentId;
+        public readonly short m_ParentKey;
 
         public readonly bool IsNull             => m_Entity.Equals(Entity.Null) && m_Parent.Equals(Entity.Null);
         public readonly bool IsChild            => !m_Parent.Equals(Entity.Null);
@@ -30,14 +30,27 @@ namespace MoveIt.Moveables
 
         public MVDefinition(Identity identity, Entity e, bool isManipulatable)
         {
+            m_IsManaged        = false;
+            m_Parent         = Entity.Null;
+            m_ParentId     = Identity.Invalid;
+            m_ParentKey       = -1;
+            
             m_Identity = identity;
             m_Entity = e;
             m_IsManipulatable = isManipulatable;
         }
 
         // Why on earth does C# not use my default values unless I have this?!
-        public MVDefinition()
-        { }
+        public MVDefinition(bool _)
+        {
+            m_Identity     = Identity.Invalid;
+            m_Entity         = Entity.Null;
+            m_IsManipulatable  = false;
+            m_IsManaged        = false;
+            m_Parent         = Entity.Null;
+            m_ParentId     = Identity.Invalid;
+            m_ParentKey       = -1;
+        }
 
         public readonly bool Equals(MVDefinition rhs)
         {

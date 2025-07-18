@@ -42,7 +42,7 @@ namespace MoveIt.Managers
             get => _HoveredHit;
             set => _HoveredHit = value;
         }
-        private MVDefinition _HoveredHit = new();
+        private MVDefinition _HoveredHit = new(true);
 
         /// <summary>
         /// The hovered object when the pointer button was pressed
@@ -52,7 +52,7 @@ namespace MoveIt.Managers
             get => _HoveredOnPress;
             set => _HoveredOnPress = value;
         }
-        private MVDefinition _HoveredOnPress = new();
+        private MVDefinition _HoveredOnPress = new(true);
 
         /// <summary>
         /// Moveable object for _Hovered, if present
@@ -73,9 +73,9 @@ namespace MoveIt.Managers
             {
                 Unset();
             }
-            Definition  = new();
-            LastValid   = new();
-            OnPress     = new();
+            Definition  = new(true);
+            LastValid   = new(true);
+            OnPress     = new(true);
         }
 
         internal void Set(MVDefinition to)
@@ -90,7 +90,7 @@ namespace MoveIt.Managers
         {
             Moveable mv         = MV;
             MVDefinition mvd    = Definition;
-            Definition          = new();
+            Definition          = new(true);
             MV                  = null;
 
             if (_MIT.Moveables.RemoveIfUnused(mvd))
@@ -222,7 +222,7 @@ namespace MoveIt.Managers
 
         private void ProcessMode(Searcher.Searcher searcher, HoverHolder holder)
         {
-            MVDefinition to = new();
+            MVDefinition to = new(true);
             if (searcher.Count > 0)
             {
                 int i = 0;
@@ -265,7 +265,7 @@ namespace MoveIt.Managers
                 holder.Unset();
             }
 
-            holder.Definition = new();
+            holder.Definition = new(true);
 
             if (_MIT.IsValid(to))
             {

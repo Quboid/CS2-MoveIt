@@ -34,18 +34,28 @@ namespace MoveIt.Snapper
 
     internal struct SnapCandidate
     {
-        internal Entity m_Entity = Entity.Null;
-        internal SnapTypes m_Type = SnapTypes.None;
-        internal SnapFlags m_Flags = SnapFlags.None;
-        internal float m_Weight = 1f;
+        internal Entity m_Entity;
+        internal SnapTypes m_Type;
+        internal SnapFlags m_Flags;
+        internal float m_Weight;
 
-        internal float3 m_Point = default;
-        internal Line3.Segment m_Line = default;
-        internal Bezier4x3 m_Curve = default;
-        internal bool m_ZoneTile = default;
+        internal float3 m_Point;
+        internal Line3.Segment m_Line;
+        internal Bezier4x3 m_Curve;
+        internal bool m_ZoneTile;
 
-        public SnapCandidate()
-        { }
+        public SnapCandidate(bool _)
+        {
+            m_Entity = Entity.Null;
+            m_Type = SnapTypes.None;
+            m_Flags = SnapFlags.None;
+            m_Weight = 1f;
+
+            m_Point = default;
+            m_Line = default;
+            m_Curve = default;
+            m_ZoneTile = default;
+        }
 
         public readonly override string ToString()
         {
@@ -79,14 +89,21 @@ namespace MoveIt.Snapper
 
     internal struct SnapResult
     {
-        internal SnapCandidate m_Candidate = default;
-        internal float3 m_SnapPosition = default;
-        internal float3 m_Delta = default;
-        internal float m_Distance = 999f;
-        internal float m_Score = 0f;
+        internal SnapCandidate m_Candidate;
+        internal float3 m_SnapPosition;
+        internal float3 m_Delta;
+        internal float m_Distance;
+        internal float m_Score;
 
-        public SnapResult()
-        { }
+        // Create new struct with default values, needs pointless parameter in C# 9.0
+        public SnapResult(bool _)
+        {
+            m_Candidate = default;
+            m_SnapPosition = default;
+            m_Delta = default;
+            m_Distance = 999f;
+            m_Score = 0f;
+        }
 
         public readonly override string ToString()
         {
@@ -190,14 +207,20 @@ namespace MoveIt.Snapper
         internal void DebugDump()
         {
             var msg = $"Candidates: {_Candidates.Length}";
-            msg = _Candidates.Aggregate(msg, (current, item) => current + $"\n    {item}");
+            for (int i = 0; i < _Candidates.Length; i++)
+            {
+                msg += "\n    " + _Candidates[i].ToString();
+            }
             MIT.Log.Debug(msg);
         }
 
         internal void DebugDumpResults(NativeList<SnapResult> results)
         {
             var msg = $"Results: {results.Length}";
-            msg = results.Aggregate(msg, (current, item) => current + $"\n    {item}");
+            for (int i = 0; i < results.Length; i++)
+            {
+                msg += "\n    " + results[i].ToString();
+            }
             MIT.Log.Bundle("SNAP", msg);
         }
     }

@@ -21,7 +21,7 @@ namespace MoveIt.Actions
         Complete,
     }
 
-    public record struct Neighbour
+    public struct Neighbour
     {
         internal Entity m_Entity;
         internal Identity m_Identity;

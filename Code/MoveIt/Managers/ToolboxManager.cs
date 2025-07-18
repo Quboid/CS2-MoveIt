@@ -160,6 +160,15 @@ namespace MoveIt.Managers
             }
         }
         internal static List<FoldoutEntry> GetUIEntries()
-            => ToolList.Select(FoldoutEntry (t) => t.m_UI).ToList();
+        {
+            //ToolList.Select(FoldoutEntry (t) => t.m_UI).ToList();
+
+            List<FoldoutEntry> list = new();
+            foreach (var t in ToolList)
+            {
+                list.Add(t.m_UI);
+            }
+            return list;
+        }
     }
 }

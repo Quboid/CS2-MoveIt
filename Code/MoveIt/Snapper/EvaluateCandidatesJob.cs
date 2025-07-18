@@ -28,7 +28,7 @@ namespace MoveIt.Snapper
             State originalState = GetState(index);
             float3 offsetPointer = originalState.m_Position - m_OriginalPointerPosition;
             float3 offsetCenter = originalState.m_Position - m_OriginalCenter;
-            SnapResult result = new();
+            SnapResult result = new(true);
             
             switch (candidate.m_Type)
             {

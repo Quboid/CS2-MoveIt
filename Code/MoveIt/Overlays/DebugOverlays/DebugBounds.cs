@@ -44,7 +44,7 @@ namespace MoveIt.Overlays.DebugOverlays
             Entity owner = new() { Index = index, Version = version };
             Entity e = _MIT.EntityManager.CreateEntity(ttl == 0 ? _Archetype : _ArchetypeTTL);
 
-            MIO_Common common = new()
+            MIO_Common common = new(true)
             {
                 m_Flags = InteractionFlags.Static,
                 m_Owner = owner,

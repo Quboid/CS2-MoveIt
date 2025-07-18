@@ -41,7 +41,7 @@ namespace MoveIt.Snapper
 
                     Line3.Segment line = new(posA, posB);
 
-                    SnapCandidate candidateLine = new()
+                    SnapCandidate candidateLine = new(true)
                     {
                         m_Entity = state.m_Entity,
                         m_Type = SnapTypes.Line,
@@ -53,7 +53,7 @@ namespace MoveIt.Snapper
                     #region Control Point Points
                     if (state.m_ParentKey.IsMiddle())
                     {
-                        SnapCandidate candidate = new()
+                        SnapCandidate candidate = new(true)
                         {
                             m_Entity = state.m_Entity,
                             m_Type = SnapTypes.Point,
@@ -81,7 +81,7 @@ namespace MoveIt.Snapper
                             }
                             position /= (float)(buffer.Length - 1f);
 
-                            SnapCandidate candidate = new()
+                            SnapCandidate candidate = new(true)
                             {
                                 m_Entity = state.m_Entity,
                                 m_Type = SnapTypes.Point,
@@ -100,13 +100,13 @@ namespace MoveIt.Snapper
                 #region Straight Segment
                 if (state.m_Identity != Identity.Segment && state.m_Identity != Identity.NetLane) return;
                 
-                SnapCandidate candidate = new()
+                SnapCandidate candidate = new(true)
                 {
                     m_Entity = state.m_Entity,
                     m_Type = SnapTypes.Point,
                     m_Flags = SnapFlags.SameStraight,
                     m_Point = math.lerp(state.m_InitialCurve.a, state.m_InitialCurve.d, 0.5f),
-                    m_Weight = 2,
+                    m_Weight = 2f,
                 };
 
                 m_Candidates.AddNoResize(candidate);

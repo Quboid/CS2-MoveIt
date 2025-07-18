@@ -1,3 +1,2 @@
-﻿0.5.2
-- Fixed errors, particularly when opening Move It after bulldozing selected objects
-- Improved logging
+﻿0.5.6
+- Fixed snapping control points to straight line

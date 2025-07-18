@@ -31,11 +31,18 @@ namespace MoveIt.Searcher
         Ray,
     }
 
-    internal record struct Result(Entity m_Entity, Identity m_Identity, float m_Distance) : IComparable<Result>
+    internal struct Result : IComparable<Result>
     {
-        public Entity m_Entity = m_Entity;
-        public Identity m_Identity = m_Identity;
-        public float m_Distance = m_Distance;
+        public Entity m_Entity;
+        public Identity m_Identity;
+        public float m_Distance;
+
+        public Result(Entity entity, Identity identity, float distance)
+        {
+            m_Entity = entity;
+            m_Identity = identity;
+            m_Distance = distance;
+        }
 
         public readonly int CompareTo(Result other)
         {

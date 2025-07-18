@@ -49,7 +49,7 @@ namespace MoveIt.Overlays.Children
             Circle3 circle = new(_Moveable.GetRadius(), Transform.m_Position, quaternion.identity);
             m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
 
-            MIO_Common common = new()
+            MIO_Common common = new(true)
             {
                 m_Owner = _Moveable.m_Entity,
             };

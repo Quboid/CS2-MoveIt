@@ -179,56 +179,82 @@ namespace MoveIt.Overlays
         /// <summary>
         /// The main colour of this overlay
         /// </summary>
-        public UnityEngine.Color m_OutlineColor     = default;
+        public UnityEngine.Color m_OutlineColor;
         /// <summary>
         /// The secondary colour used to accent the m_OutlineColor (optional)
         /// </summary>
-        public UnityEngine.Color m_BackgroundColor  = default;
+        public UnityEngine.Color m_BackgroundColor;
         /// <summary>
         /// How this overlay is being used
         /// </summary>
-        public InteractionFlags m_Flags             = InteractionFlags.None;
-        public bool m_IsManipulatable               = false;
-        public bool m_IsManipChild                  = false;
+        public InteractionFlags m_Flags;
+        public bool m_IsManipulatable;
+        public bool m_IsManipChild;
         /// <summary>
         /// The object that this overlay is rendered for, for selection/hover/tool-hover/etc
         /// </summary>
-        public Entity m_Owner                       = Entity.Null;
+        public Entity m_Owner;
         /// <summary>
         /// The prefab of the object that this overlay is rendered for (unused at this time)
         /// </summary>
-        public Entity m_Prefab                      = Entity.Null;
+        public Entity m_Prefab;
         /// <summary>
         /// This overlay's position and rotation
         /// </summary>
-        public Game.Objects.Transform m_Transform   = default;
+        public Game.Objects.Transform m_Transform;
         /// <summary>
         /// The width of this overlay's lines at ground level
         /// </summary>
-        public float m_OutlineWidthGround           = Overlay.LINE_DEFAULT_WIDTH;
+        public float m_OutlineWidthGround;
         /// <summary>
         /// The width of this overlay's lines at the object's position
         /// </summary>
-        public float m_OutlineWidthFixed            = Overlay.LINE_DEFAULT_WIDTH;
+        public float m_OutlineWidthFixed;
         /// <summary>
         /// The terrain height where this overlay is being rendered
         /// </summary>
-        public float m_TerrainHeight                = 0f;
+        public float m_TerrainHeight;
         /// <summary>
         /// The opacity of the shadow overlay, 0f if none
         /// </summary>
-        public float m_ShadowOpacity                = 0f;
+        public float m_ShadowOpacity;
 
         /// <summary>
         /// Is there a shadow overlay for this object?
         /// </summary>
         public readonly bool ShowShadow => m_ShadowOpacity > 0.0001f;
 
-        public MIO_Common()
-        { }
+        // Create new struct with default values, needs pointless parameter in C# 9.0
+        public MIO_Common(bool _)
+        {
+            m_OutlineColor = default;
+            m_BackgroundColor = default;
+            m_Flags = InteractionFlags.None;
+            m_IsManipulatable = false;
+            m_IsManipChild = false;
+            m_Owner = Entity.Null;
+            m_Prefab = Entity.Null;
+            m_Transform = default;
+            m_OutlineWidthGround = Overlay.LINE_DEFAULT_WIDTH;
+            m_OutlineWidthFixed = Overlay.LINE_DEFAULT_WIDTH;
+            m_TerrainHeight = 0f;
+            m_ShadowOpacity = 0f;
+        }
 
         public MIO_Common(Entity owner)
         {
+            m_OutlineColor = default;
+            m_BackgroundColor = default;
+            m_Flags = InteractionFlags.None;
+            m_IsManipulatable = false;
+            m_IsManipChild = false;
+            m_Prefab = Entity.Null;
+            m_Transform = default;
+            m_OutlineWidthGround = Overlay.LINE_DEFAULT_WIDTH;
+            m_OutlineWidthFixed = Overlay.LINE_DEFAULT_WIDTH;
+            m_TerrainHeight = 0f;
+            m_ShadowOpacity = 0f;
+
             m_Owner = owner;
         }
 

@@ -134,7 +134,7 @@ namespace MoveIt.Input
         protected override void OnRelease()
         {
             m_Status = ButtonStatus.None;
-            _MIT.Hovered.OnPress = new();
+            _MIT.Hovered.OnPress = new(true);
             if (_MIT.MITState == MITStates.DrawingSelection)
             {
                 _MIT.MITState = MITStates.Default;

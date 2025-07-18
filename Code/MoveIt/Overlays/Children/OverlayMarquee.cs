@@ -20,7 +20,7 @@ namespace MoveIt.Overlays.Children
             Entity owner = new() { Index = index, Version = version };
             m_Entity = _MIT.EntityManager.CreateEntity(_Archetype);
 
-            MIO_Common common = new()
+            MIO_Common common = new(true)
             {
                 m_Flags         = InteractionFlags.Static,
                 m_OutlineColor  = Colors.Get(ColorData.Contexts.Hovering),

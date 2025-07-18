@@ -1,15 +1,15 @@
 ﻿# Move It Beta for Cities Skylines 2.
 
-This is the unstable beta version and may have unexpected issues. Please report any in the forum or on Discord. Do not use more than one version of Move It.
-
-Stable version:
-https://mods.paradoxplaza.com/mods/74324/Windows
-
-
 You can move trees, props, decals, buildings, surfaces, nodes, and segment curves.
 
 Press **M** or click on the Move It icon at the bottom right to enable the tool.
 
+
+## Important Update on Development:
+
+Due to a number of personal factors, I have decided to end Move It development. Move It is important to the way I have always played Cities Skylines and I know I am not alone in this, and I feel that I have been letting down the community in recent months so it is time for someone else to take up the mantle. I am arranging moving the project to another modder. I will remain around the scene to ensure the mod's compatibility with game updates and fix critical errors, however I will not be able to provide support or general bug fixes. Hopefully at a later date I will return to modding with new projects.
+
+I am very grateful for the support I have received. Even when the community has seemed divided I have received almost uniformly positive feedback and constructive criticism and I thank everyone who has given praise, given donations, given suggestions, and given complaints that are borne of a genuine desire to see Move It improve.
 
 ## Selecting:
 
@@ -63,10 +63,10 @@ This is an beta version of Move It. Save often, save different.
 ## Known Issues
 * Align to terrain height does yet not work with objects that affect terrain, e.g. buildings and on-ground roads.
 * Page Up/Down do not work in the editor. Use Numpad 9 and 3 instead, or rebind the move up/down keys.
-* Some players experience an occasional crash the first time they use Move It after using Undo. If you get this, please send me your log files.
+* Some players experience an occasional crashes relating to undo/redo manipulation mode changes.
 
 ## Credits:
 
-Big thanks to SamSamTS, Krzychu124, Yenyang, T.D.W., Klyte45, REV0, BadPeanut, Sully, Algernon, MooseHXC!
+Big thanks to SamSamTS, Krzychu124, Yenyang, T.D.W., Klyte45, REV0, BadPeanut, Sully, Algernon, CanadianMoosePlays!
 
 Icons from SVG Repo, and from WishForge.Games under CC Attribution License.

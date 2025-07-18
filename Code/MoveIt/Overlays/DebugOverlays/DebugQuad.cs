@@ -56,7 +56,7 @@ namespace MoveIt.Overlays.DebugOverlays
             Entity e = _MIT.EntityManager.CreateEntity(ttl == 0 ? _Archetype : _ArchetypeTTL);
 
             float3 center = quad.Center();
-            MIO_Common common = new()
+            MIO_Common common = new(true)
             {
                 m_Flags = InteractionFlags.Static,
                 m_Owner = owner,

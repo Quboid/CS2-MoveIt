@@ -14,7 +14,7 @@ using Unity.Mathematics;
 
 namespace MoveIt.Selection
 {
-    internal record struct SelectionBaseData
+    internal struct SelectionBaseData
     {
         internal HashSet<MVDefinition> m_Buffer;
         internal HashSet<MVDefinition> m_BufferFull;

@@ -121,6 +121,7 @@ namespace MoveIt.Tool
         {
             Log.Info($"Tool.OnDestroy() {(ControlPointManager is null ? "(CPM destroyed)" : "(CPM closing)")}");
             //ControlPointManager?.DestroyAll();
+            Log.Shutdown();
             base.OnDestroy();
         }
 
